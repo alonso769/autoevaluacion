@@ -1477,6 +1477,12 @@ function generarReporteFinal(formato) {
 
   const mesesLabels = Object.keys(porMes).sort();
 
+  // SOLUCIÓN GRÁFICOS: Tomamos la "foto" EXACTAMENTE AHORA, antes de cualquier pausa
+  const canvasPastel = document.getElementById('expChartPreview');
+  const canvasBarras = document.getElementById('expBarChartPreview');
+  const chartImage = canvasPastel ? canvasPastel.toDataURL("image/png", 1.0) : '';
+  const barChartImage = canvasBarras ? canvasBarras.toDataURL("image/png", 1.0) : '';
+
   setTimeout(() => {
     if (formato === 'excel') {
       const wb = XLSX.utils.book_new();
@@ -1492,43 +1498,60 @@ function generarReporteFinal(formato) {
       ];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resData), "Resumen");
 
+      // Actualizamos el Excel para que coincida con las columnas de tu imagen de Drive
       const anexoData = dataExportacion.map((r, i) => ({
-        "N°": i + 1, "MES": r.num_auditoria, "DEPARTAMENTO/SERVICIO": r.servicio,
-        "N° HC": r.hc, "PUNTAJE": r.puntaje, "CALIFICACIÓN": r.calificacion
+        "N°": i + 1, 
+        "MES": r.num_auditoria, 
+        "N° HC": r.hc,
+        "DEPARTAMENTO/SERVICIO AUDITADO": r.servicio,
+        "AREA": "CONSULTA EXTERNA", // Área por defecto según tu sistema
+        "PUNTAJE": r.puntaje, 
+        "CALIFICACIÓN": r.calificacion
       }));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(anexoData), "Anexo 1 - Detalle");
       XLSX.writeFile(wb, `Informe_Auditoria_${fechaHoy.replace(/\//g,'-')}.xlsx`);
 
     } else if (formato === 'word') {
-      // Capturar los dos gráficos para el Word
-      const chartImage = document.getElementById('expChartPreview').toDataURL("image/png");
-      const barChartImage = document.getElementById('expBarChartPreview').toDataURL("image/png");
-
-      // Construir las celdas para la Tabla 3 por mes
+      
       let headersMeses = mesesLabels.map(m => `<th>${m}</th>`).join('');
       let filaSat = mesesLabels.map(m => `<td>${porMes[m].sat}</td>`).join('');
       let filaMej = mesesLabels.map(m => `<td>${porMes[m].mej}</td>`).join('');
       let filaDef = mesesLabels.map(m => `<td>${porMes[m].def}</td>`).join('');
+
+      // SOLUCIÓN ANEXO 1 EN WORD: Generamos las filas de la tabla detallada
+      const filasAnexo = dataExportacion.map((r, i) => {
+         let colorCalif = r.calificacion === 'SATISFACTORIO' ? '#166534' : r.calificacion === 'POR MEJORAR' ? '#d97706' : '#dc2626';
+         return `<tr>
+           <td>${i + 1}</td>
+           <td>${r.num_auditoria || ''}</td>
+           <td>${r.hc || ''}</td>
+           <td>${r.servicio || ''}</td>
+           <td>CONSULTA EXTERNA</td>
+           <td><strong>${r.puntaje || ''}</strong></td>
+           <td style="font-weight:bold; color:${colorCalif};">${r.calificacion || ''}</td>
+         </tr>`;
+      }).join('');
 
       const htmlContent = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head><meta charset='utf-8'><title>Informe</title>
           <style>
             body { font-family: 'Arial', sans-serif; font-size: 11pt; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
-            th, td { border: 1px solid #000; padding: 6px; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; font-size: 10pt; }
+            th, td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
             th { background-color: #e2e8f0; font-weight: bold; }
+            .title-center { text-align: center; font-weight: bold; }
           </style>
         </head>
         <body>
-          <h2 style="text-align:center;">INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA</h2>
+          <h2 class="title-center">INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA</h2>
           <p><strong>Fecha de Emisión:</strong> ${fechaHoy}</p>
           <p><strong>Total de Historias Clínicas evaluadas:</strong> ${total}</p>
           
           <h3>Evaluación de la Calidad del Registro</h3>
           <p>De las ${total} Historias Clínicas auditadas, ${sat} HCs (${((sat/total)*100).toFixed(1)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${((mej/total)*100).toFixed(1)}%) resultado "Por Mejorar" y ${def} HCs (${((def/total)*100).toFixed(1)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla Nº 2 y el Gráfico correspondiente.</p>
           
-          <p style="text-align:center; font-weight:bold;">Tabla N° 2. Calidad de registro de las HCs auditadas</p>
+          <p class="title-center">Tabla N° 2. Calidad de registro de las HCs auditadas</p>
           <table>
             <tr><th>CALIFICACIÓN</th><th>N°</th><th>%</th></tr>
             <tr><td>Satisfactorio</td><td>${sat}</td><td>${((sat/total)*100).toFixed(1)}%</td></tr>
@@ -1537,13 +1560,13 @@ function generarReporteFinal(formato) {
             <tr><td><strong>TOTAL</strong></td><td><strong>${total}</strong></td><td><strong>100%</strong></td></tr>
           </table>
 
-          <p style="text-align:center; font-weight:bold;">Gráfico N° 2. Distribución de Calificaciones</p>
-          <div style="text-align:center;"><img src="${chartImage}" width="400" height="220" /></div>
+          <p class="title-center">Gráfico N° 2. Distribución de Calificaciones</p>
+          <div style="text-align:center;"><img src="${chartImage}" width="400" /></div>
           
           <br><br>
           <p>En la Tabla Nº 3 y en el Gráfico correspondiente se presentan los resultados obtenidos por cada mes.</p>
           
-          <p style="text-align:center; font-weight:bold;">Tabla N° 3. Calidad de Registro por Mes</p>
+          <p class="title-center">Tabla N° 3. Calidad de Registro por Mes</p>
           <table>
             <tr><th>CALIFICACIÓN</th>${headersMeses}<th>TOTAL</th></tr>
             <tr><td>Satisfactorio</td>${filaSat}<td>${sat}</td></tr>
@@ -1551,8 +1574,25 @@ function generarReporteFinal(formato) {
             <tr><td>Deficiente</td>${filaDef}<td>${def}</td></tr>
           </table>
 
-          <p style="text-align:center; font-weight:bold;">Gráfico N° 3. Evolución por Mes</p>
-          <div style="text-align:center;"><img src="${barChartImage}" width="450" height="250" /></div>
+          <p class="title-center">Gráfico N° 3. Evolución por Mes</p>
+          <div style="text-align:center;"><img src="${barChartImage}" width="450" /></div>
+
+          <br clear=all style='mso-special-character:line-break;page-break-before:always'>
+
+          <h2 class="title-center">ANEXO N° 1</h2>
+          <h3 class="title-center">Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa.</h3>
+          <table>
+            <tr>
+              <th>N°</th>
+              <th>MES</th>
+              <th>N° HC</th>
+              <th>DEPARTAMENTO/SERVICIO AUDITADO</th>
+              <th>AREA</th>
+              <th>PUNTAJE</th>
+              <th>CALIFICACIÓN</th>
+            </tr>
+            ${filasAnexo}
+          </table>
 
         </body></html>
       `;
@@ -1564,7 +1604,7 @@ function generarReporteFinal(formato) {
     }
     hideLoading();
     document.getElementById('modalExportOverlay').classList.remove('open');
-  }, 600);
+  }, 800); // Aumentamos un poquito el tiempo para asegurar que procese bien la tabla larga
 }
 
 </script>
