@@ -355,7 +355,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnio" onchange="aplicarFiltros()">
             <option value="">Todos los años</option>
         </select>
-        <select id="filtMes" onchange="aplicarFiltros()" multiple style="height: 38px; min-width: 160px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--cream);">
+        <select id="filtMes" onchange="aplicarFiltros()" multiple style="height: 38px; min-width: 160px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--cream); cursor: pointer;">
           <option value="">Todos los meses</option>
       </select>
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServDash" onchange="aplicarFiltros()">
@@ -409,7 +409,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnioSec" onchange="aplicarFiltrosSec()">
             <option value="">Todos los años</option>
           </select>
-          <select id="filtMesSec" onchange="aplicarFiltrosSec()" multiple style="height: 38px; min-width: 160px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--cream);">
+          <select id="filtMesSec" onchange="aplicarFiltrosSec()" multiple style="height: 38px; min-width: 160px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--cream); cursor: pointer;">
             <option value="">Todos los meses</option>
         </select>
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServSec" onchange="aplicarFiltrosSec()">
@@ -638,7 +638,7 @@ function populateFilters(servicios, auditores, anios, meses) {
 function aplicarFiltrosSec() {
   const anioSel = document.getElementById('filtAnioSec').value;
   
-  // CAPTURAR MÚLTIPLES MESES
+  // CAPTURAMOS MÚLTIPLES MESES SELECCIONADOS
   const selectorMes = document.getElementById('filtMesSec');
   const mesesSel = Array.from(selectorMes.selectedOptions).map(opt => opt.value).filter(v => v !== "");
 
@@ -678,7 +678,7 @@ function aplicarFiltrosSec() {
 function aplicarFiltros() {
   const anioSel = document.getElementById('filtAnio').value;
   
-  // 1. CAPTURAMOS LOS MESES SELECCIONADOS COMO UN ARREGLO
+  // CAPTURAMOS MÚLTIPLES MESES SELECCIONADOS
   const selectorMes = document.getElementById('filtMes');
   const mesesSel = Array.from(selectorMes.selectedOptions).map(opt => opt.value).filter(v => v !== "");
 
@@ -702,11 +702,11 @@ function aplicarFiltros() {
       selectorServicio.value = servSel;
   }
 
-  // --- FILTRADO FINAL DE LA DATA ---
+  // --- FILTRADO FINAL DE LA DATA PARA GRÁFICOS ---
   filtData = allData.filter(r => {
       if (anioSel && r.anio !== anioSel) return false; 
       
-      // FILTRO MULTIMES: Si la lista de seleccionados no está vacía y no incluye el mes del registro, descartar
+      // FILTRO MULTIMES: Usamos .includes() para validar contra la lista
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
       
       if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
