@@ -13,7 +13,8 @@ import hashlib
 # ====================================================================
 import urllib3
 import requests
-
+app = Flask(__name__)
+CORS(app) #
 # 1. Desactivar las advertencias molestas en la consola
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -410,4 +411,7 @@ def get_estadisticas():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Render usa una variable de entorno llamada PORT
+    port = int(os.environ.get("PORT", 5000)) 
+    # Usamos ese port en lugar de dejarlo fijo en 5000
+    app.run(host='0.0.0.0', port=port, debug=True)
