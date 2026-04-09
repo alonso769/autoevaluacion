@@ -532,6 +532,16 @@ table.main-tbl tr:hover td{background:#fdf8f0}
     <div class="modal-body" id="modalBody"></div>
   </div>
 </div>
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head" style="position:relative">
+      <h2 id="modalTitle">Detalle</h2>
+      <p id="modalSub"></p>
+      <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modalExportOverlay" onclick="if(event.target.id==='modalExportOverlay') document.getElementById('modalExportOverlay').classList.remove('open')">
   <div class="modal" style="max-width: 900px;">
@@ -584,7 +594,6 @@ table.main-tbl tr:hover td{background:#fdf8f0}
     </div>
   </div>
 </div>
-
 <script>
   const API = '/api';
 let session = null;
