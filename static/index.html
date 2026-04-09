@@ -1477,7 +1477,7 @@ function generarReporteFinal(formato) {
 
   const mesesLabels = Object.keys(porMes).sort();
 
-  // SOLUCIÓN GRÁFICOS: Tomamos la "foto" EXACTAMENTE AHORA, antes de cualquier pausa
+  // Tomamos la "foto" EXACTAMENTE AHORA
   const canvasPastel = document.getElementById('expChartPreview');
   const canvasBarras = document.getElementById('expBarChartPreview');
   const chartImage = canvasPastel ? canvasPastel.toDataURL("image/png", 1.0) : '';
@@ -1498,13 +1498,12 @@ function generarReporteFinal(formato) {
       ];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resData), "Resumen");
 
-      // Actualizamos el Excel para que coincida con las columnas de tu imagen de Drive
       const anexoData = dataExportacion.map((r, i) => ({
         "N°": i + 1, 
         "MES": r.num_auditoria, 
         "N° HC": r.hc,
         "DEPARTAMENTO/SERVICIO AUDITADO": r.servicio,
-        "AREA": "CONSULTA EXTERNA", // Área por defecto según tu sistema
+        "AREA": "CONSULTA EXTERNA",
         "PUNTAJE": r.puntaje, 
         "CALIFICACIÓN": r.calificacion
       }));
@@ -1518,8 +1517,9 @@ function generarReporteFinal(formato) {
       let filaMej = mesesLabels.map(m => `<td>${porMes[m].mej}</td>`).join('');
       let filaDef = mesesLabels.map(m => `<td>${porMes[m].def}</td>`).join('');
 
-      // SOLUCIÓN ANEXO 1 EN WORD: Generamos las filas de la tabla detallada
+      // AQUI GENERAMOS LA LISTA DEL ANEXO 1 CON COLORES
       const filasAnexo = dataExportacion.map((r, i) => {
+         let bgCalif = r.calificacion === 'SATISFACTORIO' ? '#dcfce7' : r.calificacion === 'POR MEJORAR' ? '#fef3c7' : '#fee2e2';
          let colorCalif = r.calificacion === 'SATISFACTORIO' ? '#166534' : r.calificacion === 'POR MEJORAR' ? '#d97706' : '#dc2626';
          return `<tr>
            <td>${i + 1}</td>
@@ -1528,7 +1528,7 @@ function generarReporteFinal(formato) {
            <td>${r.servicio || ''}</td>
            <td>CONSULTA EXTERNA</td>
            <td><strong>${r.puntaje || ''}</strong></td>
-           <td style="font-weight:bold; color:${colorCalif};">${r.calificacion || ''}</td>
+           <td style="background-color:${bgCalif}; color:${colorCalif}; font-weight:bold;">${r.calificacion || ''}</td>
          </tr>`;
       }).join('');
 
@@ -1541,6 +1541,7 @@ function generarReporteFinal(formato) {
             th, td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
             th { background-color: #e2e8f0; font-weight: bold; }
             .title-center { text-align: center; font-weight: bold; }
+            .page-break { page-break-before: always; }
           </style>
         </head>
         <body>
@@ -1577,9 +1578,10 @@ function generarReporteFinal(formato) {
           <p class="title-center">Gráfico N° 3. Evolución por Mes</p>
           <div style="text-align:center;"><img src="${barChartImage}" width="450" /></div>
 
-          <br clear=all style='mso-special-character:line-break;page-break-before:always'>
+          <div class="page-break"></div>
+          <br clear="all" style="page-break-before:always" />
 
-          <h2 class="title-center">ANEXO N° 1</h2>
+          <h2 class="title-center" style="margin-top: 20px;">ANEXO N° 1</h2>
           <h3 class="title-center">Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa.</h3>
           <table>
             <tr>
@@ -1604,7 +1606,7 @@ function generarReporteFinal(formato) {
     }
     hideLoading();
     document.getElementById('modalExportOverlay').classList.remove('open');
-  }, 800); // Aumentamos un poquito el tiempo para asegurar que procese bien la tabla larga
+  }, 800);
 }
 
 </script>
