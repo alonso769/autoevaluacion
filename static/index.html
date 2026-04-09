@@ -256,7 +256,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
 .sec-block h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 .crit-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--cream);border-radius:8px;margin-bottom:4px;font-size:13px}
 .crit-score{font-weight:700;min-width:60px;text-align:right}
-.crit-score.f{color:var(--green)}.crit-score.p{color:#d97706}.crit-score.z{color:#dc2626}.crit-score.n{color:var(--muted);font-weight:400;font-style:italic}
+.crit-score.f{color:var(--green)}.crit-score.p{color:#d97706}.crit-score.z{color:#dc2626}.crit-score.n{color:var(--muted);font-weight:400;font-style:italic}.crit-score.e{color:#8b5cf6}
 
 /* USUARIOS PAGE */
 .user-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
@@ -1103,7 +1103,7 @@ function showDetail(idx) {
       </div>
     </div>`;
 
-  // --- SOLUCIÓN: FORZAMOS EL ORDEN EXACTO AQUÍ ---
+  // --- ORDEN EXACTO ---
   const ORDEN_SECCIONES = [
       "FILIACION", 
       "ANAMNESIS", 
@@ -1117,16 +1117,20 @@ function showDetail(idx) {
 
   for(const key of ORDEN_SECCIONES) {
     const sec = d.secciones[key];
-    if (!sec) continue; // Si la sección no existe en este registro, la salta y sigue
+    if (!sec) continue;
 
     const maxSec = sec.items.reduce((s,i)=>s+i.max,0);
     html += `<div class="sec-block">
       <h4>${sec.label} — ${sec.subtotal.toFixed(2)} / ${maxSec.toFixed(0)} pts</h4>
       ${sec.items.map(item=>{
         let cls='z',score=item.pts.toFixed(2);
+        
+        // --- AQUÍ ASIGNAMOS LOS COLORES (INCLUYENDO MORADO PARA EXCESO) ---
         if(item.estado==='na'){cls='n';score='N/A';}
-        else if(item.pts>=item.max&&item.max>0) cls='f';
-        else if(item.pts>0) cls='p';
+        else if(item.estado==='en_exceso' || item.estado==='enExceso'){cls='e';} // Exceso (Morado)
+        else if(item.pts>=item.max&&item.max>0) cls='f'; // Completo (Verde)
+        else if(item.pts>0) cls='p'; // Incompleto (Naranja)
+        
         return `<div class="crit-row">
           <span style="flex:1;font-size:13px">${item.nombre}</span>
           <span class="crit-score ${cls}">${score} / ${item.max}</span>
@@ -1134,6 +1138,17 @@ function showDetail(idx) {
       }).join('')}
     </div>`;
   }
+
+  // --- AGREGAMOS LA LEYENDA AL FINAL ---
+  html += `
+    <div class="legend" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); justify-content: center; background: var(--cream); border-radius: 8px; padding-bottom: 16px; flex-wrap: wrap;">
+      <div class="leg-item"><div class="leg-dot" style="background:#166534"></div>Completo</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#d97706"></div>Incompleto</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#8b5cf6"></div>En Exceso</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#dc2626"></div>Cero / No existe</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#64748b"></div>No Aplica (N/A)</div>
+    </div>
+  `;
 
   document.getElementById('modalBody').innerHTML = html;
   document.getElementById('modalOverlay').classList.add('open');
