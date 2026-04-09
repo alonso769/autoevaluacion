@@ -15,6 +15,12 @@ import urllib3
 import requests
 app = Flask(__name__)
 CORS(app) #
+
+# --- AGREGA ESTAS DOS LÍNEAS PARA RESPETAR TU ORDEN ---
+app.config['JSON_SORT_KEYS'] = False 
+app.json.sort_keys = False 
+# ------------------------------------------------------
+
 # 1. Desactivar las advertencias molestas en la consola
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
