@@ -1103,7 +1103,22 @@ function showDetail(idx) {
       </div>
     </div>`;
 
-  for(const [key, sec] of Object.entries(d.secciones)) {
+  // --- SOLUCIÓN: FORZAMOS EL ORDEN EXACTO AQUÍ ---
+  const ORDEN_SECCIONES = [
+      "FILIACION", 
+      "ANAMNESIS", 
+      "EXAMEN_CLINICO", 
+      "DIAGNOSTICOS", 
+      "PLAN_TRABAJO", 
+      "TRATAMIENTO", 
+      "ATRIBUTOS", 
+      "SEGUIMIENTO"
+  ];
+
+  for(const key of ORDEN_SECCIONES) {
+    const sec = d.secciones[key];
+    if (!sec) continue; // Si la sección no existe en este registro, la salta y sigue
+
     const maxSec = sec.items.reduce((s,i)=>s+i.max,0);
     html += `<div class="sec-block">
       <h4>${sec.label} — ${sec.subtotal.toFixed(2)} / ${maxSec.toFixed(0)} pts</h4>
