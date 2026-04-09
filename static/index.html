@@ -181,6 +181,29 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
 .seg-sd{background:#e2e8f0}
 .stack-count{font-size:11px;color:var(--muted);min-width:30px}
 
+/* ===== MULTISELECT TIPO EXCEL PARA SIRONA TECH ===== */
+.custom-ms { position: relative; min-width: 180px; }
+.ms-btn {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--cream); border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; font-size: 13px;
+  cursor: pointer; height: 38px; color: var(--text); user-select: none;
+}
+.ms-btn:hover { border-color: var(--navy3); }
+.ms-menu {
+  display: none; position: absolute; top: 100%; left: 0; margin-top: 5px;
+  background: var(--white); min-width: 100%; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  border-radius: 8px; border: 1px solid var(--border); z-index: 1000;
+  max-height: 250px; overflow-y: auto;
+}
+.ms-menu.show { display: block; }
+.ms-item {
+  display: flex; align-items: center; padding: 8px 12px;
+  cursor: pointer; font-size: 13px; transition: background 0.15s;
+}
+.ms-item:hover { background: #fdf8f0; }
+.ms-item input { margin-right: 10px; cursor: pointer; accent-color: var(--navy); }
+
 /* FILTERS */
 .filters-bar{background:#fff;border-radius:14px;border:1px solid var(--border);padding:16px 20px;margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
 .fg{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px}
@@ -194,6 +217,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
 .fbtn.secondary:hover{background:var(--cream3)}
 .fbtn.success{background:#16a34a;color:#fff}
 .fbtn.success:hover{background:#15803d}
+
 
 /* REGISTROS TABLE */
 .tbl-wrap{overflow-x:auto}
@@ -355,9 +379,13 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnio" onchange="aplicarFiltros()">
             <option value="">Todos los años</option>
         </select>
-        <select id="filtMes" onchange="aplicarFiltros()" multiple style="height: 38px; min-width: 160px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--cream); cursor: pointer;">
-          <option value="">Todos los meses</option>
-      </select>
+        <div class="custom-ms" id="wrapMesDash">
+          <div class="ms-btn" onclick="document.getElementById('menuMesDash').classList.toggle('show')">
+            <span id="textMesDash">Todos los meses</span> <span>▼</span>
+          </div>
+          <div class="ms-menu" id="menuMesDash">
+            </div>
+        </div>
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServDash" onchange="aplicarFiltros()">
             <option value="">Todos los servicios</option>
           </select>
@@ -409,9 +437,13 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnioSec" onchange="aplicarFiltrosSec()">
             <option value="">Todos los años</option>
           </select>
-          <select id="filtMesSec" onchange="aplicarFiltrosSec()" multiple style="height: 38px; min-width: 160px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--cream); cursor: pointer;">
-            <option value="">Todos los meses</option>
-        </select>
+          <div class="custom-ms" id="wrapMesSec">
+            <div class="ms-btn" onclick="document.getElementById('menuMesSec').classList.toggle('show')">
+              <span id="textMesSec">Todos los meses</span> <span>▼</span>
+            </div>
+            <div class="ms-menu" id="menuMesSec">
+              </div>
+          </div>
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServSec" onchange="aplicarFiltrosSec()">
             <option value="">Todos los servicios</option>
           </select>
@@ -604,119 +636,164 @@ async function calcularEstadisticas(data) {
   } catch(e) { console.error(e); }
 }
 
+// =====================================================================
+// NUEVO SISTEMA DE FILTROS (DISEÑO TIPO EXCEL)
+// =====================================================================
+
 function populateFilters(servicios, auditores, anios, meses) {
-  // --- 1. Filtros del DASHBOARD ---
+  // --- 1. Filtros de Años ---
   const selAnio = document.getElementById('filtAnio');
   if(selAnio) selAnio.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
 
-  const selMes = document.getElementById('filtMes');
-  if(selMes) selMes.innerHTML = '<option value="">Todos los meses</option>' + meses.map(m => `<option value="${m}">${m}</option>`).join('');
-
-  // --- 2. NUEVOS: Filtros de la página POR SECCIÓN ---
   const selAnioSec = document.getElementById('filtAnioSec');
-  if(selAnioSec) selAnioSec.innerHTML = '<option value="">Todos los años</optipulateFilterson>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+  if(selAnioSec) selAnioSec.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
 
-  const selMesSec = document.getElementById('filtMesSec');
-  if(selMesSec) selMesSec.innerHTML = '<option value="">Todos los meses</option>' + meses.map(m => `<option value="${m}">${m}</option>`).join('');
-
-  // --- 3. Selectores de SERVICIO (Dashboard, Registros y Sección) ---
+  // --- 2. Filtros de Servicios (Dashboard, Registros y Sección) ---
   ['filtServDash','filtServ','filtServSec'].forEach(id => {
-      const s = document.getElementById(id);
-      if (s) {
-          s.innerHTML = '<option value="">Todos los servicios</option>' + 
-              servicios.map(sv => `<option value="${sv}">${sv.length > 40 ? sv.substring(0, 40) + '...' : sv}</option>`).join('');
-      }
+    const s = document.getElementById(id);
+    if (s) {
+      s.innerHTML = '<option value="">Todos los servicios</option>' + 
+        servicios.map(sv => `<option value="${sv}">${sv.length > 40 ? sv.substring(0, 40) + '...' : sv}</option>`).join('');
+    }
   });
 
-  // --- 4. Selector de AUDITOR ---
+  // --- 3. Selector de AUDITOR (Para la pestaña de Registros) ---
   const selAud = document.getElementById('filtAud');
   if (selAud) {
-      selAud.innerHTML = '<option value="">Todos</option>' + 
-          auditores.map(a => `<option value="${a}">${a.length > 40 ? a.substring(0, 40) + '...' : a}</option>`).join('');
+    selAud.innerHTML = '<option value="">Todos</option>' + 
+      auditores.map(a => `<option value="${a}">${a.length > 40 ? a.substring(0, 40) + '...' : a}</option>`).join('');
   }
-}
-function aplicarFiltrosSec() {
-  const anioSel = document.getElementById('filtAnioSec').value;
+
+  // --- 4. NUEVO: Checkboxes de Meses (Dashboard y Secciones) ---
+  const menuDash = document.getElementById('menuMesDash');
+  const menuSec = document.getElementById('menuMesSec');
   
-  // CAPTURAMOS MÚLTIPLES MESES SELECCIONADOS
-  const selectorMes = document.getElementById('filtMesSec');
-  const mesesSel = Array.from(selectorMes.selectedOptions).map(opt => opt.value).filter(v => v !== "");
+  // Creamos el HTML de los checkboxes basándonos en los meses del Excel
+  const checkboxesHTML = meses.map(m => `
+    <label class="ms-item">
+      <input type="checkbox" value="${m}" onchange="aplicarFiltrosGlobal(event)"> ${m}
+    </label>
+  `).join('');
 
-  const selectorServicio = document.getElementById('filtServSec');
-  const servSel = selectorServicio.value;
+  if(menuDash) menuDash.innerHTML = checkboxesHTML;
+  // Para la sección secundaria, cambiamos la función que se ejecuta al hacer clic
+  if(menuSec) menuSec.innerHTML = checkboxesHTML.replace(/aplicarFiltrosGlobal/g, 'aplicarFiltrosGlobalSec');
+}
 
-  // --- LÓGICA DE FILTROS EN CASCADA ---
-  const serviciosDisponibles = [...new Set(
-      allData.filter(r => {
-          if (anioSel && r.anio !== anioSel) return false;
-          if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-          return true;
-      }).map(r => r.servicio).filter(s => s !== '—')
-  )].sort();
-
-  selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
-      serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
-
-  if (serviciosDisponibles.includes(servSel)) {
-      selectorServicio.value = servSel;
+// Evento para cerrar los menús desplegables si haces clic afuera
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.custom-ms')) {
+    document.querySelectorAll('.ms-menu').forEach(m => m.classList.remove('show'));
   }
+});
 
-  // --- FILTRADO FINAL ---
-  filtData = allData.filter(r => {
-      if (anioSel && r.anio !== anioSel) return false;
-      // FILTRO MULTIMES
-      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-      if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
-      return true;
-  });
 
-  calcularEstadisticas(filtData).then(() => {
-      renderSecciones(); 
-  });
+// =====================================================================
+// LÓGICA DEL DASHBOARD (PANEL GENERAL)
+// =====================================================================
+
+function aplicarFiltrosGlobal(e) { 
+  aplicarFiltros(); 
 }
 
 function aplicarFiltros() {
   const anioSel = document.getElementById('filtAnio').value;
   
-  // CAPTURAMOS MÚLTIPLES MESES SELECCIONADOS
-  const selectorMes = document.getElementById('filtMes');
-  const mesesSel = Array.from(selectorMes.selectedOptions).map(opt => opt.value).filter(v => v !== "");
+  // Capturar los checkboxes que el usuario ha marcado
+  const checks = document.querySelectorAll('#menuMesDash input[type="checkbox"]:checked');
+  const mesesSel = Array.from(checks).map(cb => cb.value);
+  
+  // Actualizar el texto del botón para que se vea profesional (Ej: "3 seleccionados")
+  const textBtn = document.getElementById('textMesDash');
+  if (textBtn) {
+    if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
+    else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0]; // Muestra solo el nombre del mes si es 1
+    else textBtn.textContent = `${mesesSel.length} seleccionados`;
+  }
 
   const selectorServicio = document.getElementById('filtServDash');
   const servSel = selectorServicio.value;
 
   // --- LÓGICA DE FILTROS EN CASCADA ---
-  const serviciosDisponibles = [...new Set(
-      allData.filter(r => {
-          if (anioSel && r.anio !== anioSel) return false;
-          // Si hay meses seleccionados, verificamos si el mes del registro está en la lista
-          if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-          return true;
-      }).map(r => r.servicio).filter(s => s !== '—')
-  )].sort();
+  const serviciosDisponibles = [...new Set(allData.filter(r => {
+    if (anioSel && r.anio !== anioSel) return false;
+    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+    return true;
+  }).map(r => r.servicio).filter(s => s !== '—'))].sort();
 
   selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
-      serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
-
+    serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
+  
   if (serviciosDisponibles.includes(servSel)) {
-      selectorServicio.value = servSel;
+    selectorServicio.value = servSel;
   }
 
   // --- FILTRADO FINAL DE LA DATA PARA GRÁFICOS ---
   filtData = allData.filter(r => {
-      if (anioSel && r.anio !== anioSel) return false; 
-      
-      // FILTRO MULTIMES: Usamos .includes() para validar contra la lista
-      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-      
-      if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
-      return true;
+    if (anioSel && r.anio !== anioSel) return false; 
+    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+    if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
+    return true;
   });
 
-  calcularEstadisticas(filtData).then(() => {
-      renderDashboard();
-      renderSecciones();
-      renderRegistros(); 
+  calcularEstadisticas(filtData).then(() => { 
+    renderDashboard(); 
+    renderSecciones(); 
+    renderRegistros(); 
+  });
+}
+
+
+// =====================================================================
+// LÓGICA DE LA PÁGINA "POR SECCIÓN"
+// =====================================================================
+
+function aplicarFiltrosGlobalSec(e) { 
+  aplicarFiltrosSec(); 
+}
+
+function aplicarFiltrosSec() {
+  const anioSel = document.getElementById('filtAnioSec').value;
+  
+  // Capturar los checkboxes marcados
+  const checks = document.querySelectorAll('#menuMesSec input[type="checkbox"]:checked');
+  const mesesSel = Array.from(checks).map(cb => cb.value);
+  
+  // Actualizar el texto del botón
+  const textBtn = document.getElementById('textMesSec');
+  if (textBtn) {
+    if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
+    else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
+    else textBtn.textContent = `${mesesSel.length} seleccionados`;
+  }
+
+  const selectorServicio = document.getElementById('filtServSec');
+  const servSel = selectorServicio.value;
+
+  // --- LÓGICA DE FILTROS EN CASCADA ---
+  const serviciosDisponibles = [...new Set(allData.filter(r => {
+    if (anioSel && r.anio !== anioSel) return false;
+    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+    return true;
+  }).map(r => r.servicio).filter(s => s !== '—'))].sort();
+
+  selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
+    serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
+  
+  if (serviciosDisponibles.includes(servSel)) {
+    selectorServicio.value = servSel;
+  }
+
+  // --- FILTRADO FINAL ---
+  filtData = allData.filter(r => {
+    if (anioSel && r.anio !== anioSel) return false;
+    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+    if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
+    return true;
+  });
+
+  calcularEstadisticas(filtData).then(() => { 
+    renderSecciones(); 
   });
 }
 
