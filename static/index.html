@@ -533,7 +533,57 @@ table.main-tbl tr:hover td{background:#fdf8f0}
   </div>
 </div>
 
+<div class="modal-overlay" id="modalExportOverlay" onclick="if(event.target.id==='modalExportOverlay') document.getElementById('modalExportOverlay').classList.remove('open')">
+  <div class="modal" style="max-width: 900px;">
+    <div class="modal-head" style="background: #1e3a6e;">
+      <h2 style="font-family:'Playfair Display',serif;">Generador de Informes Oficiales</h2>
+      <p>Configure los filtros, revise la vista previa y genere el documento.</p>
+      <button class="modal-close" onclick="document.getElementById('modalExportOverlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" style="background: var(--cream);">
+      
+      <div class="filters-bar" style="margin-bottom: 20px;">
+        <div class="fg">
+          <label>Año</label>
+          <select id="expAnio" onchange="actualizarPreviewExport()"></select>
+        </div>
+        <div class="custom-ms" id="wrapMesExp" style="flex:1;">
+           <div class="ms-btn" onclick="document.getElementById('menuMesExp').classList.toggle('show')">
+             <span id="textMesExp">Todos los meses</span> <span>▼</span>
+           </div>
+           <div class="ms-menu" id="menuMesExp"></div>
+        </div>
+        <div class="fg">
+          <label>Servicio</label>
+          <select id="expServ" onchange="actualizarPreviewExport()"></select>
+        </div>
+      </div>
 
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="section-card">
+          <div class="card-head"><h3>Tabla N° 2. Calidad de registro</h3></div>
+          <div class="card-body">
+             <table class="detail-table" id="expTablePreview" style="text-align: center;">
+                </table>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="card-head"><h3>Gráfico N° 2. Distribución</h3></div>
+          <div class="card-body" style="background: #fff;">
+             <div class="chart-wrap-sm" style="height: 250px;">
+                <canvas id="expChartPreview"></canvas>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
+        <button class="fbtn primary" onclick="generarReporteFinal('word')" style="background: #2b579a; font-size: 14px;">📄 Descargar Informe (Word)</button>
+        <button class="fbtn success" onclick="generarReporteFinal('excel')" style="background: #107c41; font-size: 14px;">📊 Descargar Anexo 1 (Excel)</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   const API = '/api';
