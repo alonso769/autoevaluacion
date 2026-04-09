@@ -1,0 +1,5 @@
+credenciales.json
+datos_auditoria.xlsx
+__pycache__/
+*.pyc
+.env

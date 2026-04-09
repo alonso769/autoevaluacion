@@ -1,0 +1,9 @@
+flask
+flask-cors
+gunicorn
+gspread
+google-auth
+pandas
+openpyxl
+requests
+urllib3
