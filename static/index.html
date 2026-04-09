@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistema de Auditoría HC — Anexo 5</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -333,7 +334,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
       <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
     </div>
     <button class="btn-login" onclick="doLogin()">Ingresar al Sistema</button>
-    <div class="login-footer">Hospital San Román — Control de Calidad HC</div>
+    <div class="login-footer">Control de Calidad HSR</div>
   </div>
 </div>
 
@@ -471,7 +472,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
         <div class="fg"><label>N° Auditoría</label><input type="text" id="filtNum" placeholder="Ej: 7"></div>
         <button class="fbtn primary" onclick="filtrarRegistros()">Filtrar</button>
         <button class="fbtn secondary" onclick="limpiarFiltros()">Limpiar</button>
-        <button class="fbtn success" onclick="exportarExcel()">⬇ Exportar</button>
+        <button class="fbtn primary" onclick="abrirModalExportacion()" style="background: var(--navy); margin-left: auto;">📄 Generar Informe Oficial</button>
       </div>
       <div class="section-card wide">
         <div class="card-head">
@@ -532,6 +533,8 @@ table.main-tbl tr:hover td{background:#fdf8f0}
   </div>
 </div>
 
+
+
 <script>
   const API = '/api';
 let session = null;
@@ -541,6 +544,7 @@ let stats = null;
 let charts = {};
 let regPage = 1;
 const REG_SIZE = 25;
+
 
 // ===== LOGIN =====
 document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
@@ -1254,6 +1258,162 @@ function exportarExcel() {
 function showLoading(msg){document.getElementById('loadingMsg').textContent=msg||'Cargando...';document.getElementById('loadingOverlay').classList.add('show');}
 function hideLoading(){document.getElementById('loadingOverlay').classList.remove('show');}
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(type||'');setTimeout(()=>t.className='toast',3500);}
+
+// =====================================================================
+// MINI SISTEMA DE GENERACIÓN DE INFORMES OFICIALES
+// =====================================================================
+let expChart = null;
+let dataExportacion = [];
+
+function abrirModalExportacion() {
+  // 1. Llenar los selectores del modal de exportación
+  document.getElementById('expAnio').innerHTML = document.getElementById('filtAnio').innerHTML;
+  document.getElementById('expServ').innerHTML = document.getElementById('filtServDash').innerHTML;
+  
+  // Clonar checkboxes de meses
+  const menuExp = document.getElementById('menuMesExp');
+  menuExp.innerHTML = document.getElementById('menuMesDash').innerHTML.replace(/aplicarFiltrosGlobal/g, 'actualizarPreviewExport');
+
+  document.getElementById('modalExportOverlay').classList.add('open');
+  actualizarPreviewExport();
+}
+
+function actualizarPreviewExport() {
+  const anioSel = document.getElementById('expAnio').value;
+  const checks = document.querySelectorAll('#menuMesExp input[type="checkbox"]:checked');
+  const mesesSel = Array.from(checks).map(cb => cb.value);
+  const servSel = document.getElementById('expServ').value;
+
+  // Actualizar texto del botón de meses
+  const textBtn = document.getElementById('textMesExp');
+  if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
+  else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
+  else textBtn.textContent = `${mesesSel.length} seleccionados`;
+
+  // Filtrar data
+  dataExportacion = allData.filter(r => {
+    if (anioSel && r.anio !== anioSel) return false;
+    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+    if (servSel && r.servicio !== servSel) return false;
+    return true;
+  });
+
+  // Calcular totales
+  let sat = 0, mej = 0, def = 0;
+  dataExportacion.forEach(r => {
+    if (r.calificacion === 'SATISFACTORIO') sat++;
+    else if (r.calificacion === 'POR MEJORAR') mej++;
+    else def++;
+  });
+  const total = dataExportacion.length;
+  const pctSat = total ? ((sat/total)*100).toFixed(1) : 0;
+  const pctMej = total ? ((mej/total)*100).toFixed(1) : 0;
+  const pctDef = total ? ((def/total)*100).toFixed(1) : 0;
+
+  // Dibujar Tabla N° 2
+  const tbody = document.getElementById('expTablePreview');
+  tbody.innerHTML = `
+    <tr><th style="text-align:left">CALIFICACIÓN</th><th>N°</th><th>%</th></tr>
+    <tr><td style="text-align:left">Satisfactorio</td><td>${sat}</td><td>${pctSat}%</td></tr>
+    <tr><td style="text-align:left">Por Mejorar</td><td>${mej}</td><td>${pctMej}%</td></tr>
+    <tr><td style="text-align:left">Deficiente</td><td>${def}</td><td>${pctDef}%</td></tr>
+    <tr style="background:var(--cream2);font-weight:bold"><td style="text-align:left">TOTAL</td><td>${total}</td><td>100%</td></tr>
+  `;
+
+  // Dibujar Gráfico N° 2
+  if(expChart) expChart.destroy();
+  const ctx = document.getElementById('expChartPreview').getContext('2d');
+  expChart = new Chart(ctx, {
+    type: 'pie', // Pie chart como en el PDF
+    data: {
+      labels: [`Satisfactorio: ${sat} (${pctSat}%)`, `Por Mejorar: ${mej} (${pctMej}%)`, `Deficiente: ${def} (${pctDef}%)`],
+      datasets: [{ data: [sat, mej, def], backgroundColor: ['#82c91e', '#facc15', '#ef4444'], borderWidth: 1 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
+  });
+}
+
+function generarReporteFinal(formato) {
+  if(dataExportacion.length === 0) { showToast('No hay datos para exportar.', 'err'); return; }
+  showLoading(`Generando archivo ${formato.toUpperCase()}...`);
+
+  const fechaHoy = new Date().toLocaleDateString('es-PE');
+  const total = dataExportacion.length;
+  let sat = 0, mej = 0, def = 0;
+  dataExportacion.forEach(r => {
+    if(r.calificacion==='SATISFACTORIO') sat++; else if(r.calificacion==='POR MEJORAR') mej++; else def++;
+  });
+
+  setTimeout(() => {
+    if (formato === 'excel') {
+      const wb = XLSX.utils.book_new();
+      
+      // Resumen
+      const resData = [
+        ["INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO"], ["Fecha:", fechaHoy], [""],
+        ["Tabla N° 2. Calidad de registro de las HCs auditadas por Mes"],
+        ["CALIFICACIÓN", "N°", "%"],
+        ["Satisfactorio", sat, ((sat/total)*100).toFixed(1) + "%"],
+        ["Por Mejorar", mej, ((mej/total)*100).toFixed(1) + "%"],
+        ["Deficiente", def, ((def/total)*100).toFixed(1) + "%"],
+        ["TOTAL", total, "100%"]
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resData), "Resumen");
+
+      // Anexo 1
+      const anexoData = dataExportacion.map((r, i) => ({
+        "N°": i + 1, "MES": r.num_auditoria, "DEPARTAMENTO/SERVICIO": r.servicio,
+        "N° HC": r.hc, "PUNTAJE": r.puntaje, "CALIFICACIÓN": r.calificacion
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(anexoData), "Anexo 1 - Detalle");
+      XLSX.writeFile(wb, `Informe_Auditoria_${fechaHoy.replace(/\//g,'-')}.xlsx`);
+
+    } else if (formato === 'word') {
+      const canvas = document.getElementById('expChartPreview');
+      const chartImage = canvas.toDataURL("image/png");
+
+      const htmlContent = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>Informe</title>
+          <style>
+            body { font-family: 'Arial', sans-serif; font-size: 11pt; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 6px; text-align: center; }
+            th { background-color: #e2e8f0; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h2 style="text-align:center;">INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA</h2>
+          <p><strong>Fecha de Emisión:</strong> ${fechaHoy}</p>
+          <p><strong>Total de Historias Clínicas evaluadas:</strong> ${total}</p>
+          
+          <h3>Evaluación de la Calidad del Registro</h3>
+          <p>De las ${total} Historias Clínicas auditadas, ${sat} HCs (${((sat/total)*100).toFixed(1)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${((mej/total)*100).toFixed(1)}%) resultado "Por Mejorar" y ${def} HCs (${((def/total)*100).toFixed(1)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla Nº 2 y el Gráfico correspondiente.</p>
+          
+          <p style="text-align:center; font-weight:bold;">Tabla N° 2. Calidad de registro de las HCs auditadas</p>
+          <table>
+            <tr><th>CALIFICACIÓN</th><th>N°</th><th>%</th></tr>
+            <tr><td>Satisfactorio</td><td>${sat}</td><td>${((sat/total)*100).toFixed(1)}%</td></tr>
+            <tr><td>Por Mejorar</td><td>${mej}</td><td>${((mej/total)*100).toFixed(1)}%</td></tr>
+            <tr><td>Deficiente</td><td>${def}</td><td>${((def/total)*100).toFixed(1)}%</td></tr>
+            <tr><td><strong>TOTAL</strong></td><td><strong>${total}</strong></td><td><strong>100%</strong></td></tr>
+          </table>
+
+          <p style="text-align:center; font-weight:bold;">Gráfico N° 2. Distribución de Calificaciones</p>
+          <div style="text-align:center;"><img src="${chartImage}" width="450" height="250" /></div>
+        </body></html>
+      `;
+      const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Informe_Oficial_${fechaHoy.replace(/\//g,'-')}.doc`;
+      a.click();
+    }
+    hideLoading();
+    document.getElementById('modalExportOverlay').classList.remove('open');
+  }, 600);
+}
+
 </script>
 </body>
 </html>
