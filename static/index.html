@@ -355,7 +355,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnio" onchange="aplicarFiltros()">
             <option value="">Todos los años</option>
         </select>
-          <select class="fg" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtMes" onchange="aplicarFiltros()">
+          <select id="filtMes" onchange="aplicarFiltros()" multiple style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtMes" onchange="aplicarFiltros()">
             <option value="">Todos los meses</option>
           </select>
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServDash" onchange="aplicarFiltros()">
@@ -409,7 +409,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnioSec" onchange="aplicarFiltrosSec()">
             <option value="">Todos los años</option>
           </select>
-          <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtMesSec" onchange="aplicarFiltrosSec()">
+          <select id="filtMesSec" onchange="aplicarFiltrosSec()" multiple style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtMesSec" onchange="aplicarFiltrosSec()">
             <option value="">Todos los meses</option>
           </select>
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServSec" onchange="aplicarFiltrosSec()">
@@ -637,7 +637,11 @@ function populateFilters(servicios, auditores, anios, meses) {
 }
 function aplicarFiltrosSec() {
   const anioSel = document.getElementById('filtAnioSec').value;
-  const mesSel = document.getElementById('filtMesSec').value;
+  
+  // CAPTURAR MÚLTIPLES MESES
+  const selectorMes = document.getElementById('filtMesSec');
+  const mesesSel = Array.from(selectorMes.selectedOptions).map(opt => opt.value).filter(v => v !== "");
+
   const selectorServicio = document.getElementById('filtServSec');
   const servSel = selectorServicio.value;
 
@@ -645,7 +649,7 @@ function aplicarFiltrosSec() {
   const serviciosDisponibles = [...new Set(
       allData.filter(r => {
           if (anioSel && r.anio !== anioSel) return false;
-          if (mesSel && r.num_auditoria !== mesSel) return false;
+          if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
           return true;
       }).map(r => r.servicio).filter(s => s !== '—')
   )].sort();
@@ -660,7 +664,8 @@ function aplicarFiltrosSec() {
   // --- FILTRADO FINAL ---
   filtData = allData.filter(r => {
       if (anioSel && r.anio !== anioSel) return false;
-      if (mesSel && r.num_auditoria !== mesSel) return false;
+      // FILTRO MULTIMES
+      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
       if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
       return true;
   });
@@ -671,40 +676,43 @@ function aplicarFiltrosSec() {
 }
 
 function aplicarFiltros() {
-  // 1. Capturamos los valores actuales
   const anioSel = document.getElementById('filtAnio').value;
-  const mesSel = document.getElementById('filtMes').value;
+  
+  // 1. CAPTURAMOS LOS MESES SELECCIONADOS COMO UN ARREGLO
+  const selectorMes = document.getElementById('filtMes');
+  const mesesSel = Array.from(selectorMes.selectedOptions).map(opt => opt.value).filter(v => v !== "");
+
   const selectorServicio = document.getElementById('filtServDash');
   const servSel = selectorServicio.value;
 
-  // --- LÓGICA DE FILTROS EN CASCADA PARA EL SELECTOR ---
-  // Filtramos la data maestra para ver qué servicios existen en ese año/mes
+  // --- LÓGICA DE FILTROS EN CASCADA ---
   const serviciosDisponibles = [...new Set(
       allData.filter(r => {
           if (anioSel && r.anio !== anioSel) return false;
-          if (mesSel && r.num_auditoria !== mesSel) return false;
+          // Si hay meses seleccionados, verificamos si el mes del registro está en la lista
+          if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
           return true;
       }).map(r => r.servicio).filter(s => s !== '—')
   )].sort();
 
-  // Actualizamos el HTML del selector de servicios
   selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
       serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
 
-  // Intentamos mantener la selección del servicio si aún existe en la nueva lista
   if (serviciosDisponibles.includes(servSel)) {
       selectorServicio.value = servSel;
   }
 
-  // --- FILTRADO FINAL DE LA DATA PARA GRÁFICOS ---
+  // --- FILTRADO FINAL DE LA DATA ---
   filtData = allData.filter(r => {
       if (anioSel && r.anio !== anioSel) return false; 
-      if (mesSel && r.num_auditoria !== mesSel) return false;
+      
+      // FILTRO MULTIMES: Si la lista de seleccionados no está vacía y no incluye el mes del registro, descartar
+      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+      
       if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
       return true;
   });
 
-  // Actualizamos la interfaz
   calcularEstadisticas(filtData).then(() => {
       renderDashboard();
       renderSecciones();
