@@ -689,6 +689,13 @@ document.addEventListener('click', function(e) {
 
 
 // =====================================================================
+// VARIABLES GLOBALES PARA OPTIMIZACIÓN (DEBOUNCE)
+// =====================================================================
+let timerFiltrosDash;
+let timerFiltrosSec;
+
+
+// =====================================================================
 // LÓGICA DEL DASHBOARD (PANEL GENERAL)
 // =====================================================================
 
@@ -697,50 +704,66 @@ function aplicarFiltrosGlobal(e) {
 }
 
 function aplicarFiltros() {
-  const anioSel = document.getElementById('filtAnio').value;
-  
-  // Capturar los checkboxes que el usuario ha marcado
-  const checks = document.querySelectorAll('#menuMesDash input[type="checkbox"]:checked');
-  const mesesSel = Array.from(checks).map(cb => cb.value);
-  
-  // Actualizar el texto del botón para que se vea profesional (Ej: "3 seleccionados")
-  const textBtn = document.getElementById('textMesDash');
-  if (textBtn) {
-    if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
-    else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0]; // Muestra solo el nombre del mes si es 1
-    else textBtn.textContent = `${mesesSel.length} seleccionados`;
-  }
+  // 1. FEEDBACK VISUAL: Atenuamos la pantalla e indicamos que está cargando
+  const contentDiv = document.querySelector('.content');
+  if(contentDiv) contentDiv.style.opacity = '0.5';
+  document.body.style.cursor = 'wait';
 
-  const selectorServicio = document.getElementById('filtServDash');
-  const servSel = selectorServicio.value;
+  // 2. DEBOUNCE: Cancelamos el cálculo anterior si hay clics rápidos
+  clearTimeout(timerFiltrosDash);
 
-  // --- LÓGICA DE FILTROS EN CASCADA ---
-  const serviciosDisponibles = [...new Set(allData.filter(r => {
-    if (anioSel && r.anio !== anioSel) return false;
-    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-    return true;
-  }).map(r => r.servicio).filter(s => s !== '—'))].sort();
+  // 3. Programamos el trabajo pesado para cuando termine de hacer clic (400ms)
+  timerFiltrosDash = setTimeout(() => {
+    const anioSel = document.getElementById('filtAnio').value;
+    
+    // Capturar los checkboxes que el usuario ha marcado
+    const checks = document.querySelectorAll('#menuMesDash input[type="checkbox"]:checked');
+    const mesesSel = Array.from(checks).map(cb => cb.value);
+    
+    // Actualizar el texto del botón para que se vea profesional
+    const textBtn = document.getElementById('textMesDash');
+    if (textBtn) {
+      if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
+      else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0]; 
+      else textBtn.textContent = `${mesesSel.length} seleccionados`;
+    }
 
-  selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
-    serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
-  
-  if (serviciosDisponibles.includes(servSel)) {
-    selectorServicio.value = servSel;
-  }
+    const selectorServicio = document.getElementById('filtServDash');
+    const servSel = selectorServicio.value;
 
-  // --- FILTRADO FINAL DE LA DATA PARA GRÁFICOS ---
-  filtData = allData.filter(r => {
-    if (anioSel && r.anio !== anioSel) return false; 
-    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-    if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
-    return true;
-  });
+    // --- LÓGICA DE FILTROS EN CASCADA ---
+    const serviciosDisponibles = [...new Set(allData.filter(r => {
+      if (anioSel && r.anio !== anioSel) return false;
+      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+      return true;
+    }).map(r => r.servicio).filter(s => s !== '—'))].sort();
 
-  calcularEstadisticas(filtData).then(() => { 
-    renderDashboard(); 
-    renderSecciones(); 
-    renderRegistros(); 
-  });
+    selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
+      serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
+    
+    if (serviciosDisponibles.includes(servSel)) {
+      selectorServicio.value = servSel;
+    }
+
+    // --- FILTRADO FINAL DE LA DATA PARA GRÁFICOS ---
+    filtData = allData.filter(r => {
+      if (anioSel && r.anio !== anioSel) return false; 
+      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+      if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
+      return true;
+    });
+
+    // 4. Calculamos y actualizamos gráficas
+    calcularEstadisticas(filtData).then(() => { 
+      renderDashboard(); 
+      renderSecciones(); 
+      renderRegistros(); 
+      
+      // 5. RESTAURAMOS LA PANTALLA (Efecto de carga terminada)
+      if(contentDiv) contentDiv.style.opacity = '1';
+      document.body.style.cursor = 'default';
+    });
+  }, 400); // 400ms de espera inteligente
 }
 
 
@@ -753,48 +776,63 @@ function aplicarFiltrosGlobalSec(e) {
 }
 
 function aplicarFiltrosSec() {
-  const anioSel = document.getElementById('filtAnioSec').value;
-  
-  // Capturar los checkboxes marcados
-  const checks = document.querySelectorAll('#menuMesSec input[type="checkbox"]:checked');
-  const mesesSel = Array.from(checks).map(cb => cb.value);
-  
-  // Actualizar el texto del botón
-  const textBtn = document.getElementById('textMesSec');
-  if (textBtn) {
-    if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
-    else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
-    else textBtn.textContent = `${mesesSel.length} seleccionados`;
-  }
+  // 1. FEEDBACK VISUAL
+  const contentDiv = document.querySelector('.content');
+  if(contentDiv) contentDiv.style.opacity = '0.5';
+  document.body.style.cursor = 'wait';
 
-  const selectorServicio = document.getElementById('filtServSec');
-  const servSel = selectorServicio.value;
+  // 2. DEBOUNCE
+  clearTimeout(timerFiltrosSec);
 
-  // --- LÓGICA DE FILTROS EN CASCADA ---
-  const serviciosDisponibles = [...new Set(allData.filter(r => {
-    if (anioSel && r.anio !== anioSel) return false;
-    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-    return true;
-  }).map(r => r.servicio).filter(s => s !== '—'))].sort();
+  timerFiltrosSec = setTimeout(() => {
+    const anioSel = document.getElementById('filtAnioSec').value;
+    
+    // Capturar los checkboxes marcados
+    const checks = document.querySelectorAll('#menuMesSec input[type="checkbox"]:checked');
+    const mesesSel = Array.from(checks).map(cb => cb.value);
+    
+    // Actualizar el texto del botón
+    const textBtn = document.getElementById('textMesSec');
+    if (textBtn) {
+      if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
+      else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
+      else textBtn.textContent = `${mesesSel.length} seleccionados`;
+    }
 
-  selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
-    serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
-  
-  if (serviciosDisponibles.includes(servSel)) {
-    selectorServicio.value = servSel;
-  }
+    const selectorServicio = document.getElementById('filtServSec');
+    const servSel = selectorServicio.value;
 
-  // --- FILTRADO FINAL ---
-  filtData = allData.filter(r => {
-    if (anioSel && r.anio !== anioSel) return false;
-    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-    if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
-    return true;
-  });
+    // --- LÓGICA DE FILTROS EN CASCADA ---
+    const serviciosDisponibles = [...new Set(allData.filter(r => {
+      if (anioSel && r.anio !== anioSel) return false;
+      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+      return true;
+    }).map(r => r.servicio).filter(s => s !== '—'))].sort();
 
-  calcularEstadisticas(filtData).then(() => { 
-    renderSecciones(); 
-  });
+    selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
+      serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
+    
+    if (serviciosDisponibles.includes(servSel)) {
+      selectorServicio.value = servSel;
+    }
+
+    // --- FILTRADO FINAL ---
+    filtData = allData.filter(r => {
+      if (anioSel && r.anio !== anioSel) return false;
+      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+      if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
+      return true;
+    });
+
+    // 4. Calculamos y actualizamos la interfaz
+    calcularEstadisticas(filtData).then(() => { 
+      renderSecciones(); 
+      
+      // 5. RESTAURAMOS LA PANTALLA
+      if(contentDiv) contentDiv.style.opacity = '1';
+      document.body.style.cursor = 'default';
+    });
+  }, 400); // 400ms de espera inteligente
 }
 
 // ===== DASHBOARD =====
