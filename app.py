@@ -36,7 +36,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-CREDENCIALES_PATH = "credenciales.json"
+CREDENCIALES_PATH = os.environ.get("CREDENCIALES_PATH", "/etc/secrets/credenciales.json")
 SHEET_NAME = "FORMATO DE CONSULTA EXTERNA-INICIAL (Respuestas)"
 WORKSHEET_NAME = "NUEVO CE"
 USERS_SHEET = "USUARIOS_SISTEMA"
