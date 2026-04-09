@@ -36,7 +36,16 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-CREDENCIALES_PATH = os.environ.get("CREDENCIALES_PATH", "/etc/secrets/credenciales.json")
+import tempfile
+
+_creds_env = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+if _creds_env:
+    _tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+    _tmp.write(_creds_env)
+    _tmp.close()
+    CREDENCIALES_PATH = _tmp.name
+else:
+    CREDENCIALES_PATH = "credenciales.json"
 SHEET_NAME = "FORMATO DE CONSULTA EXTERNA-INICIAL (Respuestas)"
 WORKSHEET_NAME = "NUEVO CE"
 USERS_SHEET = "USUARIOS_SISTEMA"
