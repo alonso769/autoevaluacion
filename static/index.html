@@ -2000,30 +2000,31 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
                        porMes, meses, porServ, imgPastel, imgBarras, imgServ,
                        narrativo, anio) {
   
-  // Tabla N°2
-  const t2 = `<div align="center"><table>
-    <tr><th>CALIFICACIÓN</th><th>N°</th><th>%</th></tr>
-    <tr><td>Satisfactorio</td><td>${sat}</td><td>${_pct(sat,total)}%</td></tr>
-    <tr><td>Por Mejorar</td><td>${mej}</td><td>${_pct(mej,total)}%</td></tr>
-    <tr><td>Deficiente</td><td>${def}</td><td>${_pct(def,total)}%</td></tr>
-    <tr><td><strong>TOTAL</strong></td><td><strong>${total}</strong></td><td><strong>100%</strong></td></tr>
-  </table></div>`;
+  // Tabla N°2. Se usa align="center" directo en la tabla para MS Word
+  const t2 = `<table align="center" style="width:80%; border-collapse:collapse; margin:10px auto 20px auto; font-size:10pt;">
+    <tr><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">CALIFICACIÓN</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">N°</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">%</th></tr>
+    <tr><td style="border:1px solid #000; padding:6px;">Satisfactorio</td><td style="border:1px solid #000; padding:6px;">${sat}</td><td style="border:1px solid #000; padding:6px;">${_pct(sat,total)}%</td></tr>
+    <tr><td style="border:1px solid #000; padding:6px;">Por Mejorar</td><td style="border:1px solid #000; padding:6px;">${mej}</td><td style="border:1px solid #000; padding:6px;">${_pct(mej,total)}%</td></tr>
+    <tr><td style="border:1px solid #000; padding:6px;">Deficiente</td><td style="border:1px solid #000; padding:6px;">${def}</td><td style="border:1px solid #000; padding:6px;">${_pct(def,total)}%</td></tr>
+    <tr><td style="border:1px solid #000; padding:6px;"><strong>TOTAL</strong></td><td style="border:1px solid #000; padding:6px;"><strong>${total}</strong></td><td style="border:1px solid #000; padding:6px;"><strong>100%</strong></td></tr>
+  </table>`;
 
   // Tabla N°3
-  const hMeses = meses.map(m=>`<th>${_mesCorto(m)}</th>`).join('');
-  const fSat3  = meses.map(m=>`<td>${porMes[m].sat}</td>`).join('');
-  const fMej3  = meses.map(m=>`<td>${porMes[m].mej}</td>`).join('');
-  const fDef3  = meses.map(m=>`<td>${porMes[m].def}</td>`).join('');
-  const fTot3  = meses.map(m=>`<td>${porMes[m].total}</td>`).join('');
-  const fPct3  = meses.map(m=>`<td>${_pct(porMes[m].sat,porMes[m].total)}%</td>`).join('');
-  const t3 = `<div align="center"><table>
-    <tr><th>CALIFICACIÓN</th>${hMeses}<th>TOTAL</th></tr>
-    <tr><td>Satisfactorio</td>${fSat3}<td>${sat}</td></tr>
-    <tr><td>Por Mejorar</td>${fMej3}<td>${mej}</td></tr>
-    <tr><td>Deficiente</td>${fDef3}<td>${def}</td></tr>
-    <tr><td><strong>TOTAL</strong></td>${fTot3}<td><strong>${total}</strong></td></tr>
-    <tr><td><em>% Satisfactorio</em></td>${fPct3}<td></td></tr>
-  </table></div>`;
+  const hMeses = meses.map(m=>`<th style="border:1px solid #000; background:#e2e8f0; padding:6px;">${_mesCorto(m)}</th>`).join('');
+  const fSat3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${porMes[m].sat}</td>`).join('');
+  const fMej3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${porMes[m].mej}</td>`).join('');
+  const fDef3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${porMes[m].def}</td>`).join('');
+  const fTot3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${porMes[m].total}</td>`).join('');
+  const fPct3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${_pct(porMes[m].sat,porMes[m].total)}%</td>`).join('');
+  
+  const t3 = `<table align="center" style="width:90%; border-collapse:collapse; margin:10px auto 20px auto; font-size:10pt;">
+    <tr><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">CALIFICACIÓN</th>${hMeses}<th style="border:1px solid #000; background:#e2e8f0; padding:6px;">TOTAL</th></tr>
+    <tr><td style="border:1px solid #000; padding:6px;">Satisfactorio</td>${fSat3}<td style="border:1px solid #000; padding:6px;">${sat}</td></tr>
+    <tr><td style="border:1px solid #000; padding:6px;">Por Mejorar</td>${fMej3}<td style="border:1px solid #000; padding:6px;">${mej}</td></tr>
+    <tr><td style="border:1px solid #000; padding:6px;">Deficiente</td>${fDef3}<td style="border:1px solid #000; padding:6px;">${def}</td></tr>
+    <tr><td style="border:1px solid #000; padding:6px;"><strong>TOTAL</strong></td>${fTot3}<td style="border:1px solid #000; padding:6px;"><strong>${total}</strong></td></tr>
+    <tr><td style="border:1px solid #000; padding:6px;"><em>% Satisfactorio</em></td>${fPct3}<td style="border:1px solid #000; padding:6px;"></td></tr>
+  </table>`;
 
   // Tabla N°5
   let t5Html = '';
@@ -2037,102 +2038,108 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
         const bg = p>=90?'#dcfce7':p>=75?'#fef3c7':'#fee2e2';
         const co = p>=90?'#166534':p>=75?'#d97706':'#dc2626';
         return `<tr>
-          <td style="text-align:left">${s}</td>
-          <td>${d.sat}</td>
-          <td style="background:${bg};color:${co};font-weight:bold">${p}%</td>
-          <td>${d.mej}</td><td>${d.def}</td><td><strong>${d.total}</strong></td>
+          <td style="border:1px solid #000; padding:6px; text-align:left;">${s}</td>
+          <td style="border:1px solid #000; padding:6px;">${d.sat}</td>
+          <td style="border:1px solid #000; padding:6px; background:${bg}; color:${co}; font-weight:bold;">${p}%</td>
+          <td style="border:1px solid #000; padding:6px;">${d.mej}</td>
+          <td style="border:1px solid #000; padding:6px;">${d.def}</td>
+          <td style="border:1px solid #000; padding:6px;"><strong>${d.total}</strong></td>
         </tr>`;
       }).join('');
     t5Html = `
-      <h3 class="center">Tabla N° 5. Calidad de Registro por Departamento / Servicio</h3>
-      <div align="center"><table>
-        <tr><th style="text-align:left">SERVICIO</th><th>SAT.</th><th>%SAT.</th><th>POR MEJ.</th><th>DEFIC.</th><th>TOTAL</th></tr>
+      <h3 align="center" style="color:#1e3a6e; text-align:center;">Tabla N° 5. Calidad de Registro por Departamento / Servicio</h3>
+      <table align="center" style="width:90%; border-collapse:collapse; margin:10px auto 20px auto; font-size:10pt;">
+        <tr><th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:left;">SERVICIO</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">SAT.</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">%SAT.</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">POR MEJ.</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">DEFIC.</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">TOTAL</th></tr>
         ${filas5}
-        <tr><td style="text-align:left"><strong>TOTAL</strong></td><td>${sat}</td><td>${_pct(sat,total)}%</td><td>${mej}</td><td>${def}</td><td><strong>${total}</strong></td></tr>
-      </table></div>
-      ${imgServ ? `<div align="center"><img src="${imgServ}" width="500"/></div>` : ''}
+        <tr><td style="border:1px solid #000; padding:6px; text-align:left;"><strong>TOTAL</strong></td><td style="border:1px solid #000; padding:6px;">${sat}</td><td style="border:1px solid #000; padding:6px;">${_pct(sat,total)}%</td><td style="border:1px solid #000; padding:6px;">${mej}</td><td style="border:1px solid #000; padding:6px;">${def}</td><td style="border:1px solid #000; padding:6px;"><strong>${total}</strong></td></tr>
+      </table>
+      ${imgServ ? `<p align="center" style="text-align:center;"><img src="${imgServ}" width="500"/></p>` : ''}
       <br>`;
   }
 
-  // Tabla Anexo N°1 (Agregamos colores a la columna CALIFICACIÓN)
+  // Tabla Anexo N°1
   const filasAnexo = _expData.map((r,i) => {
     const bg = r.calificacion==='SATISFACTORIO'?'#dcfce7':r.calificacion==='POR MEJORAR'?'#fef3c7':'#fee2e2';
     const co = r.calificacion==='SATISFACTORIO'?'#166534':r.calificacion==='POR MEJORAR'?'#d97706':'#dc2626';
     return `<tr>
-      <td>${i+1}</td><td>${r.num_auditoria||''}</td><td>${r.hc||''}</td>
-      <td style="text-align:left">${r.servicio||''}</td><td>CONSULTA EXTERNA</td>
-      <td><strong>${r.puntaje||''}</strong></td>
-      <td style="background:${bg};color:${co};font-weight:bold">${r.calificacion||''}</td>
+      <td style="border:1px solid #000; padding:6px;">${i+1}</td>
+      <td style="border:1px solid #000; padding:6px;">${r.num_auditoria||''}</td>
+      <td style="border:1px solid #000; padding:6px;">${r.hc||''}</td>
+      <td style="border:1px solid #000; padding:6px; text-align:left;">${r.servicio||''}</td>
+      <td style="border:1px solid #000; padding:6px;">CONSULTA EXTERNA</td>
+      <td style="border:1px solid #000; padding:6px;"><strong>${r.puntaje||''}</strong></td>
+      <td style="border:1px solid #000; padding:6px; background:${bg}; color:${co}; font-weight:bold;">${r.calificacion||''}</td>
     </tr>`;
   }).join('');
 
-  // Estructura HTML para Word (Centrado y Profesional)
+  // HTML DEL DOCUMENTO WORD - Ajustado sin "margin:2cm" para evitar el salto a la derecha. 
+  // Uso de <p align="center"> y <table align="center"> nativos para máxima compatibilidad.
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
     xmlns:w='urn:schemas-microsoft-com:office:word'
     xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset='utf-8'><title>Informe Auditoría</title>
   <style>
-    body { font-family:Arial,sans-serif; font-size:11pt; margin:2cm; }
-    h1,h2,h3,h4 { font-family:Arial,sans-serif; color:#1e3a6e; text-align:center; }
-    table { width:90%; border-collapse:collapse; margin:10px auto 20px auto; font-size:10pt; }
-    th,td { border:1px solid #000; padding:5px 8px; text-align:center; vertical-align:middle; }
-    th { background:#e2e8f0; font-weight:bold; }
-    td:first-child { text-align:left; }
-    .center { text-align:center; }
+    body { font-family:Arial,sans-serif; font-size:11pt; }
     .page-break { page-break-before:always; }
     .fuente { font-size:9pt; color:#555; margin-top:4px; text-align:center; }
   </style>
   </head>
   <body>
-    <h2 class="center">INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA</h2>
-    <div align="center">
-      <p><strong>Fecha de Emisión:</strong> ${fechaHoy} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Total de HCs evaluadas:</strong> ${total}</p>
-    </div>
+    <h2 align="center" style="color:#1e3a6e; text-align:center;">INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA</h2>
+    <p align="center" style="text-align:center;">
+      <strong>Fecha de Emisión:</strong> ${fechaHoy} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Total de HCs evaluadas:</strong> ${total}
+    </p>
 
-    <h3 style="text-align:left">3.3. RESULTADOS</h3>
-    <h4 style="text-align:left">3.3.1. Evaluación de la Calidad del Registro</h4>
-    <p style="text-align:justify">${narrativo.split('\n\n')[0] || ''}</p>
+    <h3 style="color:#1e3a6e; text-align:left;">3.3. RESULTADOS</h3>
+    <h4 style="color:#1e3a6e; text-align:left;">3.3.1. Evaluación de la Calidad del Registro</h4>
+    <p style="text-align:justify;">${narrativo.split('\n\n')[0] || ''}</p>
 
-    <p class="center"><strong>Tabla N° 2. Calidad de registro de las HCs auditadas — Hospital Santa Rosa</strong></p>
+    <p align="center" style="text-align:center;"><strong>Tabla N° 2. Calidad de registro de las HCs auditadas — Hospital Santa Rosa</strong></p>
     ${t2}
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
 
-    ${imgPastel ? `<p class="center"><strong>Gráfico N° 2. Distribución de Calificaciones</strong></p>
-    <div align="center"><img src="${imgPastel}" width="400"/></div>
+    ${imgPastel ? `
+    <p align="center" style="text-align:center;"><strong>Gráfico N° 2. Distribución de Calificaciones</strong></p>
+    <p align="center" style="text-align:center;"><img src="${imgPastel}" width="400"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-    <p style="text-align:justify">${narrativo.split('\n\n')[1] || ''}</p>
+    <p style="text-align:justify;">${narrativo.split('\n\n')[1] || ''}</p>
 
-    <p class="center"><strong>Tabla N° 3. Calidad de Registro por Mes — Hospital Santa Rosa</strong></p>
+    <p align="center" style="text-align:center;"><strong>Tabla N° 3. Calidad de Registro por Mes — Hospital Santa Rosa</strong></p>
     ${t3}
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
 
-    ${imgBarras ? `<p class="center"><strong>Gráfico N° 3. Evolución por Mes</strong></p>
-    <div align="center"><img src="${imgBarras}" width="450"/></div>
+    ${imgBarras ? `
+    <p align="center" style="text-align:center;"><strong>Gráfico N° 3. Evolución por Mes</strong></p>
+    <p align="center" style="text-align:center;"><img src="${imgBarras}" width="450"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
     ${t5Html}
 
-    <h4 style="text-align:left">3.3.2. Promedio de Cumplimiento del correcto registro</h4>
-    <p style="text-align:justify">${narrativo.split('\n\n')[2] || ''}</p>
+    <h4 style="color:#1e3a6e; text-align:left;">3.3.2. Promedio de Cumplimiento del correcto registro</h4>
+    <p style="text-align:justify;">${narrativo.split('\n\n')[2] || ''}</p>
 
-    <div class="page-break"></div>
     <br clear="all" style="page-break-before:always" />
+    <div class="page-break"></div>
 
-    <h2 class="center" style="margin-top:20px">ANEXO N° 1</h2>
-    <h3 class="center">Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa</h3>
-    <div align="center">
-      <table style="width:100%;">
-        <thead>
-          <tr>
-            <th style="text-align:center">N°</th><th>MES</th><th>N° HC</th>
-            <th style="text-align:center">DEPARTAMENTO/SERVICIO AUDITADO</th><th>ÁREA</th>
-            <th>PUNTAJE</th><th>CALIFICACIÓN</th>
-          </tr>
-        </thead>
-        <tbody>${filasAnexo}</tbody>
-      </table>
-    </div>
+    <h2 align="center" style="color:#1e3a6e; text-align:center; margin-top:20px;">ANEXO N° 1</h2>
+    <h3 align="center" style="color:#1e3a6e; text-align:center;">Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa</h3>
+    
+    <table align="center" style="width:100%; border-collapse:collapse; margin:10px auto; font-size:10pt;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">N°</th>
+          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">MES</th>
+          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">N° HC</th>
+          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">DEPARTAMENTO/SERVICIO AUDITADO</th>
+          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">ÁREA</th>
+          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">PUNTAJE</th>
+          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">CALIFICACIÓN</th>
+        </tr>
+      </thead>
+      <tbody>${filasAnexo}</tbody>
+    </table>
+
   </body></html>`;
 
   const blob = new Blob(['\ufeff', html], { type:'application/msword' });
