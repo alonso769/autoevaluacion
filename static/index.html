@@ -532,6 +532,16 @@ table.main-tbl tr:hover td{background:#fdf8f0}
     <div class="modal-body" id="modalBody"></div>
   </div>
 </div>
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head" style="position:relative">
+      <h2 id="modalTitle">Detalle</h2>
+      <p id="modalSub"></p>
+      <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modalExportOverlay" onclick="if(event.target.id==='modalExportOverlay') document.getElementById('modalExportOverlay').classList.remove('open')">
   <div class="modal" style="max-width: 950px; max-height: 95vh; display: flex; flex-direction: column;">
@@ -548,29 +558,20 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <label>Año</label>
           <select id="expAnio" onchange="actualizarPreviewExport()"></select>
         </div>
-        
-        <div class="fg" style="flex:1;">
-          <label>Meses</label>
-          <div class="custom-ms" id="wrapMesExp" style="width:100%;">
-             <div class="ms-btn" onclick="document.getElementById('menuMesExp').classList.toggle('show')">
-               <span id="textMesExp">Todos los meses</span> <span>▼</span>
-             </div>
-             <div class="ms-menu" id="menuMesExp"></div>
-          </div>
+        <div class="custom-ms" id="wrapMesExp" style="flex:1;">
+           <div class="ms-btn" onclick="document.getElementById('menuMesExp').classList.toggle('show')">
+             <span id="textMesExp">Todos los meses</span> <span>▼</span>
+           </div>
+           <div class="ms-menu" id="menuMesExp"></div>
         </div>
-
-        <div class="fg" style="flex:1.5;">
-          <label>Servicios</label>
-          <div class="custom-ms" id="wrapServExp" style="width:100%;">
-             <div class="ms-btn" onclick="document.getElementById('menuServExp').classList.toggle('show')">
-               <span id="textServExp">Todos los servicios</span> <span>▼</span>
-             </div>
-             <div class="ms-menu" id="menuServExp"></div>
-          </div>
+        <div class="fg">
+          <label>Servicio</label>
+          <select id="expServ" onchange="actualizarPreviewExport()"></select>
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;">
+        
         <div class="section-card" style="align-self: start;">
           <div class="card-head"><h3>Tabla N° 2. Calidad de registro</h3></div>
           <div class="card-body">
@@ -597,6 +598,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
             </div>
           </div>
         </div>
+
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
@@ -1335,73 +1337,60 @@ function showToast(msg,type=''){const t=document.getElementById('toast');t.textC
 // MINI SISTEMA DE GENERACIÓN DE INFORMES OFICIALES
 // =====================================================================
 let expChart = null;
-let expBarChart = null; 
+let expBarChart = null; // Variable para el gráfico de barras
 let dataExportacion = [];
 
 function abrirModalExportacion() {
-  // 1. Llenar selector de año
+  // 1. Llenar selectores base
   document.getElementById('expAnio').innerHTML = document.getElementById('filtAnio').innerHTML;
   
-  // 2. Clonar checkboxes de meses
+  // Clonar checkboxes de meses
   const menuExp = document.getElementById('menuMesExp');
   menuExp.innerHTML = document.getElementById('menuMesDash').innerHTML.replace(/aplicarFiltrosGlobal/g, 'actualizarPreviewExport');
 
   document.getElementById('modalExportOverlay').classList.add('open');
-  
-  // Llamamos a la actualización que ahora también construirá los servicios
   actualizarPreviewExport();
 }
 
 function actualizarPreviewExport() {
   const anioSel = document.getElementById('expAnio').value;
-  
-  const checksMes = document.querySelectorAll('#menuMesExp input[type="checkbox"]:checked');
-  const mesesSel = Array.from(checksMes).map(cb => cb.value);
+  const checks = document.querySelectorAll('#menuMesExp input[type="checkbox"]:checked');
+  const mesesSel = Array.from(checks).map(cb => cb.value);
 
-  // --- FILTRO EN CASCADA PARA SERVICIOS (MULTIPLE) ---
-  // 1. Capturamos los servicios que ya estaban marcados (para no perderlos al actualizar)
-  const checksServOld = document.querySelectorAll('#menuServExp input[type="checkbox"]:checked');
-  let servSel = Array.from(checksServOld).map(cb => cb.value);
+  // --- FILTRO EN CASCADA PARA SERVICIOS ---
+  const selectorServicio = document.getElementById('expServ');
+  const servSel = selectorServicio.value;
 
-  // 2. Buscamos qué servicios están disponibles en este Año y Mes
   const serviciosDisponibles = [...new Set(allData.filter(r => {
     if (anioSel && r.anio !== anioSel) return false;
     if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
     return true;
   }).map(r => r.servicio).filter(s => s !== '—'))].sort();
 
-  // 3. Filtramos los seleccionados por si alguno ya no existe en este año
-  servSel = servSel.filter(s => serviciosDisponibles.includes(s));
+  selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
+    serviciosDisponibles.map(sv => `<option value="${sv}">${sv.length > 40 ? sv.substring(0, 40) + '...' : sv}</option>`).join('');
+  
+  if (serviciosDisponibles.includes(servSel)) {
+    selectorServicio.value = servSel;
+  }
+  // ----------------------------------------
 
-  // 4. Dibujamos las opciones de servicios dinámicamente
-  const menuServExp = document.getElementById('menuServExp');
-  menuServExp.innerHTML = serviciosDisponibles.map(sv => `
-    <label class="ms-item">
-      <input type="checkbox" value="${sv}" onchange="actualizarPreviewExport()" ${servSel.includes(sv) ? 'checked' : ''}> ${sv.length > 45 ? sv.substring(0, 45) + '...' : sv}
-    </label>
-  `).join('');
-  // ---------------------------------------------------
+  // Actualizar texto del botón de meses
+  const textBtn = document.getElementById('textMesExp');
+  if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
+  else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
+  else textBtn.textContent = `${mesesSel.length} seleccionados`;
 
-  // Actualizar texto del botón de Meses
-  const textBtnMes = document.getElementById('textMesExp');
-  if (mesesSel.length === 0) textBtnMes.textContent = 'Todos los meses';
-  else if (mesesSel.length === 1) textBtnMes.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
-  else textBtnMes.textContent = `${mesesSel.length} seleccionados`;
-
-  // Actualizar texto del botón de Servicios
-  const textBtnServ = document.getElementById('textServExp');
-  if (servSel.length === 0) textBtnServ.textContent = 'Todos los servicios';
-  else if (servSel.length === 1) textBtnServ.textContent = servSel[0].length > 25 ? servSel[0].substring(0, 25) + '...' : servSel[0];
-  else textBtnServ.textContent = `${servSel.length} seleccionados`;
-
-  // Filtrar data final para gráficas y tablas
+  // Filtrar data con el servicio ya actualizado
+  const finalServSel = selectorServicio.value;
   dataExportacion = allData.filter(r => {
     if (anioSel && r.anio !== anioSel) return false;
     if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-    if (servSel.length > 0 && !servSel.includes(r.servicio)) return false;
+    if (finalServSel && r.servicio !== finalServSel) return false;
     return true;
   });
 
+  // Calcular totales (Global y Por Mes)
   let sat = 0, mej = 0, def = 0;
   const porMes = {}; 
 
@@ -1410,6 +1399,7 @@ function actualizarPreviewExport() {
     else if (r.calificacion === 'POR MEJORAR') mej++;
     else def++;
 
+    // Agrupar por mes para el Gráfico 3
     const m = r.num_auditoria || 'Sin Mes';
     if(!porMes[m]) porMes[m] = { sat:0, mej:0, def:0 };
     if(r.calificacion === 'SATISFACTORIO') porMes[m].sat++;
@@ -1422,6 +1412,7 @@ function actualizarPreviewExport() {
   const pctMej = total ? ((mej/total)*100).toFixed(1) : 0;
   const pctDef = total ? ((def/total)*100).toFixed(1) : 0;
 
+  // Dibujar Tabla N° 2
   const tbody = document.getElementById('expTablePreview');
   tbody.innerHTML = `
     <tr><th style="text-align:left">CALIFICACIÓN</th><th>N°</th><th>%</th></tr>
@@ -1431,6 +1422,7 @@ function actualizarPreviewExport() {
     <tr style="background:var(--cream2);font-weight:bold"><td style="text-align:left">TOTAL</td><td>${total}</td><td>100%</td></tr>
   `;
 
+  // Dibujar Gráfico N° 2 (Pastel)
   if(expChart) expChart.destroy();
   const ctx = document.getElementById('expChartPreview').getContext('2d');
   expChart = new Chart(ctx, {
@@ -1442,6 +1434,7 @@ function actualizarPreviewExport() {
     options: { animation: false, responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
   });
 
+  // Dibujar Gráfico N° 3 (Barras)
   const mesesLabels = Object.keys(porMes).sort(); 
   const satData = mesesLabels.map(m => porMes[m].sat);
   const mejData = mesesLabels.map(m => porMes[m].mej);
@@ -1484,6 +1477,7 @@ function generarReporteFinal(formato) {
 
   const mesesLabels = Object.keys(porMes).sort();
 
+  // Tomamos la "foto" EXACTAMENTE AHORA
   const canvasPastel = document.getElementById('expChartPreview');
   const canvasBarras = document.getElementById('expBarChartPreview');
   const chartImage = canvasPastel ? canvasPastel.toDataURL("image/png", 1.0) : '';
@@ -1523,6 +1517,7 @@ function generarReporteFinal(formato) {
       let filaMej = mesesLabels.map(m => `<td>${porMes[m].mej}</td>`).join('');
       let filaDef = mesesLabels.map(m => `<td>${porMes[m].def}</td>`).join('');
 
+      // AQUI GENERAMOS LA LISTA DEL ANEXO 1 CON COLORES
       const filasAnexo = dataExportacion.map((r, i) => {
          let bgCalif = r.calificacion === 'SATISFACTORIO' ? '#dcfce7' : r.calificacion === 'POR MEJORAR' ? '#fef3c7' : '#fee2e2';
          let colorCalif = r.calificacion === 'SATISFACTORIO' ? '#166534' : r.calificacion === 'POR MEJORAR' ? '#d97706' : '#dc2626';
