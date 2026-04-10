@@ -521,94 +521,282 @@ table.main-tbl tr:hover td{background:#fdf8f0}
   </div><!-- /content -->
 </div><!-- /appPage -->
 
-<!-- MODAL DETALLE -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-  <div class="modal">
-    <div class="modal-head" style="position:relative">
-      <h2 id="modalTitle">Detalle</h2>
-      <p id="modalSub"></p>
-      <button class="modal-close" onclick="closeModalBtn()">✕</button>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
-  </div>
-</div>
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-  <div class="modal">
-    <div class="modal-head" style="position:relative">
-      <h2 id="modalTitle">Detalle</h2>
-      <p id="modalSub"></p>
-      <button class="modal-close" onclick="closeModalBtn()">✕</button>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
-  </div>
-</div>
+<!-- ============================================================
+     MODAL EXPORTACIÓN — GENERADOR DE INFORMES OFICIALES v2.0
+     Analizado en base a informes reales del Hospital Santa Rosa
+     Mejoras: selección múltiple de servicios, texto narrativo
+     automático, Tabla N°3 por mes, Tabla N°5 por servicio,
+     gráficos adicionales, Word con estructura oficial completa.
+     ============================================================ -->
 
-<div class="modal-overlay" id="modalExportOverlay" onclick="if(event.target.id==='modalExportOverlay') document.getElementById('modalExportOverlay').classList.remove('open')">
-  <div class="modal" style="max-width: 950px; max-height: 95vh; display: flex; flex-direction: column;">
-    <div class="modal-head" style="background: #1e3a6e;">
-      <h2 style="font-family:'Playfair Display',serif;">Generador de Informes Oficiales</h2>
-      <p>Configure los filtros, revise la vista previa y genere el documento.</p>
-      <button class="modal-close" onclick="document.getElementById('modalExportOverlay').classList.remove('open')">✕</button>
+<!-- ── MODAL EXPORTACIÓN ─────────────────────────────────────── -->
+<div class="modal-overlay" id="modalExportOverlay"
+     onclick="if(event.target.id==='modalExportOverlay') cerrarModalExport()">
+  <div class="modal exp-modal">
+
+    <!-- Cabecera -->
+    <div class="modal-head exp-head">
+      <div>
+        <h2 class="exp-titulo">Generador de Informes Oficiales</h2>
+        <p class="exp-sub">Configure los filtros, revise la vista previa y genere el documento.</p>
+      </div>
+      <button class="modal-close" onclick="cerrarModalExport()">✕</button>
     </div>
-    
-    <div class="modal-body" style="background: var(--cream); overflow-y: auto; padding-bottom: 30px;">
-      
-      <div class="filters-bar" style="margin-bottom: 20px;">
+
+    <!-- Cuerpo -->
+    <div class="modal-body exp-body">
+
+      <!-- ── FILTROS ── -->
+      <div class="exp-filtros">
+
+        <!-- Año -->
         <div class="fg">
-          <label>Año</label>
+          <label>AÑO</label>
           <select id="expAnio" onchange="actualizarPreviewExport()"></select>
         </div>
-        <div class="custom-ms" id="wrapMesExp" style="flex:1;">
-           <div class="ms-btn" onclick="document.getElementById('menuMesExp').classList.toggle('show')">
-             <span id="textMesExp">Todos los meses</span> <span>▼</span>
-           </div>
-           <div class="ms-menu" id="menuMesExp"></div>
+
+        <!-- Meses (multi-select existente) -->
+        <div class="custom-ms" id="wrapMesExp" style="flex:1.2">
+          <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">MESES</label>
+          <div class="ms-btn" onclick="toggleMesExp()">
+            <span id="textMesExp">Todos los meses</span> <span>▼</span>
+          </div>
+          <div class="ms-menu" id="menuMesExp"></div>
         </div>
-        <div class="fg">
-          <label>Servicio</label>
-          <select id="expServ" onchange="actualizarPreviewExport()"></select>
+
+        <!-- Servicios (multi-select NUEVO) -->
+        <div class="custom-ms" id="wrapServExp" style="flex:2">
+          <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">SERVICIOS</label>
+          <div class="ms-btn" onclick="toggleServExp()">
+            <span id="textServExp">Todos los servicios</span> <span>▼</span>
+          </div>
+          <div class="ms-menu" id="menuServExp" style="min-width:340px;max-height:240px;overflow-y:auto;"></div>
+        </div>
+
+        <!-- Botón actualizar -->
+        <div class="fg" style="align-self:flex-end">
+          <button class="fbtn primary" style="width:100%;font-size:13px;" onclick="actualizarPreviewExport()">
+            🔄 Actualizar
+          </button>
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;">
-        
-        <div class="section-card" style="align-self: start;">
-          <div class="card-head"><h3>Tabla N° 2. Calidad de registro</h3></div>
-          <div class="card-body">
-             <table class="detail-table" id="expTablePreview" style="text-align: center;">
-                </table>
-          </div>
-        </div>
+      <!-- Resumen rápido -->
+      <div id="expResumenRapido" class="exp-resumen-bar"></div>
 
-        <div style="display: flex; flex-direction: column; gap: 20px;">
+      <!-- ── GRILLA DE PREVISUALIZACIÓN ── -->
+      <div class="exp-grid">
+
+        <!-- COL IZQUIERDA: tablas -->
+        <div class="exp-col-tablas">
+
+          <!-- Tabla N°2 -->
           <div class="section-card">
-            <div class="card-head"><h3>Gráfico N° 2. Distribución</h3></div>
-            <div class="card-body" style="background: #fff;">
-               <div class="chart-wrap-sm" style="height: 220px;">
-                  <canvas id="expChartPreview"></canvas>
-               </div>
+            <div class="card-head"><h3>Tabla N° 2 · Calidad de registro global</h3></div>
+            <div class="card-body">
+              <table class="detail-table text-center" id="expTabla2"></table>
             </div>
           </div>
+
+          <!-- Tabla N°3 por mes -->
           <div class="section-card">
-            <div class="card-head"><h3>Gráfico N° 3. Evolución por Mes</h3></div>
-            <div class="card-body" style="background: #fff;">
-               <div class="chart-wrap-sm" style="height: 220px;">
-                  <canvas id="expBarChartPreview"></canvas>
-               </div>
+            <div class="card-head"><h3>Tabla N° 3 · Calidad por Mes</h3></div>
+            <div class="card-body" style="overflow-x:auto">
+              <table class="detail-table text-center" id="expTabla3"></table>
             </div>
           </div>
+
+          <!-- Tabla N°5 por servicio (solo si hay varios servicios) -->
+          <div class="section-card" id="wrapTabla5">
+            <div class="card-head"><h3>Tabla N° 5 · Calidad por Servicio</h3></div>
+            <div class="card-body" style="overflow-x:auto">
+              <table class="detail-table text-center" id="expTabla5"></table>
+            </div>
+          </div>
+
         </div>
 
+        <!-- COL DERECHA: gráficos -->
+        <div class="exp-col-graficos">
+
+          <!-- Gráfico N°2 pastel -->
+          <div class="section-card">
+            <div class="card-head"><h3>Gráfico N° 2 · Distribución</h3></div>
+            <div class="card-body" style="background:#fff">
+              <div style="height:230px"><canvas id="expChart2"></canvas></div>
+            </div>
+          </div>
+
+          <!-- Gráfico N°3 barras por mes -->
+          <div class="section-card">
+            <div class="card-head"><h3>Gráfico N° 3 · Evolución por Mes</h3></div>
+            <div class="card-body" style="background:#fff">
+              <div style="height:230px"><canvas id="expChart3"></canvas></div>
+            </div>
+          </div>
+
+          <!-- Gráfico N°5 barras por servicio -->
+          <div class="section-card" id="wrapGraf5">
+            <div class="card-head"><h3>Gráfico N° 5 · % Satisfactorio por Servicio</h3></div>
+            <div class="card-body" style="background:#fff">
+              <div style="height:230px"><canvas id="expChart5"></canvas></div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /exp-grid -->
+
+      <!-- ── TEXTO NARRATIVO AUTOMÁTICO ── -->
+      <div class="section-card" style="margin-top:18px">
+        <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+          <h3>📝 Texto Narrativo Automático</h3>
+          <button class="fbtn" style="font-size:12px;padding:4px 12px;background:var(--cream2);color:var(--navy);border:1px solid var(--border)"
+                  onclick="copiarNarrativo()">📋 Copiar texto</button>
+        </div>
+        <div class="card-body">
+          <div id="expNarrativo" style="font-size:13px;line-height:1.7;color:#333;white-space:pre-line;font-family:'Georgia',serif;"></div>
+        </div>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
-        <button class="fbtn primary" onclick="generarReporteFinal('word')" style="background: #2b579a; font-size: 14px;">📄 Descargar Informe (Word)</button>
-        <button class="fbtn success" onclick="generarReporteFinal('excel')" style="background: #107c41; font-size: 14px;">📊 Descargar Anexo 1 (Excel)</button>
+      <!-- ── BOTONES DE DESCARGA ── -->
+      <div class="exp-botones">
+        <button class="fbtn" onclick="cerrarModalExport()"
+                style="background:var(--cream2);color:var(--navy);border:1px solid var(--border);font-size:14px">
+          Cancelar
+        </button>
+        <button class="fbtn success" onclick="generarReporteFinal('excel')"
+                style="background:#107c41;font-size:14px">
+          📊 Descargar Anexo 1 (Excel)
+        </button>
+        <button class="fbtn primary" onclick="generarReporteFinal('word')"
+                style="background:#2b579a;font-size:14px">
+          📄 Descargar Informe Completo (Word)
+        </button>
       </div>
 
-    </div>
-  </div>
-</div>
+    </div><!-- /modal-body -->
+  </div><!-- /modal -->
+</div><!-- /overlay -->
+
+
+<!-- ============================================================
+     CSS ADICIONAL DEL MODAL
+     (agregar dentro del <style> global o en un bloque aparte)
+     ============================================================ -->
+<style>
+/* Modal principal */
+.exp-modal {
+  max-width: 1100px;
+  width: 96vw;
+  max-height: 96vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.exp-head {
+  background: linear-gradient(135deg, #1e3a6e 0%, #2b579a 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 24px;
+}
+.exp-titulo { font-family:'Playfair Display',serif; font-size:20px; margin:0; color:#fff; }
+.exp-sub { font-size:13px; color:rgba(255,255,255,.75); margin:4px 0 0; }
+.exp-body { background:var(--cream,#f8f5ee); overflow-y:auto; padding:20px 24px 28px; flex:1; }
+
+/* Filtros */
+.exp-filtros {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--border,#e0d9cf);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+/* Resumen rápido */
+.exp-resumen-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.exp-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--border,#e0d9cf);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy,#1e3a6e);
+  flex: 1;
+  min-width: 130px;
+}
+.exp-badge .badge-num { font-size: 22px; font-weight: 800; }
+.exp-badge.sat { border-left: 4px solid #82c91e; }
+.exp-badge.mej { border-left: 4px solid #facc15; }
+.exp-badge.def { border-left: 4px solid #ef4444; }
+.exp-badge.tot { border-left: 4px solid var(--navy,#1e3a6e); }
+.exp-badge.pct { border-left: 4px solid #3b82f6; }
+
+/* Grid previsualización */
+.exp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 18px;
+  align-items: start;
+}
+.exp-col-tablas, .exp-col-graficos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@media (max-width: 820px) {
+  .exp-grid { grid-template-columns: 1fr; }
+}
+
+/* Botones finales */
+.exp-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border,#e0d9cf);
+}
+
+/* Multi-select servicios */
+#menuServExp .ms-item { padding: 7px 14px; font-size: 13px; }
+#menuServExp .ms-item:hover { background: var(--cream2,#f0ebe0); }
+#menuServExp .ms-item input { margin-right: 8px; }
+#menuServExp .ms-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border,#e0d9cf);
+}
+#menuServExp .ms-actions button {
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border,#e0d9cf);
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--cream,#f8f5ee);
+  color: var(--navy,#1e3a6e);
+}
+
+/* Tabla centrada */
+.text-center td, .text-center th { text-align: center !important; }
+.text-center td:first-child, .text-center th:first-child { text-align: left !important; }
+</style>
 <script>
   const API = '/api';
 let session = null;
@@ -1336,278 +1524,723 @@ function showToast(msg,type=''){const t=document.getElementById('toast');t.textC
 // =====================================================================
 // MINI SISTEMA DE GENERACIÓN DE INFORMES OFICIALES
 // =====================================================================
-let expChart = null;
-let expBarChart = null; // Variable para el gráfico de barras
-let dataExportacion = [];
+// ── Instancias de Chart.js ────────────────────────────────────
+let _ch2 = null, _ch3 = null, _ch5 = null;
 
+// ── Datos computados para exportación ────────────────────────
+let _expData = [];
+
+// ── Servicios seleccionados (multi) ──────────────────────────
+let _serviciosSelExp = new Set(); // vacío = todos
+
+// ──────────────────────────────────────────────────────────────
+// 1. ABRIR MODAL
+// ──────────────────────────────────────────────────────────────
 function abrirModalExportacion() {
-  // 1. Llenar selectores base
-  document.getElementById('expAnio').innerHTML = document.getElementById('filtAnio').innerHTML;
-  
-  // Clonar checkboxes de meses
-  const menuExp = document.getElementById('menuMesExp');
-  menuExp.innerHTML = document.getElementById('menuMesDash').innerHTML.replace(/aplicarFiltrosGlobal/g, 'actualizarPreviewExport');
+  // Poblar Año
+  const selAnio = document.getElementById('expAnio');
+  selAnio.innerHTML = document.getElementById('filtAnio').innerHTML;
+
+  // Poblar Meses (clonar checkboxes del dashboard)
+  const menuMes = document.getElementById('menuMesExp');
+  menuMes.innerHTML = document.getElementById('menuMesDash').innerHTML
+    .replace(/aplicarFiltrosGlobal/g, 'actualizarPreviewExport');
+
+  // Poblar Servicios multi-select
+  _poblarServiciosExp();
 
   document.getElementById('modalExportOverlay').classList.add('open');
   actualizarPreviewExport();
 }
 
-function actualizarPreviewExport() {
+function cerrarModalExport() {
+  document.getElementById('modalExportOverlay').classList.remove('open');
+}
+
+// ──────────────────────────────────────────────────────────────
+// 2. POBLAR MULTI-SELECT DE SERVICIOS
+// ──────────────────────────────────────────────────────────────
+function _poblarServiciosExp() {
   const anioSel = document.getElementById('expAnio').value;
-  const checks = document.querySelectorAll('#menuMesExp input[type="checkbox"]:checked');
-  const mesesSel = Array.from(checks).map(cb => cb.value);
+  const servicios = [...new Set(
+    allData
+      .filter(r => !anioSel || r.anio === anioSel)
+      .map(r => r.servicio)
+      .filter(s => s && s !== '—')
+  )].sort();
 
-  // --- FILTRO EN CASCADA PARA SERVICIOS ---
-  const selectorServicio = document.getElementById('expServ');
-  const servSel = selectorServicio.value;
+  const menu = document.getElementById('menuServExp');
+  menu.innerHTML = `
+    <div class="ms-actions">
+      <button onclick="seleccionarTodosServ(true)">✅ Todos</button>
+      <button onclick="seleccionarTodosServ(false)">❌ Ninguno</button>
+    </div>
+  ` + servicios.map(s => `
+    <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;gap:0">
+      <input type="checkbox" value="${_esc(s)}"
+             ${_serviciosSelExp.size === 0 || _serviciosSelExp.has(s) ? 'checked' : ''}
+             onchange="_onServExpChange(this)">
+      <span style="margin-left:6px;font-size:12px">${s}</span>
+    </label>
+  `).join('');
 
-  const serviciosDisponibles = [...new Set(allData.filter(r => {
-    if (anioSel && r.anio !== anioSel) return false;
-    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-    return true;
-  }).map(r => r.servicio).filter(s => s !== '—'))].sort();
+  _actualizarTextoServExp();
+}
 
-  selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
-    serviciosDisponibles.map(sv => `<option value="${sv}">${sv.length > 40 ? sv.substring(0, 40) + '...' : sv}</option>`).join('');
-  
-  if (serviciosDisponibles.includes(servSel)) {
-    selectorServicio.value = servSel;
+function _onServExpChange(cb) {
+  if (cb.checked) {
+    _serviciosSelExp.add(cb.value);
+  } else {
+    _serviciosSelExp.delete(cb.value);
   }
-  // ----------------------------------------
+  // Si están todos marcados, limpiar set (= todos)
+  const total = document.querySelectorAll('#menuServExp input[type=checkbox]').length;
+  const checked = document.querySelectorAll('#menuServExp input[type=checkbox]:checked').length;
+  if (checked === total) _serviciosSelExp.clear();
+  _actualizarTextoServExp();
+  actualizarPreviewExport();
+}
+
+function seleccionarTodosServ(sel) {
+  document.querySelectorAll('#menuServExp input[type=checkbox]')
+    .forEach(cb => { cb.checked = sel; });
+  _serviciosSelExp.clear();
+  if (!sel) {
+    document.querySelectorAll('#menuServExp input[type=checkbox]')
+      .forEach(cb => _serviciosSelExp.add(cb.value));
+  }
+  _actualizarTextoServExp();
+  actualizarPreviewExport();
+}
+
+function _actualizarTextoServExp() {
+  const total = document.querySelectorAll('#menuServExp input[type=checkbox]').length;
+  const checked = document.querySelectorAll('#menuServExp input[type=checkbox]:checked').length;
+  const txt = document.getElementById('textServExp');
+  if (!txt) return;
+  if (checked === 0) txt.textContent = 'Ningún servicio';
+  else if (checked === total || _serviciosSelExp.size === 0) txt.textContent = 'Todos los servicios';
+  else if (checked === 1) {
+    const v = document.querySelector('#menuServExp input[type=checkbox]:checked')?.value || '';
+    txt.textContent = v.length > 35 ? v.substring(0, 35) + '…' : v;
+  } else txt.textContent = `${checked} servicios`;
+}
+
+function toggleServExp() {
+  document.getElementById('menuServExp').classList.toggle('show');
+}
+function toggleMesExp() {
+  document.getElementById('menuMesExp').classList.toggle('show');
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3. ACTUALIZAR PREVIEW
+// ──────────────────────────────────────────────────────────────
+function actualizarPreviewExport() {
+  const anioSel  = document.getElementById('expAnio').value;
+  const mesesSel = _getMesesSelExp();
+  const servsSel = _getServsSelExp();
 
   // Actualizar texto del botón de meses
-  const textBtn = document.getElementById('textMesExp');
-  if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
-  else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
-  else textBtn.textContent = `${mesesSel.length} seleccionados`;
+  const textMes = document.getElementById('textMesExp');
+  if (textMes) {
+    if (mesesSel.length === 0) textMes.textContent = 'Todos los meses';
+    else if (mesesSel.length === 1) textMes.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
+    else textMes.textContent = `${mesesSel.length} seleccionados`;
+  }
 
-  // Filtrar data con el servicio ya actualizado
-  const finalServSel = selectorServicio.value;
-  dataExportacion = allData.filter(r => {
+  // Re-poblar servicios si cambia el año
+  _poblarServiciosExp();
+
+  // Filtrar datos
+  _expData = allData.filter(r => {
     if (anioSel && r.anio !== anioSel) return false;
     if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-    if (finalServSel && r.servicio !== finalServSel) return false;
+    if (servsSel.length > 0 && !servsSel.includes(r.servicio)) return false;
     return true;
   });
 
-  // Calcular totales (Global y Por Mes)
-  let sat = 0, mej = 0, def = 0;
-  const porMes = {}; 
+  if (_expData.length === 0) {
+    _limpiarPreview();
+    return;
+  }
 
-  dataExportacion.forEach(r => {
-    if (r.calificacion === 'SATISFACTORIO') sat++;
-    else if (r.calificacion === 'POR MEJORAR') mej++;
-    else def++;
+  _renderResumen();
+  _renderTabla2();
+  _renderTabla3();
+  _renderTabla5();
+  _renderGraf2();
+  _renderGraf3();
+  _renderGraf5();
+  _renderNarrativo();
+}
 
-    // Agrupar por mes para el Gráfico 3
-    const m = r.num_auditoria || 'Sin Mes';
-    if(!porMes[m]) porMes[m] = { sat:0, mej:0, def:0 };
-    if(r.calificacion === 'SATISFACTORIO') porMes[m].sat++;
-    else if(r.calificacion === 'POR MEJORAR') porMes[m].mej++;
-    else porMes[m].def++;
-  });
-
-  const total = dataExportacion.length;
-  const pctSat = total ? ((sat/total)*100).toFixed(1) : 0;
-  const pctMej = total ? ((mej/total)*100).toFixed(1) : 0;
-  const pctDef = total ? ((def/total)*100).toFixed(1) : 0;
-
-  // Dibujar Tabla N° 2
-  const tbody = document.getElementById('expTablePreview');
-  tbody.innerHTML = `
-    <tr><th style="text-align:left">CALIFICACIÓN</th><th>N°</th><th>%</th></tr>
-    <tr><td style="text-align:left">Satisfactorio</td><td>${sat}</td><td>${pctSat}%</td></tr>
-    <tr><td style="text-align:left">Por Mejorar</td><td>${mej}</td><td>${pctMej}%</td></tr>
-    <tr><td style="text-align:left">Deficiente</td><td>${def}</td><td>${pctDef}%</td></tr>
-    <tr style="background:var(--cream2);font-weight:bold"><td style="text-align:left">TOTAL</td><td>${total}</td><td>100%</td></tr>
+// ──────────────────────────────────────────────────────────────
+// 4. RESUMEN RÁPIDO (badges)
+// ──────────────────────────────────────────────────────────────
+function _renderResumen() {
+  const { sat, mej, def, total, prom } = _calcGlobal(_expData);
+  document.getElementById('expResumenRapido').innerHTML = `
+    <div class="exp-badge tot"><div><div class="badge-num">${total}</div><div>Total HCs</div></div></div>
+    <div class="exp-badge sat"><div><div class="badge-num">${sat}</div><div>Satisfactorio (${_pct(sat,total)}%)</div></div></div>
+    <div class="exp-badge mej"><div><div class="badge-num">${mej}</div><div>Por Mejorar (${_pct(mej,total)}%)</div></div></div>
+    <div class="exp-badge def"><div><div class="badge-num">${def}</div><div>Deficiente (${_pct(def,total)}%)</div></div></div>
+    <div class="exp-badge pct"><div><div class="badge-num">${prom}%</div><div>Promedio cumplimiento</div></div></div>
   `;
+}
 
-  // Dibujar Gráfico N° 2 (Pastel)
-  if(expChart) expChart.destroy();
-  const ctx = document.getElementById('expChartPreview').getContext('2d');
-  expChart = new Chart(ctx, {
+// ──────────────────────────────────────────────────────────────
+// 5. TABLA N°2
+// ──────────────────────────────────────────────────────────────
+function _renderTabla2() {
+  const { sat, mej, def, total } = _calcGlobal(_expData);
+  document.getElementById('expTabla2').innerHTML = `
+    <thead><tr><th style="text-align:left">CALIFICACIÓN</th><th>N°</th><th>%</th></tr></thead>
+    <tbody>
+      <tr><td style="text-align:left">Satisfactorio</td><td>${sat}</td><td>${_pct(sat,total)}%</td></tr>
+      <tr><td style="text-align:left">Por Mejorar</td><td>${mej}</td><td>${_pct(mej,total)}%</td></tr>
+      <tr><td style="text-align:left">Deficiente</td><td>${def}</td><td>${_pct(def,total)}%</td></tr>
+      <tr style="font-weight:700;background:var(--cream2)">
+        <td style="text-align:left">TOTAL</td><td>${total}</td><td>100%</td>
+      </tr>
+    </tbody>`;
+}
+
+// ──────────────────────────────────────────────────────────────
+// 6. TABLA N°3 (por mes — como en los PDFs reales)
+// ──────────────────────────────────────────────────────────────
+function _renderTabla3() {
+  const porMes = _calcPorMes(_expData);
+  const meses  = Object.keys(porMes).sort();
+  const { sat: tSat, mej: tMej, def: tDef, total } = _calcGlobal(_expData);
+
+  let ths = meses.map(m => `<th>${_mesCorto(m)}</th>`).join('') + '<th>TOTAL</th><th>%SAT</th>';
+  let fSat = meses.map(m => `<td>${porMes[m].sat}</td>`).join('') + `<td>${tSat}</td><td>${_pct(tSat,total)}%</td>`;
+  let fMej = meses.map(m => `<td>${porMes[m].mej}</td>`).join('') + `<td>${tMej}</td><td>${_pct(tMej,total)}%</td>`;
+  let fDef = meses.map(m => `<td>${porMes[m].def}</td>`).join('') + `<td>${tDef}</td><td>${_pct(tDef,total)}%</td>`;
+  let fTot = meses.map(m => `<td>${porMes[m].total}</td>`).join('') + `<td>${total}</td><td>100%</td>`;
+  let fPct = meses.map(m => {
+    const t = porMes[m].total;
+    const s = porMes[m].sat;
+    const p = t ? Math.round(s/t*100) : 0;
+    return `<td style="color:${p>=90?'#166534':p>=75?'#d97706':'#dc2626'};font-weight:700">${p}%</td>`;
+  }).join('') + `<td colspan="2"></td>`;
+
+  document.getElementById('expTabla3').innerHTML = `
+    <thead>
+      <tr><th style="text-align:left">CALIFICACIÓN</th>${ths}</tr>
+    </thead>
+    <tbody>
+      <tr><td style="text-align:left">Satisfactorio</td>${fSat}</tr>
+      <tr><td style="text-align:left">Por Mejorar</td>${fMej}</tr>
+      <tr><td style="text-align:left">Deficiente</td>${fDef}</tr>
+      <tr style="font-weight:700;background:var(--cream2)"><td style="text-align:left">TOTAL</td>${fTot}</tr>
+      <tr style="background:#f0f9ff"><td style="text-align:left;font-style:italic">% Satisfactorio</td>${fPct}</tr>
+    </tbody>`;
+}
+
+// ──────────────────────────────────────────────────────────────
+// 7. TABLA N°5 (por servicio — como en los PDFs reales)
+// ──────────────────────────────────────────────────────────────
+function _renderTabla5() {
+  const porServ = _calcPorServicio(_expData);
+  const servicios = Object.keys(porServ).sort((a,b) =>
+    (porServ[b].sat / (porServ[b].total||1)) - (porServ[a].sat / (porServ[a].total||1))
+  );
+  const mostrar = servicios.length > 1;
+  document.getElementById('wrapTabla5').style.display  = mostrar ? '' : 'none';
+  document.getElementById('wrapGraf5').style.display   = mostrar ? '' : 'none';
+  if (!mostrar) return;
+
+  const filas = servicios.map(s => {
+    const d = porServ[s];
+    const pct = _pct(d.sat, d.total);
+    const color = pct >= 90 ? '#dcfce7' : pct >= 75 ? '#fef3c7' : '#fee2e2';
+    const cTxt  = pct >= 90 ? '#166534' : pct >= 75 ? '#d97706' : '#dc2626';
+    const nombre = s.length > 40 ? s.substring(0,40)+'…' : s;
+    return `<tr>
+      <td style="text-align:left;font-size:12px">${nombre}</td>
+      <td>${d.sat}</td>
+      <td style="background:${color};color:${cTxt};font-weight:700">${pct}%</td>
+      <td>${d.mej}</td>
+      <td>${d.def}</td>
+      <td style="font-weight:700">${d.total}</td>
+    </tr>`;
+  }).join('');
+
+  const { sat: tS, mej: tM, def: tD, total: tT } = _calcGlobal(_expData);
+  document.getElementById('expTabla5').innerHTML = `
+    <thead>
+      <tr>
+        <th style="text-align:left">SERVICIO</th>
+        <th>SAT.</th><th>%SAT.</th><th>POR MEJ.</th><th>DEFIC.</th><th>TOTAL</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filas}
+      <tr style="font-weight:700;background:var(--cream2)">
+        <td style="text-align:left">TOTAL</td>
+        <td>${tS}</td><td>${_pct(tS,tT)}%</td><td>${tM}</td><td>${tD}</td><td>${tT}</td>
+      </tr>
+    </tbody>`;
+}
+
+// ──────────────────────────────────────────────────────────────
+// 8. GRÁFICOS
+// ──────────────────────────────────────────────────────────────
+const COLORS = { sat:'#82c91e', mej:'#facc15', def:'#ef4444' };
+
+function _renderGraf2() {
+  const { sat, mej, def, total } = _calcGlobal(_expData);
+  if (_ch2) _ch2.destroy();
+  _ch2 = new Chart(document.getElementById('expChart2').getContext('2d'), {
     type: 'pie',
     data: {
-      labels: [`Satisfactorio: ${sat} (${pctSat}%)`, `Por Mejorar: ${mej} (${pctMej}%)`, `Deficiente: ${def} (${pctDef}%)`],
-      datasets: [{ data: [sat, mej, def], backgroundColor: ['#82c91e', '#facc15', '#ef4444'], borderWidth: 1 }]
+      labels: [
+        `Satisfactorio: ${sat} (${_pct(sat,total)}%)`,
+        `Por Mejorar: ${mej} (${_pct(mej,total)}%)`,
+        `Deficiente: ${def} (${_pct(def,total)}%)`
+      ],
+      datasets: [{ data: [sat, mej, def], backgroundColor: [COLORS.sat, COLORS.mej, COLORS.def], borderWidth: 2 }]
     },
-    options: { animation: false, responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:'right', labels:{ font:{ size:11 }, boxWidth:14 } } }
+    }
   });
+}
 
-  // Dibujar Gráfico N° 3 (Barras)
-  const mesesLabels = Object.keys(porMes).sort(); 
-  const satData = mesesLabels.map(m => porMes[m].sat);
-  const mejData = mesesLabels.map(m => porMes[m].mej);
-  const defData = mesesLabels.map(m => porMes[m].def);
-
-  if(expBarChart) expBarChart.destroy();
-  const ctxBar = document.getElementById('expBarChartPreview').getContext('2d');
-  expBarChart = new Chart(ctxBar, {
+function _renderGraf3() {
+  const porMes = _calcPorMes(_expData);
+  const meses  = Object.keys(porMes).sort();
+  if (_ch3) _ch3.destroy();
+  _ch3 = new Chart(document.getElementById('expChart3').getContext('2d'), {
     type: 'bar',
     data: {
-      labels: mesesLabels,
+      labels: meses.map(_mesCorto),
       datasets: [
-        { label: 'Satisfactorio', data: satData, backgroundColor: '#82c91e' },
-        { label: 'Por Mejorar', data: mejData, backgroundColor: '#facc15' },
-        { label: 'Deficiente', data: defData, backgroundColor: '#ef4444' }
+        { label:'Satisfactorio', data: meses.map(m=>porMes[m].sat), backgroundColor: COLORS.sat },
+        { label:'Por Mejorar',   data: meses.map(m=>porMes[m].mej), backgroundColor: COLORS.mej },
+        { label:'Deficiente',    data: meses.map(m=>porMes[m].def), backgroundColor: COLORS.def }
       ]
     },
-    options: { animation: false, responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position:'top', labels:{ font:{ size:11 }, boxWidth:12 } } },
+      scales: {
+        x: { stacked: false },
+        y: { beginAtZero:true, ticks:{ stepSize:1 } }
+      }
+    }
   });
 }
 
+function _renderGraf5() {
+  const porServ = _calcPorServicio(_expData);
+  if (Object.keys(porServ).length <= 1) return;
+  const servicios = Object.keys(porServ).sort((a,b) =>
+    (porServ[b].sat/(porServ[b].total||1)) - (porServ[a].sat/(porServ[a].total||1))
+  );
+  const pcts = servicios.map(s => _pct(porServ[s].sat, porServ[s].total));
+  const bgs  = pcts.map(p => p >= 90 ? COLORS.sat : p >= 75 ? COLORS.mej : COLORS.def);
+  const labels = servicios.map(s => s.replace('SERV. DE ','').replace('DPTO. DE ','').substring(0,22));
+
+  if (_ch5) _ch5.destroy();
+  _ch5 = new Chart(document.getElementById('expChart5').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label:'% Satisfactorio', data: pcts, backgroundColor: bgs, borderRadius: 4 }]
+    },
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const s = servicios[ctx.dataIndex];
+              const d = porServ[s];
+              return ` ${ctx.parsed.x}%  (${d.sat}/${d.total} HCs)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { beginAtZero:true, max:100, ticks:{ callback: v => v+'%' } },
+        y: { ticks:{ font:{ size:11 } } }
+      }
+    }
+  });
+}
+
+// ──────────────────────────────────────────────────────────────
+// 9. TEXTO NARRATIVO AUTOMÁTICO
+// ──────────────────────────────────────────────────────────────
+function _renderNarrativo() {
+  const { sat, mej, def, total, prom } = _calcGlobal(_expData);
+  const porMes = _calcPorMes(_expData);
+  const meses  = Object.keys(porMes).sort();
+  const anio   = document.getElementById('expAnio').value || 'el período seleccionado';
+
+  // Mejor y peor mes
+  let mejorMes = '', mejorPct = -1, peorMes = '', peorPct = 101;
+  meses.forEach(m => {
+    const p = _pct(porMes[m].sat, porMes[m].total);
+    if (p > mejorPct) { mejorPct = p; mejorMes = _mesCorto(m); }
+    if (p < peorPct)  { peorPct  = p; peorMes  = _mesCorto(m); }
+  });
+
+  const clasif = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
+  const porServ = _calcPorServicio(_expData);
+  const servs = Object.keys(porServ);
+
+  // Párrafos
+  let texto = '';
+
+  texto += `De las ${total} Historias Clínicas auditadas, ${sat} HCs (${_pct(sat,total)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${_pct(mej,total)}%) resultado "Por Mejorar" y ${def} HCs (${_pct(def,total)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla N° 2 y el Gráfico correspondiente.\n\n`;
+
+  if (meses.length > 0) {
+    texto += `En la Tabla N° 3 y en el Gráfico correspondiente se presentan los resultados obtenidos por mes.`;
+    if (mejorMes) texto += ` Los mejores resultados se reportaron en ${mejorMes} con ${mejorPct}% de calificación "Satisfactorio"`;
+    if (peorMes && peorMes !== mejorMes) texto += `; mientras que ${peorMes} registró el menor porcentaje con ${peorPct}%`;
+    texto += '.\n\n';
+  }
+
+  if (servs.length > 1) {
+    const top = servs.sort((a,b) => _pct(porServ[b].sat,porServ[b].total) - _pct(porServ[a].sat,porServ[a].total));
+    const topNombre  = top[0].replace('SERV. DE ','Servicio de ').replace('DPTO. DE ','Departamento de ');
+    const topPct     = _pct(porServ[top[0]].sat, porServ[top[0]].total);
+    texto += `Los mejores resultados en la calidad de registro fueron reportados por el ${topNombre} con ${topPct}% de calificación "Satisfactorio".\n\n`;
+  }
+
+  texto += `El Promedio de Cumplimiento del correcto registro en las HCs auditadas fue de ${prom}%, correspondiendo a la calificación "${clasif}" según los criterios de la NTS N° 029-MINSA/DIGEPRES-V.02.`;
+
+  document.getElementById('expNarrativo').textContent = texto;
+}
+
+function copiarNarrativo() {
+  const t = document.getElementById('expNarrativo').textContent;
+  navigator.clipboard.writeText(t).then(() => showToast('Texto copiado al portapapeles ✓', 'ok'));
+}
+
+// ──────────────────────────────────────────────────────────────
+// 10. GENERAR ARCHIVOS
+// ──────────────────────────────────────────────────────────────
 function generarReporteFinal(formato) {
-  if(dataExportacion.length === 0) { showToast('No hay datos para exportar.', 'err'); return; }
-  showLoading(`Generando archivo ${formato.toUpperCase()}...`);
+  if (_expData.length === 0) { showToast('No hay datos para exportar.', 'err'); return; }
+  showLoading(`Generando archivo ${formato.toUpperCase()}…`);
+
+  // Capturar gráficos ANTES del timeout
+  const imgPastel = _canvasToImg('expChart2');
+  const imgBarras = _canvasToImg('expChart3');
+  const imgServ   = _canvasToImg('expChart5');
 
   const fechaHoy = new Date().toLocaleDateString('es-PE');
-  const total = dataExportacion.length;
-  let sat = 0, mej = 0, def = 0;
-  const porMes = {};
-
-  dataExportacion.forEach(r => {
-    if(r.calificacion==='SATISFACTORIO') sat++; else if(r.calificacion==='POR MEJORAR') mej++; else def++;
-    
-    const m = r.num_auditoria || 'Sin Mes';
-    if(!porMes[m]) porMes[m] = { sat:0, mej:0, def:0 };
-    if(r.calificacion === 'SATISFACTORIO') porMes[m].sat++;
-    else if(r.calificacion === 'POR MEJORAR') porMes[m].mej++;
-    else porMes[m].def++;
-  });
-
-  const mesesLabels = Object.keys(porMes).sort();
-
-  // Tomamos la "foto" EXACTAMENTE AHORA
-  const canvasPastel = document.getElementById('expChartPreview');
-  const canvasBarras = document.getElementById('expBarChartPreview');
-  const chartImage = canvasPastel ? canvasPastel.toDataURL("image/png", 1.0) : '';
-  const barChartImage = canvasBarras ? canvasBarras.toDataURL("image/png", 1.0) : '';
+  const { sat, mej, def, total, prom } = _calcGlobal(_expData);
+  const porMes  = _calcPorMes(_expData);
+  const porServ = _calcPorServicio(_expData);
+  const meses   = Object.keys(porMes).sort();
+  const anio    = document.getElementById('expAnio').value || '';
+  const narrativo = document.getElementById('expNarrativo').textContent;
 
   setTimeout(() => {
-    if (formato === 'excel') {
-      const wb = XLSX.utils.book_new();
-      
-      const resData = [
-        ["INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO"], ["Fecha:", fechaHoy], [""],
-        ["Tabla N° 2. Calidad de registro de las HCs auditadas"],
-        ["CALIFICACIÓN", "N°", "%"],
-        ["Satisfactorio", sat, ((sat/total)*100).toFixed(1) + "%"],
-        ["Por Mejorar", mej, ((mej/total)*100).toFixed(1) + "%"],
-        ["Deficiente", def, ((def/total)*100).toFixed(1) + "%"],
-        ["TOTAL", total, "100%"]
-      ];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resData), "Resumen");
-
-      const anexoData = dataExportacion.map((r, i) => ({
-        "N°": i + 1, 
-        "MES": r.num_auditoria, 
-        "N° HC": r.hc,
-        "DEPARTAMENTO/SERVICIO AUDITADO": r.servicio,
-        "AREA": "CONSULTA EXTERNA",
-        "PUNTAJE": r.puntaje, 
-        "CALIFICACIÓN": r.calificacion
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(anexoData), "Anexo 1 - Detalle");
-      XLSX.writeFile(wb, `Informe_Auditoria_${fechaHoy.replace(/\//g,'-')}.xlsx`);
-
-    } else if (formato === 'word') {
-      
-      let headersMeses = mesesLabels.map(m => `<th>${m}</th>`).join('');
-      let filaSat = mesesLabels.map(m => `<td>${porMes[m].sat}</td>`).join('');
-      let filaMej = mesesLabels.map(m => `<td>${porMes[m].mej}</td>`).join('');
-      let filaDef = mesesLabels.map(m => `<td>${porMes[m].def}</td>`).join('');
-
-      // AQUI GENERAMOS LA LISTA DEL ANEXO 1 CON COLORES
-      const filasAnexo = dataExportacion.map((r, i) => {
-         let bgCalif = r.calificacion === 'SATISFACTORIO' ? '#dcfce7' : r.calificacion === 'POR MEJORAR' ? '#fef3c7' : '#fee2e2';
-         let colorCalif = r.calificacion === 'SATISFACTORIO' ? '#166534' : r.calificacion === 'POR MEJORAR' ? '#d97706' : '#dc2626';
-         return `<tr>
-           <td>${i + 1}</td>
-           <td>${r.num_auditoria || ''}</td>
-           <td>${r.hc || ''}</td>
-           <td>${r.servicio || ''}</td>
-           <td>CONSULTA EXTERNA</td>
-           <td><strong>${r.puntaje || ''}</strong></td>
-           <td style="background-color:${bgCalif}; color:${colorCalif}; font-weight:bold;">${r.calificacion || ''}</td>
-         </tr>`;
-      }).join('');
-
-      const htmlContent = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head><meta charset='utf-8'><title>Informe</title>
-          <style>
-            body { font-family: 'Arial', sans-serif; font-size: 11pt; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; font-size: 10pt; }
-            th, td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
-            th { background-color: #e2e8f0; font-weight: bold; }
-            .title-center { text-align: center; font-weight: bold; }
-            .page-break { page-break-before: always; }
-          </style>
-        </head>
-        <body>
-          <h2 class="title-center">INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA</h2>
-          <p><strong>Fecha de Emisión:</strong> ${fechaHoy}</p>
-          <p><strong>Total de Historias Clínicas evaluadas:</strong> ${total}</p>
-          
-          <h3>Evaluación de la Calidad del Registro</h3>
-          <p>De las ${total} Historias Clínicas auditadas, ${sat} HCs (${((sat/total)*100).toFixed(1)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${((mej/total)*100).toFixed(1)}%) resultado "Por Mejorar" y ${def} HCs (${((def/total)*100).toFixed(1)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla Nº 2 y el Gráfico correspondiente.</p>
-          
-          <p class="title-center">Tabla N° 2. Calidad de registro de las HCs auditadas</p>
-          <table>
-            <tr><th>CALIFICACIÓN</th><th>N°</th><th>%</th></tr>
-            <tr><td>Satisfactorio</td><td>${sat}</td><td>${((sat/total)*100).toFixed(1)}%</td></tr>
-            <tr><td>Por Mejorar</td><td>${mej}</td><td>${((mej/total)*100).toFixed(1)}%</td></tr>
-            <tr><td>Deficiente</td><td>${def}</td><td>${((def/total)*100).toFixed(1)}%</td></tr>
-            <tr><td><strong>TOTAL</strong></td><td><strong>${total}</strong></td><td><strong>100%</strong></td></tr>
-          </table>
-
-          <p class="title-center">Gráfico N° 2. Distribución de Calificaciones</p>
-          <div style="text-align:center;"><img src="${chartImage}" width="400" /></div>
-          
-          <br><br>
-          <p>En la Tabla Nº 3 y en el Gráfico correspondiente se presentan los resultados obtenidos por cada mes.</p>
-          
-          <p class="title-center">Tabla N° 3. Calidad de Registro por Mes</p>
-          <table>
-            <tr><th>CALIFICACIÓN</th>${headersMeses}<th>TOTAL</th></tr>
-            <tr><td>Satisfactorio</td>${filaSat}<td>${sat}</td></tr>
-            <tr><td>Por Mejorar</td>${filaMej}<td>${mej}</td></tr>
-            <tr><td>Deficiente</td>${filaDef}<td>${def}</td></tr>
-          </table>
-
-          <p class="title-center">Gráfico N° 3. Evolución por Mes</p>
-          <div style="text-align:center;"><img src="${barChartImage}" width="450" /></div>
-
-          <div class="page-break"></div>
-          <br clear="all" style="page-break-before:always" />
-
-          <h2 class="title-center" style="margin-top: 20px;">ANEXO N° 1</h2>
-          <h3 class="title-center">Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa.</h3>
-          <table>
-            <tr>
-              <th>N°</th>
-              <th>MES</th>
-              <th>N° HC</th>
-              <th>DEPARTAMENTO/SERVICIO AUDITADO</th>
-              <th>AREA</th>
-              <th>PUNTAJE</th>
-              <th>CALIFICACIÓN</th>
-            </tr>
-            ${filasAnexo}
-          </table>
-
-        </body></html>
-      `;
-      const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `Informe_Oficial_${fechaHoy.replace(/\//g,'-')}.doc`;
-      a.click();
+    try {
+      if (formato === 'excel') {
+        _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ);
+      } else {
+        _generarWord(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ,
+                     imgPastel, imgBarras, imgServ, narrativo, anio);
+      }
+    } catch(e) {
+      console.error(e);
+      showToast('Error al generar el archivo.', 'err');
     }
     hideLoading();
-    document.getElementById('modalExportOverlay').classList.remove('open');
-  }, 800);
+    cerrarModalExport();
+  }, 600);
 }
+
+// ─── Excel ────────────────────────────────────────────────────
+function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ) {
+  const wb = XLSX.utils.book_new();
+
+  // Hoja 1: Resumen
+  const resData = [
+    ['INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO — HOSPITAL SANTA ROSA'],
+    ['Fecha de emisión:', fechaHoy], [''],
+    ['Tabla N° 2. Calidad de registro de las HCs auditadas'],
+    ['CALIFICACIÓN', 'N°', '%'],
+    ['Satisfactorio', sat, _pct(sat,total)+'%'],
+    ['Por Mejorar', mej, _pct(mej,total)+'%'],
+    ['Deficiente', def, _pct(def,total)+'%'],
+    ['TOTAL', total, '100%'],
+    [''], ['Promedio de Cumplimiento:', prom+'%'], [''],
+    ['Tabla N° 3. Calidad de Registro por Mes'],
+    ['CALIFICACIÓN', ...meses.map(_mesCorto), 'TOTAL'],
+    ['Satisfactorio', ...meses.map(m=>porMes[m].sat), sat],
+    ['Por Mejorar',   ...meses.map(m=>porMes[m].mej), mej],
+    ['Deficiente',    ...meses.map(m=>porMes[m].def), def],
+    ['TOTAL',         ...meses.map(m=>porMes[m].total), total],
+    ['% Satisfactorio', ...meses.map(m=>_pct(porMes[m].sat,porMes[m].total)+'%'), ''],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resData), 'Resumen');
+
+  // Hoja 2: Por Servicio
+  if (Object.keys(porServ).length > 1) {
+    const servData = [
+      ['Tabla N° 5. Calidad de Registro por Departamento/Servicio'],
+      ['SERVICIO', 'SATISFACTORIO', '% SAT.', 'POR MEJORAR', 'DEFICIENTE', 'TOTAL'],
+      ...Object.keys(porServ)
+        .sort((a,b) => _pct(porServ[b].sat,porServ[b].total)-_pct(porServ[a].sat,porServ[a].total))
+        .map(s => [s, porServ[s].sat, _pct(porServ[s].sat,porServ[s].total)+'%', porServ[s].mej, porServ[s].def, porServ[s].total])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(servData), 'Por Servicio');
+  }
+
+  // Hoja 3: Anexo 1 detalle
+  const anexoData = _expData.map((r, i) => ({
+    'N°': i+1, 'MES': r.num_auditoria, 'N° HC': r.hc,
+    'DPTO/SERVICIO AUDITADO': r.servicio, 'ÁREA': 'CONSULTA EXTERNA',
+    'PUNTAJE': r.puntaje, 'CALIFICACIÓN': r.calificacion
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(anexoData), 'Anexo 1 - Detalle');
+
+  XLSX.writeFile(wb, `Informe_Auditoria_${fechaHoy.replace(/\//g,'-')}.xlsx`);
+}
+
+// ─── Word ─────────────────────────────────────────────────────
+function _generarWord(fechaHoy, sat, mej, def, total, prom,
+                       porMes, meses, porServ, imgPastel, imgBarras, imgServ,
+                       narrativo, anio) {
+  const clasif = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
+
+  // Tabla N°2
+  const t2 = `<table>
+    <tr><th>CALIFICACIÓN</th><th>N°</th><th>%</th></tr>
+    <tr><td>Satisfactorio</td><td>${sat}</td><td>${_pct(sat,total)}%</td></tr>
+    <tr><td>Por Mejorar</td><td>${mej}</td><td>${_pct(mej,total)}%</td></tr>
+    <tr><td>Deficiente</td><td>${def}</td><td>${_pct(def,total)}%</td></tr>
+    <tr><td><strong>TOTAL</strong></td><td><strong>${total}</strong></td><td><strong>100%</strong></td></tr>
+  </table>`;
+
+  // Tabla N°3
+  const hMeses = meses.map(m=>`<th>${_mesCorto(m)}</th>`).join('');
+  const fSat3  = meses.map(m=>`<td>${porMes[m].sat}</td>`).join('');
+  const fMej3  = meses.map(m=>`<td>${porMes[m].mej}</td>`).join('');
+  const fDef3  = meses.map(m=>`<td>${porMes[m].def}</td>`).join('');
+  const fTot3  = meses.map(m=>`<td>${porMes[m].total}</td>`).join('');
+  const fPct3  = meses.map(m=>`<td>${_pct(porMes[m].sat,porMes[m].total)}%</td>`).join('');
+  const t3 = `<table>
+    <tr><th>CALIFICACIÓN</th>${hMeses}<th>TOTAL</th></tr>
+    <tr><td>Satisfactorio</td>${fSat3}<td>${sat}</td></tr>
+    <tr><td>Por Mejorar</td>${fMej3}<td>${mej}</td></tr>
+    <tr><td>Deficiente</td>${fDef3}<td>${def}</td></tr>
+    <tr><td><strong>TOTAL</strong></td>${fTot3}<td><strong>${total}</strong></td></tr>
+    <tr><td><em>% Satisfactorio</em></td>${fPct3}<td></td></tr>
+  </table>`;
+
+  // Tabla N°5
+  let t5Html = '';
+  const servsList = Object.keys(porServ);
+  if (servsList.length > 1) {
+    const filas5 = servsList
+      .sort((a,b) => _pct(porServ[b].sat,porServ[b].total)-_pct(porServ[a].sat,porServ[a].total))
+      .map(s => {
+        const d = porServ[s];
+        const p = _pct(d.sat, d.total);
+        const bg = p>=90?'#dcfce7':p>=75?'#fef3c7':'#fee2e2';
+        const co = p>=90?'#166534':p>=75?'#d97706':'#dc2626';
+        return `<tr>
+          <td style="text-align:left">${s}</td>
+          <td>${d.sat}</td>
+          <td style="background:${bg};color:${co};font-weight:bold">${p}%</td>
+          <td>${d.mej}</td><td>${d.def}</td><td><strong>${d.total}</strong></td>
+        </tr>`;
+      }).join('');
+    t5Html = `
+      <h3 style="text-align:center">Tabla N° 5. Calidad de Registro por Departamento / Servicio</h3>
+      <table>
+        <tr><th style="text-align:left">SERVICIO</th><th>SAT.</th><th>%SAT.</th><th>POR MEJ.</th><th>DEFIC.</th><th>TOTAL</th></tr>
+        ${filas5}
+        <tr><td style="text-align:left"><strong>TOTAL</strong></td><td>${sat}</td><td>${_pct(sat,total)}%</td><td>${mej}</td><td>${def}</td><td><strong>${total}</strong></td></tr>
+      </table>
+      ${imgServ ? `<p style="text-align:center"><img src="${imgServ}" width="500"/></p>` : ''}
+      <br>`;
+  }
+
+  // Tabla Anexo N°1
+  const filasAnexo = _expData.map((r,i) => {
+    const bg = r.calificacion==='SATISFACTORIO'?'#dcfce7':r.calificacion==='POR MEJORAR'?'#fef3c7':'#fee2e2';
+    const co = r.calificacion==='SATISFACTORIO'?'#166534':r.calificacion==='POR MEJORAR'?'#d97706':'#dc2626';
+    return `<tr>
+      <td>${i+1}</td><td>${r.num_auditoria||''}</td><td>${r.hc||''}</td>
+      <td>${r.servicio||''}</td><td>CONSULTA EXTERNA</td>
+      <td><strong>${r.puntaje||''}</strong></td>
+      <td style="background:${bg};color:${co};font-weight:bold">${r.calificacion||''}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset='utf-8'><title>Informe Auditoría</title>
+  <style>
+    body { font-family:Arial,sans-serif; font-size:11pt; margin:2cm; }
+    h1,h2,h3 { font-family:Arial,sans-serif; color:#1e3a6e; }
+    table { width:100%; border-collapse:collapse; margin:10px 0 20px; font-size:10pt; }
+    th,td { border:1px solid #000; padding:5px 8px; text-align:center; vertical-align:middle; }
+    th { background:#e2e8f0; font-weight:bold; }
+    td:first-child, th:first-child { text-align:left; }
+    .center { text-align:center; }
+    .page-break { page-break-before:always; }
+    .fuente { font-size:9pt; color:#555; margin-top:4px; }
+  </style>
+  </head>
+  <body>
+    <h2 class="center">INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA</h2>
+    <p><strong>Fecha de Emisión:</strong> ${fechaHoy}</p>
+    <p><strong>Total de Historias Clínicas evaluadas:</strong> ${total}</p>
+
+    <h3>3.3. RESULTADOS</h3>
+    <h4>3.3.1. Evaluación de la Calidad del Registro</h4>
+    <p>${narrativo.split('\n\n')[0] || ''}</p>
+
+    <p class="center"><strong>Tabla N° 2. Calidad de registro de las HCs auditadas — Hospital Santa Rosa</strong></p>
+    ${t2}
+    <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
+
+    ${imgPastel ? `<p class="center"><strong>Gráfico N° 2. Distribución de Calificaciones</strong></p>
+    <p class="center"><img src="${imgPastel}" width="380"/></p>
+    <p class="fuente center">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
+
+    <p>${narrativo.split('\n\n')[1] || ''}</p>
+
+    <p class="center"><strong>Tabla N° 3. Calidad de Registro por Mes — Hospital Santa Rosa</strong></p>
+    ${t3}
+    <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
+
+    ${imgBarras ? `<p class="center"><strong>Gráfico N° 3. Evolución por Mes</strong></p>
+    <p class="center"><img src="${imgBarras}" width="450"/></p>
+    <p class="fuente center">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
+
+    ${t5Html}
+
+    <h4>3.3.2. Promedio de Cumplimiento del correcto registro</h4>
+    <p>${narrativo.split('\n\n')[2] || ''}</p>
+
+    <div class="page-break"></div>
+    <h2 class="center" style="margin-top:20px">ANEXO N° 1</h2>
+    <h3 class="center">Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>N°</th><th>MES</th><th>N° HC</th>
+          <th>DEPARTAMENTO/SERVICIO AUDITADO</th><th>ÁREA</th>
+          <th>PUNTAJE</th><th>CALIFICACIÓN</th>
+        </tr>
+      </thead>
+      <tbody>${filasAnexo}</tbody>
+    </table>
+  </body></html>`;
+
+  const blob = new Blob(['\ufeff', html], { type:'application/msword' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Informe_Oficial_${fechaHoy.replace(/\//g,'-')}.doc`;
+  a.click();
+}
+
+// ──────────────────────────────────────────────────────────────
+// 11. HELPERS
+// ──────────────────────────────────────────────────────────────
+function _calcGlobal(data) {
+  let sat=0, mej=0, def=0, sumPct=0;
+  data.forEach(r => {
+    if (r.calificacion==='SATISFACTORIO') sat++;
+    else if (r.calificacion==='POR MEJORAR') mej++;
+    else def++;
+    sumPct += (r.porcentaje || 0);
+  });
+  const total = data.length;
+  const prom  = total ? parseFloat((sumPct/total).toFixed(2)) : 0;
+  return { sat, mej, def, total, prom };
+}
+
+function _calcPorMes(data) {
+  const pm = {};
+  data.forEach(r => {
+    const m = r.num_auditoria || 'Sin Mes';
+    if (!pm[m]) pm[m] = { sat:0, mej:0, def:0, total:0 };
+    if (r.calificacion==='SATISFACTORIO') pm[m].sat++;
+    else if (r.calificacion==='POR MEJORAR') pm[m].mej++;
+    else pm[m].def++;
+    pm[m].total++;
+  });
+  return pm;
+}
+
+function _calcPorServicio(data) {
+  const ps = {};
+  data.forEach(r => {
+    const s = r.servicio || '—';
+    if (!ps[s]) ps[s] = { sat:0, mej:0, def:0, total:0 };
+    if (r.calificacion==='SATISFACTORIO') ps[s].sat++;
+    else if (r.calificacion==='POR MEJORAR') ps[s].mej++;
+    else ps[s].def++;
+    ps[s].total++;
+  });
+  return ps;
+}
+
+function _getMesesSelExp() {
+  return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
+    .map(cb => cb.value);
+}
+
+function _getServsSelExp() {
+  if (_serviciosSelExp.size === 0) return [];
+  return [..._serviciosSelExp];
+}
+
+function _pct(n, total) {
+  if (!total) return 0;
+  return parseFloat((n/total*100).toFixed(1));
+}
+
+function _mesCorto(mes) {
+  // "01 - Enero" → "Enero"  |  pasa sin cambios si ya es corto
+  return mes.includes(' - ') ? mes.split(' - ')[1] : mes;
+}
+
+function _canvasToImg(id) {
+  const c = document.getElementById(id);
+  return c ? c.toDataURL('image/png', 1.0) : '';
+}
+
+function _limpiarPreview() {
+  ['expTabla2','expTabla3','expTabla5'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.innerHTML='';
+  });
+  ['expResumenRapido','expNarrativo'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.innerHTML='';
+  });
+  if (_ch2) { _ch2.destroy(); _ch2=null; }
+  if (_ch3) { _ch3.destroy(); _ch3=null; }
+  if (_ch5) { _ch5.destroy(); _ch5=null; }
+}
+
+function _esc(s) {
+  return s.replace(/"/g, '&quot;').replace(/'/g,'&#39;');
+}
+
+// Cerrar dropdowns al hacer click fuera
+document.addEventListener('click', e => {
+  if (!e.target.closest('#wrapServExp'))
+    document.getElementById('menuServExp')?.classList.remove('show');
+  if (!e.target.closest('#wrapMesExp'))
+    document.getElementById('menuMesExp')?.classList.remove('show');
+});
 
 </script>
 </body>
