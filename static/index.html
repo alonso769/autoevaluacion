@@ -1346,16 +1346,9 @@ function abrirModalExportacion() {
   const menuExp = document.getElementById('menuMesExp');
   menuExp.innerHTML = document.getElementById('menuMesDash').innerHTML.replace(/aplicarFiltrosGlobal/g, 'actualizarPreviewExport');
 
-  // 3. Generar checkboxes de SERVICIOS
-  const menuServExp = document.getElementById('menuServExp');
-  const todosLosServicios = [...new Set(allData.map(r => r.servicio).filter(s => s !== '—'))].sort();
-  menuServExp.innerHTML = todosLosServicios.map(sv => `
-    <label class="ms-item">
-      <input type="checkbox" value="${sv}" onchange="actualizarPreviewExport()"> ${sv.length > 50 ? sv.substring(0, 50) + '...' : sv}
-    </label>
-  `).join('');
-
   document.getElementById('modalExportOverlay').classList.add('open');
+  
+  // Llamamos a la actualización que ahora también construirá los servicios
   actualizarPreviewExport();
 }
 
@@ -1365,19 +1358,43 @@ function actualizarPreviewExport() {
   const checksMes = document.querySelectorAll('#menuMesExp input[type="checkbox"]:checked');
   const mesesSel = Array.from(checksMes).map(cb => cb.value);
 
-  const checksServ = document.querySelectorAll('#menuServExp input[type="checkbox"]:checked');
-  const servSel = Array.from(checksServ).map(cb => cb.value);
+  // --- FILTRO EN CASCADA PARA SERVICIOS (MULTIPLE) ---
+  // 1. Capturamos los servicios que ya estaban marcados (para no perderlos al actualizar)
+  const checksServOld = document.querySelectorAll('#menuServExp input[type="checkbox"]:checked');
+  let servSel = Array.from(checksServOld).map(cb => cb.value);
 
+  // 2. Buscamos qué servicios están disponibles en este Año y Mes
+  const serviciosDisponibles = [...new Set(allData.filter(r => {
+    if (anioSel && r.anio !== anioSel) return false;
+    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+    return true;
+  }).map(r => r.servicio).filter(s => s !== '—'))].sort();
+
+  // 3. Filtramos los seleccionados por si alguno ya no existe en este año
+  servSel = servSel.filter(s => serviciosDisponibles.includes(s));
+
+  // 4. Dibujamos las opciones de servicios dinámicamente
+  const menuServExp = document.getElementById('menuServExp');
+  menuServExp.innerHTML = serviciosDisponibles.map(sv => `
+    <label class="ms-item">
+      <input type="checkbox" value="${sv}" onchange="actualizarPreviewExport()" ${servSel.includes(sv) ? 'checked' : ''}> ${sv.length > 45 ? sv.substring(0, 45) + '...' : sv}
+    </label>
+  `).join('');
+  // ---------------------------------------------------
+
+  // Actualizar texto del botón de Meses
   const textBtnMes = document.getElementById('textMesExp');
   if (mesesSel.length === 0) textBtnMes.textContent = 'Todos los meses';
   else if (mesesSel.length === 1) textBtnMes.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
   else textBtnMes.textContent = `${mesesSel.length} seleccionados`;
 
+  // Actualizar texto del botón de Servicios
   const textBtnServ = document.getElementById('textServExp');
   if (servSel.length === 0) textBtnServ.textContent = 'Todos los servicios';
   else if (servSel.length === 1) textBtnServ.textContent = servSel[0].length > 25 ? servSel[0].substring(0, 25) + '...' : servSel[0];
   else textBtnServ.textContent = `${servSel.length} seleccionados`;
 
+  // Filtrar data final para gráficas y tablas
   dataExportacion = allData.filter(r => {
     if (anioSel && r.anio !== anioSel) return false;
     if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
@@ -1467,7 +1484,6 @@ function generarReporteFinal(formato) {
 
   const mesesLabels = Object.keys(porMes).sort();
 
-  // Tomamos la "foto" EXACTAMENTE AHORA
   const canvasPastel = document.getElementById('expChartPreview');
   const canvasBarras = document.getElementById('expBarChartPreview');
   const chartImage = canvasPastel ? canvasPastel.toDataURL("image/png", 1.0) : '';
@@ -1507,7 +1523,6 @@ function generarReporteFinal(formato) {
       let filaMej = mesesLabels.map(m => `<td>${porMes[m].mej}</td>`).join('');
       let filaDef = mesesLabels.map(m => `<td>${porMes[m].def}</td>`).join('');
 
-      // AQUI GENERAMOS LA LISTA DEL ANEXO 1 CON COLORES
       const filasAnexo = dataExportacion.map((r, i) => {
          let bgCalif = r.calificacion === 'SATISFACTORIO' ? '#dcfce7' : r.calificacion === 'POR MEJORAR' ? '#fef3c7' : '#fee2e2';
          let colorCalif = r.calificacion === 'SATISFACTORIO' ? '#166534' : r.calificacion === 'POR MEJORAR' ? '#d97706' : '#dc2626';
