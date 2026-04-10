@@ -255,27 +255,41 @@ def procesar_df(df):
         
         marca_temporal = str(r.get("Marca temporal", "")).strip()
         
+        # ==============================================================
+        # NUEVA LÓGICA: EL AÑO SE TOMA DE LA MARCA TEMPORAL
+        # ==============================================================
         try:
             fecha_exacta = pd.to_datetime(marca_temporal, dayfirst=True)
-            mes_num = fecha_exacta.month
-            
-            # ==============================================================
-            # AHORA EL AÑO Y EL MES VIAJAN POR SEPARADO
-            # ==============================================================
             anio_automatico = str(fecha_exacta.year)
-            mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
-            
         except Exception:
             anio_automatico = "Sin Año"
-            mes_automatico = "Sin Fecha"
             
+        # ==============================================================
+        # NUEVA LÓGICA: EL MES SE TOMA DE LA COLUMNA "NÚMERO DE AUDITORIA"
+        # ==============================================================
+        mes_raw = ""
+        # Buscamos la columna de forma inteligente por si hay espacios extra o errores de tipeo
+        for k, v in r.items():
+            if "úmero de Auditoria" in str(k) or "umero de Auditoria" in str(k):
+                mes_raw = str(v).strip()
+                break
+        
+        try:
+            # Convertimos a número (usamos float primero por si el Excel manda "7.0")
+            mes_num = int(float(mes_raw))
+            mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
+        except Exception:
+            mes_automatico = "Sin Mes"
+            
+        # ==============================================================
+
         results.append({
             "hc": str(r.get("NÚMERO DE HISTORIA CLÍNICA", r.get("NUMERO DE HISTORIA CLINICA", "—"))),
             "fecha": str(r.get("FECHA DE AUDITORÍA", r.get("FECHA DE AUDITORIA", "—"))),
             "servicio": str(r.get("SERVICIO AUDITADO", "—")),
             "auditor": str(r.get("Miembros del Comité de Auditoria que realizan la auditoría", "—")),
-            "anio": anio_automatico, # NUEVO DATO SEPARADO
-            "num_auditoria": mes_automatico, # SOLO EL MES
+            "anio": anio_automatico,         # SE EXTRAE DE LA MARCA TEMPORAL
+            "num_auditoria": mes_automatico, # SE EXTRAE DE LA COLUMNA N° DE AUDITORIA
             "diagnostico": str(r.get("DIAGNÓSTICO", "—")),
             "cie10": str(r.get("CIE 10 (en mayúsculas, separando diagnósticos con slash, ejemplo: U07.1 / K35.9)", "—")),
             **calc
