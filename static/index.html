@@ -1501,8 +1501,8 @@ let _ch2 = null, _ch3 = null, _ch5 = null;
 let _expData = [];
 
 // ── Servicios seleccionados (multi) ──────────────────────────
-let _serviciosSelExp = new Set(); // vacío = todos
-let _isFirstLoadExp = true; // Para marcar todos por defecto al abrir
+let _serviciosSelExp = new Set();
+let _isFirstLoadExp = true;
 
 // ──────────────────────────────────────────────────────────────
 // 1. ABRIR MODAL
@@ -1511,18 +1511,14 @@ function abrirModalExportacion() {
   _isFirstLoadExp = true;
   _serviciosSelExp.clear();
 
-  // Poblar Año
   const selAnio = document.getElementById('expAnio');
   selAnio.innerHTML = document.getElementById('filtAnio').innerHTML;
 
-  // Poblar Meses (clonar checkboxes del dashboard y cambiar la función que llaman)
   const menuMes = document.getElementById('menuMesExp');
   menuMes.innerHTML = document.getElementById('menuMesDash').innerHTML
     .replace(/aplicarFiltrosGlobal/g, 'cambioFiltroPrincipal');
 
   document.getElementById('modalExportOverlay').classList.add('open');
-  
-  // Llamar a la cascada por primera vez
   cambioFiltroPrincipal();
 }
 
@@ -1537,7 +1533,6 @@ function cambioFiltroPrincipal() {
   const anioSel = document.getElementById('expAnio').value;
   const mesesSel = _getMesesSelExp();
 
-  // 1. Averiguar qué servicios existen en el año y mes seleccionados
   const serviciosDisponibles = [...new Set(
     allData.filter(r => {
       if (anioSel && r.anio !== anioSel) return false;
@@ -1546,22 +1541,20 @@ function cambioFiltroPrincipal() {
     }).map(r => r.servicio).filter(s => s && s !== '—')
   )].sort();
 
-  // 2. Mantener las selecciones previas o marcar todos si es la primera vez
   const newSet = new Set();
   if (_isFirstLoadExp) {
     serviciosDisponibles.forEach(s => newSet.add(s));
     _isFirstLoadExp = false;
   } else {
-    serviciosDisponibles.forEach(s => { if(_serviciosSelExp.has(s)) newSet.add(s); });
+    serviciosDisponibles.forEach(s => { if (_serviciosSelExp.has(s)) newSet.add(s); });
   }
   _serviciosSelExp = newSet;
 
-  // 3. Dibujar el menú de servicios con los botones Todos/Ninguno
   const menu = document.getElementById('menuServExp');
   menu.innerHTML = `
-    <div class="ms-actions" style="position:sticky; top:0; background:#fff; z-index:10; padding:10px; border-bottom:1px solid #ccc; display:flex; gap:10px;">
-      <button onclick="seleccionarTodosServ(true)" style="padding:4px 8px; cursor:pointer; background:var(--cream2); border:1px solid var(--border); border-radius:4px; font-weight:bold; color:var(--navy);">✅ Todos</button>
-      <button onclick="seleccionarTodosServ(false)" style="padding:4px 8px; cursor:pointer; background:var(--cream2); border:1px solid var(--border); border-radius:4px; font-weight:bold; color:#dc2626;">❌ Ninguno</button>
+    <div class="ms-actions" style="position:sticky;top:0;background:#fff;z-index:10;padding:10px;border-bottom:1px solid #ccc;display:flex;gap:10px;">
+      <button onclick="seleccionarTodosServ(true)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:var(--navy);">✅ Todos</button>
+      <button onclick="seleccionarTodosServ(false)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:#dc2626;">❌ Ninguno</button>
     </div>
   ` + serviciosDisponibles.map(s => `
     <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
@@ -1577,20 +1570,17 @@ function cambioFiltroPrincipal() {
 }
 
 function _onServExpChange(cb) {
-  if (cb.checked) {
-    _serviciosSelExp.add(cb.value);
-  } else {
-    _serviciosSelExp.delete(cb.value);
-  }
+  if (cb.checked) _serviciosSelExp.add(cb.value);
+  else _serviciosSelExp.delete(cb.value);
   _actualizarTextoServExp();
   actualizarPreviewExport();
 }
 
 function seleccionarTodosServ(sel) {
   document.querySelectorAll('#menuServExp input[type=checkbox]')
-    .forEach(cb => { 
-      cb.checked = sel; 
-      if(sel) _serviciosSelExp.add(cb.value);
+    .forEach(cb => {
+      cb.checked = sel;
+      if (sel) _serviciosSelExp.add(cb.value);
       else _serviciosSelExp.delete(cb.value);
     });
   _actualizarTextoServExp();
@@ -1610,12 +1600,8 @@ function _actualizarTextoServExp() {
   } else txt.textContent = `${checked} servicios`;
 }
 
-function toggleServExp() {
-  document.getElementById('menuServExp').classList.toggle('show');
-}
-function toggleMesExp() {
-  document.getElementById('menuMesExp').classList.toggle('show');
-}
+function toggleServExp() { document.getElementById('menuServExp').classList.toggle('show'); }
+function toggleMesExp()  { document.getElementById('menuMesExp').classList.toggle('show'); }
 
 // ──────────────────────────────────────────────────────────────
 // 3. ACTUALIZAR PREVIEW
@@ -1625,7 +1611,6 @@ function actualizarPreviewExport() {
   const mesesSel = _getMesesSelExp();
   const servsSel = _getServsSelExp();
 
-  // Actualizar texto del botón de meses
   const textMes = document.getElementById('textMesExp');
   if (textMes) {
     if (mesesSel.length === 0) textMes.textContent = 'Todos los meses';
@@ -1633,14 +1618,8 @@ function actualizarPreviewExport() {
     else textMes.textContent = `${mesesSel.length} seleccionados`;
   }
 
-  // Si no hay servicios marcados, vaciamos la data visual
-  if (servsSel.length === 0) {
-     _expData = [];
-     _limpiarPreview();
-     return;
-  }
+  if (servsSel.length === 0) { _expData = []; _limpiarPreview(); return; }
 
-  // Filtrar datos finales
   _expData = allData.filter(r => {
     if (anioSel && r.anio !== anioSel) return false;
     if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
@@ -1648,10 +1627,7 @@ function actualizarPreviewExport() {
     return true;
   });
 
-  if (_expData.length === 0) {
-    _limpiarPreview();
-    return;
-  }
+  if (_expData.length === 0) { _limpiarPreview(); return; }
 
   _renderResumen();
   _renderTabla2();
@@ -1702,22 +1678,19 @@ function _renderTabla3() {
   const meses  = Object.keys(porMes).sort();
   const { sat: tSat, mej: tMej, def: tDef, total } = _calcGlobal(_expData);
 
-  let ths = meses.map(m => `<th>${_mesCorto(m)}</th>`).join('') + '<th>TOTAL</th><th>%SAT</th>';
+  let ths  = meses.map(m => `<th>${_mesCorto(m)}</th>`).join('') + '<th>TOTAL</th><th>%SAT</th>';
   let fSat = meses.map(m => `<td>${porMes[m].sat}</td>`).join('') + `<td>${tSat}</td><td>${_pct(tSat,total)}%</td>`;
   let fMej = meses.map(m => `<td>${porMes[m].mej}</td>`).join('') + `<td>${tMej}</td><td>${_pct(tMej,total)}%</td>`;
   let fDef = meses.map(m => `<td>${porMes[m].def}</td>`).join('') + `<td>${tDef}</td><td>${_pct(tDef,total)}%</td>`;
   let fTot = meses.map(m => `<td>${porMes[m].total}</td>`).join('') + `<td>${total}</td><td>100%</td>`;
   let fPct = meses.map(m => {
-    const t = porMes[m].total;
-    const s = porMes[m].sat;
-    const p = t ? Math.round(s/t*100) : 0;
+    const t = porMes[m].total, s = porMes[m].sat;
+    const p = t ? Math.round(s / t * 100) : 0;
     return `<td style="color:${p>=90?'#166534':p>=75?'#d97706':'#dc2626'};font-weight:700">${p}%</td>`;
   }).join('') + `<td colspan="2"></td>`;
 
   document.getElementById('expTabla3').innerHTML = `
-    <thead>
-      <tr><th style="text-align:left">CALIFICACIÓN</th>${ths}</tr>
-    </thead>
+    <thead><tr><th style="text-align:left">CALIFICACIÓN</th>${ths}</tr></thead>
     <tbody>
       <tr><td style="text-align:left">Satisfactorio</td>${fSat}</tr>
       <tr><td style="text-align:left">Por Mejorar</td>${fMej}</tr>
@@ -1733,11 +1706,11 @@ function _renderTabla3() {
 function _renderTabla5() {
   const porServ = _calcPorServicio(_expData);
   const servicios = Object.keys(porServ).sort((a,b) =>
-    (porServ[b].sat / (porServ[b].total||1)) - (porServ[a].sat / (porServ[a].total||1))
+    (_pct(porServ[b].sat, porServ[b].total)) - (_pct(porServ[a].sat, porServ[a].total))
   );
   const mostrar = servicios.length > 1;
-  document.getElementById('wrapTabla5').style.display  = mostrar ? '' : 'none';
-  document.getElementById('wrapGraf5').style.display   = mostrar ? '' : 'none';
+  document.getElementById('wrapTabla5').style.display = mostrar ? '' : 'none';
+  document.getElementById('wrapGraf5').style.display  = mostrar ? '' : 'none';
   if (!mostrar) return;
 
   const filas = servicios.map(s => {
@@ -1774,7 +1747,7 @@ function _renderTabla5() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// 8. GRÁFICOS
+// 8. GRÁFICOS (preview)
 // ──────────────────────────────────────────────────────────────
 const COLORS = { sat:'#82c91e', mej:'#facc15', def:'#ef4444' };
 
@@ -1789,11 +1762,11 @@ function _renderGraf2() {
         `Por Mejorar: ${mej} (${_pct(mej,total)}%)`,
         `Deficiente: ${def} (${_pct(def,total)}%)`
       ],
-      datasets: [{ data: [sat, mej, def], backgroundColor: [COLORS.sat, COLORS.mej, COLORS.def], borderWidth: 2 }]
+      datasets: [{ data:[sat,mej,def], backgroundColor:[COLORS.sat,COLORS.mej,COLORS.def], borderWidth:2 }]
     },
     options: {
-      animation: false, responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position:'right', labels:{ font:{ size:11 }, boxWidth:14 } } }
+      animation:false, responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'right', labels:{ font:{size:11}, boxWidth:14 } } }
     }
   });
 }
@@ -1807,18 +1780,15 @@ function _renderGraf3() {
     data: {
       labels: meses.map(_mesCorto),
       datasets: [
-        { label:'Satisfactorio', data: meses.map(m=>porMes[m].sat), backgroundColor: COLORS.sat },
-        { label:'Por Mejorar',   data: meses.map(m=>porMes[m].mej), backgroundColor: COLORS.mej },
-        { label:'Deficiente',    data: meses.map(m=>porMes[m].def), backgroundColor: COLORS.def }
+        { label:'Satisfactorio', data:meses.map(m=>porMes[m].sat), backgroundColor:COLORS.sat },
+        { label:'Por Mejorar',   data:meses.map(m=>porMes[m].mej), backgroundColor:COLORS.mej },
+        { label:'Deficiente',    data:meses.map(m=>porMes[m].def), backgroundColor:COLORS.def }
       ]
     },
     options: {
-      animation: false, responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position:'top', labels:{ font:{ size:11 }, boxWidth:12 } } },
-      scales: {
-        x: { stacked: false },
-        y: { beginAtZero:true, ticks:{ stepSize:1 } }
-      }
+      animation:false, responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ font:{size:11}, boxWidth:12 } } },
+      scales:{ x:{stacked:false}, y:{beginAtZero:true, ticks:{stepSize:1}} }
     }
   });
 }
@@ -1827,7 +1797,7 @@ function _renderGraf5() {
   const porServ = _calcPorServicio(_expData);
   if (Object.keys(porServ).length <= 1) return;
   const servicios = Object.keys(porServ).sort((a,b) =>
-    (porServ[b].sat/(porServ[b].total||1)) - (porServ[a].sat/(porServ[a].total||1))
+    (_pct(porServ[b].sat,porServ[b].total)) - (_pct(porServ[a].sat,porServ[a].total))
   );
   const pcts = servicios.map(s => _pct(porServ[s].sat, porServ[s].total));
   const bgs  = pcts.map(p => p >= 90 ? COLORS.sat : p >= 75 ? COLORS.mej : COLORS.def);
@@ -1838,25 +1808,23 @@ function _renderGraf5() {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ label:'% Satisfactorio', data: pcts, backgroundColor: bgs, borderRadius: 4 }]
+      datasets:[{ label:'% Satisfactorio', data:pcts, backgroundColor:bgs, borderRadius:4 }]
     },
     options: {
-      animation: false, responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      animation:false, responsive:true, maintainAspectRatio:false, indexAxis:'y',
       plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              const s = servicios[ctx.dataIndex];
-              const d = porServ[s];
-              return ` ${ctx.parsed.x}%  (${d.sat}/${d.total} HCs)`;
-            }
-          }
+        legend:{ display:false },
+        tooltip:{
+          callbacks:{ label: ctx => {
+            const s = servicios[ctx.dataIndex];
+            const d = porServ[s];
+            return ` ${ctx.parsed.x}%  (${d.sat}/${d.total} HCs)`;
+          }}
         }
       },
-      scales: {
-        x: { beginAtZero:true, max:100, ticks:{ callback: v => v+'%' } },
-        y: { ticks:{ font:{ size:11 } } }
+      scales:{
+        x:{ beginAtZero:true, max:100, ticks:{ callback: v => v+'%' } },
+        y:{ ticks:{ font:{size:11} } }
       }
     }
   });
@@ -1867,9 +1835,9 @@ function _renderGraf5() {
 // ──────────────────────────────────────────────────────────────
 function _renderNarrativo() {
   const { sat, mej, def, total, prom } = _calcGlobal(_expData);
-  const porMes = _calcPorMes(_expData);
-  const meses  = Object.keys(porMes).sort();
-  const anio   = document.getElementById('expAnio').value || 'el período seleccionado';
+  const porMes  = _calcPorMes(_expData);
+  const meses   = Object.keys(porMes).sort();
+  const anio    = document.getElementById('expAnio').value || 'el período seleccionado';
 
   let mejorMes = '', mejorPct = -1, peorMes = '', peorPct = 101;
   meses.forEach(m => {
@@ -1878,29 +1846,50 @@ function _renderNarrativo() {
     if (p < peorPct)  { peorPct  = p; peorMes  = _mesCorto(m); }
   });
 
-  const clasif = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
+  const clasif  = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
   const porServ = _calcPorServicio(_expData);
-  const servs = Object.keys(porServ);
+  const servs   = Object.keys(porServ);
+
+  // Tabla N°1 — HCs por mes
+  const totalOct = porMes[Object.keys(porMes).find(k=>k.includes('OCTUBRE'))||''] || {total:0};
+  const textoMeses = meses.map(m => {
+    const d = porMes[m];
+    return `${d.total} (${_pct(d.total,total)}%) en el mes de ${_mesCorto(m)}`;
+  }).join('; ');
 
   let texto = '';
 
-  texto += `De las ${total} Historias Clínicas auditadas, ${sat} HCs (${_pct(sat,total)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${_pct(mej,total)}%) resultado "Por Mejorar" y ${def} HCs (${_pct(def,total)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla N° 2 y el Gráfico correspondiente.\n\n`;
-
+  // Párrafo 1 — HCs por mes (Tabla N°1, Gráfico N°1)
   if (meses.length > 0) {
-    texto += `En la Tabla N° 3 y en el Gráfico correspondiente se presentan los resultados obtenidos por mes.`;
+    texto += `En el período seleccionado (${anio}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
+    texto += `La distribución mensual fue la siguiente: ${textoMeses}; tal como se muestra en la Tabla N° 1 y en el Gráfico N° 1.\n\n`;
+  }
+
+  // Párrafo 2 — Calidad global (Tabla N°2, Gráfico N°2)
+  texto += `De las ${total} Historias Clínicas auditadas, ${sat} HCs (${_pct(sat,total)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${_pct(mej,total)}%) resultado "Por Mejorar" y ${def} HCs (${_pct(def,total)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla N° 2 y el Gráfico N° 2.\n\n`;
+
+  // Párrafo 3 — Evolución por mes (Tabla N°3, Gráfico N°3)
+  if (meses.length > 0) {
+    texto += `En la Tabla N° 3 y en el Gráfico N° 3 se presentan los resultados obtenidos por mes.`;
     if (mejorMes) texto += ` Los mejores resultados se reportaron en ${mejorMes} con ${mejorPct}% de calificación "Satisfactorio"`;
     if (peorMes && peorMes !== mejorMes) texto += `; mientras que ${peorMes} registró el menor porcentaje con ${peorPct}%`;
     texto += '.\n\n';
   }
 
+  // Párrafo 4 — Por servicio (Tabla N°5, Gráfico N°5)
   if (servs.length > 1) {
-    const top = servs.sort((a,b) => _pct(porServ[b].sat,porServ[b].total) - _pct(porServ[a].sat,porServ[a].total));
-    const topNombre  = top[0].replace('SERV. DE ','Servicio de ').replace('DPTO. DE ','Departamento de ');
-    const topPct     = _pct(porServ[top[0]].sat, porServ[top[0]].total);
-    texto += `Los mejores resultados en la calidad de registro fueron reportados por el ${topNombre} con ${topPct}% de calificación "Satisfactorio".\n\n`;
+    const top = [...servs].sort((a,b) => _pct(porServ[b].sat,porServ[b].total) - _pct(porServ[a].sat,porServ[a].total));
+    const topNombre = top[0].replace('SERV. DE ','Servicio de ').replace('DPTO. DE ','Departamento de ');
+    const topPct    = _pct(porServ[top[0]].sat, porServ[top[0]].total);
+    const botNombre = top[top.length-1].replace('SERV. DE ','Servicio de ').replace('DPTO. DE ','Departamento de ');
+    const botPct    = _pct(porServ[top[top.length-1]].sat, porServ[top[top.length-1]].total);
+    texto += `En la Tabla N° 5 y en el Gráfico N° 5 se presentan los resultados por Departamento/Servicio. Los mejores resultados en la calidad de registro fueron reportados por el ${topNombre} con ${topPct}% de calificación "Satisfactorio". `;
+    if (top.length > 1) texto += `Por otro lado, se reportó un mayor porcentaje de resultados deficientes en el ${botNombre} con ${botPct}% de calificación "Satisfactorio".\n\n`;
+    else texto += '\n\n';
   }
 
-  texto += `El Promedio de Cumplimiento del correcto registro en las HCs auditadas fue de ${prom}%, correspondiendo a la calificación "${clasif}" según los criterios de la NTS N° 029-MINSA/DIGEPRES-V.02.`;
+  // Párrafo 5 — Promedio de cumplimiento (Gráfico N°6)
+  texto += `El Promedio de Cumplimiento del correcto registro en las HCs auditadas fue de ${prom}%, correspondiendo a la calificación "${clasif}" según los criterios de la NTS N° 029-MINSA/DIGEPRES-V.02, tal como se presenta en el Gráfico N° 6.`;
 
   document.getElementById('expNarrativo').textContent = texto;
 }
@@ -1917,11 +1906,12 @@ function generarReporteFinal(formato) {
   if (_expData.length === 0) { showToast('No hay datos para exportar.', 'err'); return; }
   showLoading(`Generando archivo ${formato.toUpperCase()}…`);
 
-  // Capturar gráficos ANTES del timeout para evitar fallos en Canvas
-  const imgPastel = _canvasToImg('expChart2');
-  const imgBarras = _canvasToImg('expChart3');
-  const imgServ   = _canvasToImg('expChart5');
+  // Capturar todos los canvas ANTES del timeout
+  const imgPastel   = _canvasToImg('expChart2');   // Gráfico N°2 — pastel calidad global
+  const imgBarras   = _canvasToImg('expChart3');   // Gráfico N°3 — barras por mes
+  const imgServ     = _canvasToImg('expChart5');   // Gráfico N°5 — horizontal por servicio
 
+  // Gráficos adicionales que se generan off-screen para el Word/Excel
   const fechaHoy = new Date().toLocaleDateString('es-PE');
   const { sat, mej, def, total, prom } = _calcGlobal(_expData);
   const porMes  = _calcPorMes(_expData);
@@ -1930,51 +1920,187 @@ function generarReporteFinal(formato) {
   const anio    = document.getElementById('expAnio').value || '';
   const narrativo = document.getElementById('expNarrativo').textContent;
 
-  setTimeout(() => {
-    try {
-      if (formato === 'excel') {
-        _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ);
-      } else {
-        _generarWord(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ,
-                     imgPastel, imgBarras, imgServ, narrativo, anio);
+  // Generamos gráficos off-screen adicionales (N°1, N°4, N°6)
+  _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, mej, def, (imgMes, imgServ4, imgCumpl) => {
+    setTimeout(() => {
+      try {
+        if (formato === 'excel') {
+          _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ);
+        } else {
+          _generarWord(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ,
+                       imgPastel, imgBarras, imgServ, narrativo, anio,
+                       imgMes, imgServ4, imgCumpl);
+        }
+      } catch(e) {
+        console.error(e);
+        showToast('Error al generar el archivo.', 'err');
       }
-    } catch(e) {
-      console.error(e);
-      showToast('Error al generar el archivo.', 'err');
-    }
-    hideLoading();
-    cerrarModalExport();
-  }, 600);
+      hideLoading();
+      cerrarModalExport();
+    }, 600);
+  });
 }
 
-// ─── Excel ────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+// 10b. GENERAR GRÁFICOS ADICIONALES OFF-SCREEN
+//      Gráfico N°1 (HCs por mes - barras simples)
+//      Gráfico N°4 (HCs por servicio - barras simples)
+//      Gráfico N°6 (Promedio cumplimiento - pastel)
+// ──────────────────────────────────────────────────────────────
+function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, mej, def, callback) {
+  // Contenedor off-screen
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:700px;height:350px;';
+  document.body.appendChild(wrap);
+
+  let pendientes = 3;
+  let imgMes = '', imgServ4 = '', imgCumpl = '';
+  function check() { pendientes--; if (pendientes <= 0) { document.body.removeChild(wrap); callback(imgMes, imgServ4, imgCumpl); } }
+
+  // ── Gráfico N°1: HCs auditadas por mes (barra azul) ─────────
+  const c1 = document.createElement('canvas'); c1.width=700; c1.height=340; wrap.appendChild(c1);
+  const ch1 = new Chart(c1.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: meses.map(_mesCorto),
+      datasets: [{
+        label: 'N° HCs auditadas',
+        data: meses.map(m => porMes[m].total),
+        backgroundColor: '#2b579a',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      animation: { duration:0 },
+      responsive: false,
+      plugins: {
+        legend: { display: false },
+        title: { display: false },
+        datalabels: {
+          display: true,
+          anchor: 'end', align: 'top',
+          formatter: (v,ctx) => {
+            const t = meses.map(m=>porMes[m].total).reduce((a,b)=>a+b,0);
+            return `${v}\n${_pct(v,t)}%`;
+          },
+          color: '#1e3a6e', font: { weight:'bold', size:11 }
+        }
+      },
+      scales: {
+        x: { grid:{display:false} },
+        y: { beginAtZero:true, ticks:{ stepSize:10 } }
+      }
+    }
+  });
+  setTimeout(() => { imgMes = c1.toDataURL('image/png',1.0); ch1.destroy(); check(); }, 300);
+
+  // ── Gráfico N°4: HCs por Departamento/Servicio (barra azul horizontal) ─
+  const c4 = document.createElement('canvas'); c4.width=700; c4.height=340; wrap.appendChild(c4);
+  const servList4 = Object.keys(porServ).sort((a,b) => porServ[b].total - porServ[a].total);
+  const ch4 = new Chart(c4.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: servList4.map(s => s.replace('SERV. DE ','').replace('DPTO. DE ','').substring(0,24)),
+      datasets: [{
+        label: 'N° HCs auditadas',
+        data: servList4.map(s => porServ[s].total),
+        backgroundColor: '#2b579a',
+        borderRadius: 3
+      }]
+    },
+    options: {
+      animation: { duration:0 },
+      responsive: false,
+      plugins: {
+        legend: { display:false },
+        datalabels: {
+          display: true,
+          anchor:'end', align:'top',
+          formatter: v => v,
+          color:'#1e3a6e', font:{ weight:'bold', size:10 }
+        }
+      },
+      scales: {
+        x: { grid:{display:false}, ticks:{ font:{size:9}, maxRotation:45, minRotation:30 } },
+        y: { beginAtZero:true }
+      }
+    }
+  });
+  setTimeout(() => { imgServ4 = c4.toDataURL('image/png',1.0); ch4.destroy(); check(); }, 350);
+
+  // ── Gráfico N°6: Promedio de Cumplimiento global (pastel/doughnut) ──────
+  const c6 = document.createElement('canvas'); c6.width=500; c6.height=340; wrap.appendChild(c6);
+  const noCumpl = parseFloat((100 - prom).toFixed(2));
+  const ch6 = new Chart(c6.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: [`% Cumplimiento: ${prom}%`, `No Cumplimiento: ${noCumpl}%`],
+      datasets: [{
+        data: [prom, noCumpl],
+        backgroundColor: ['#2b579a', '#ef4444'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      animation: { duration:0 },
+      responsive: false,
+      cutout: '60%',
+      plugins: {
+        legend: { position:'right', labels:{ font:{size:12}, boxWidth:14 } }
+      }
+    }
+  });
+  setTimeout(() => { imgCumpl = c6.toDataURL('image/png',1.0); ch6.destroy(); check(); }, 400);
+}
+
+// ──────────────────────────────────────────────────────────────
+// 11. EXCEL — todas las tablas en hojas separadas
+// ──────────────────────────────────────────────────────────────
 function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ) {
   const wb = XLSX.utils.book_new();
 
-  // Hoja 1: Resumen
+  // ── Hoja 1: Resumen ─────────────────────────────────────────
   const resData = [
     ['INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO — HOSPITAL SANTA ROSA'],
-    ['Fecha de emisión:', fechaHoy], [''],
+    ['Fecha de emisión:', fechaHoy],
+    [''],
+    ['⚠ NOTA: Este archivo fue generado automáticamente en base a la data del archivo Excel del Drive.',
+     'Algunos datos narrativos y secciones del informe oficial deben ser completados manualmente.'],
+    [''],
+    ['Tabla N° 1. Historias Clínicas auditadas por mes'],
+    ['MES', 'N° HCs', '%'],
+    ...meses.map(m => [_mesCorto(m), porMes[m].total, _pct(porMes[m].total,total)+'%']),
+    ['TOTAL', total, '100%'],
+    [''],
     ['Tabla N° 2. Calidad de registro de las HCs auditadas'],
     ['CALIFICACIÓN', 'N°', '%'],
     ['Satisfactorio', sat, _pct(sat,total)+'%'],
-    ['Por Mejorar', mej, _pct(mej,total)+'%'],
-    ['Deficiente', def, _pct(def,total)+'%'],
-    ['TOTAL', total, '100%'],
-    [''], ['Promedio de Cumplimiento:', prom+'%'], [''],
+    ['Por Mejorar',   mej, _pct(mej,total)+'%'],
+    ['Deficiente',    def, _pct(def,total)+'%'],
+    ['TOTAL',         total, '100%'],
+    [''],
+    ['Promedio de Cumplimiento Global:', prom+'%'],
+    [''],
     ['Tabla N° 3. Calidad de Registro por Mes'],
-    ['CALIFICACIÓN', ...meses.map(_mesCorto), 'TOTAL'],
-    ['Satisfactorio', ...meses.map(m=>porMes[m].sat), sat],
-    ['Por Mejorar',   ...meses.map(m=>porMes[m].mej), mej],
-    ['Deficiente',    ...meses.map(m=>porMes[m].def), def],
-    ['TOTAL',         ...meses.map(m=>porMes[m].total), total],
-    ['% Satisfactorio', ...meses.map(m=>_pct(porMes[m].sat,porMes[m].total)+'%'), ''],
+    ['CALIFICACIÓN', ...meses.map(_mesCorto), 'TOTAL', '% SAT'],
+    ['Satisfactorio', ...meses.map(m=>porMes[m].sat), sat, _pct(sat,total)+'%'],
+    ['Por Mejorar',   ...meses.map(m=>porMes[m].mej), mej, _pct(mej,total)+'%'],
+    ['Deficiente',    ...meses.map(m=>porMes[m].def), def, _pct(def,total)+'%'],
+    ['TOTAL',         ...meses.map(m=>porMes[m].total), total, '100%'],
+    ['% Satisfactorio', ...meses.map(m=>_pct(porMes[m].sat,porMes[m].total)+'%'), '', ''],
   ];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resData), 'Resumen');
 
-  // Hoja 2: Por Servicio
+  // ── Hoja 2: Por Servicio ─────────────────────────────────────
   if (Object.keys(porServ).length > 1) {
     const servData = [
+      ['Tabla N° 4. Distribución de HCs por Departamento/Servicio'],
+      ['SERVICIO', 'N° HCs', '%'],
+      ...Object.keys(porServ)
+        .sort((a,b) => porServ[b].total - porServ[a].total)
+        .map(s => [s, porServ[s].total, _pct(porServ[s].total,total)+'%']),
+      ['TOTAL', total, '100%'],
+      [''],
       ['Tabla N° 5. Calidad de Registro por Departamento/Servicio'],
       ['SERVICIO', 'SATISFACTORIO', '% SAT.', 'POR MEJORAR', 'DEFICIENTE', 'TOTAL'],
       ...Object.keys(porServ)
@@ -1984,53 +2110,115 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(servData), 'Por Servicio');
   }
 
-  // Hoja 3: Anexo 1 detalle
+  // ── Hoja 3: Anexo N°1 detalle ────────────────────────────────
   const anexoData = _expData.map((r, i) => ({
-    'N°': i+1, 'MES': r.num_auditoria, 'N° HC': r.hc,
-    'DPTO/SERVICIO AUDITADO': r.servicio, 'ÁREA': 'CONSULTA EXTERNA',
-    'PUNTAJE': r.puntaje, 'CALIFICACIÓN': r.calificacion
+    'N°': i+1,
+    'MES': r.num_auditoria,
+    'N° HC': r.hc,
+    'DPTO/SERVICIO AUDITADO': r.servicio,
+    'ÁREA': r.area || 'CONSULTA EXTERNA',
+    'PUNTAJE': r.puntaje,
+    'CALIFICACIÓN': r.calificacion
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(anexoData), 'Anexo 1 - Detalle');
 
   XLSX.writeFile(wb, `Informe_Auditoria_${fechaHoy.replace(/\//g,'-')}.xlsx`);
 }
 
-// ─── Word ─────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+// 12. WORD — documento oficial completo con TODOS los gráficos
+// ──────────────────────────────────────────────────────────────
 function _generarWord(fechaHoy, sat, mej, def, total, prom,
-                       porMes, meses, porServ, imgPastel, imgBarras, imgServ,
-                       narrativo, anio) {
-  
-  // Tabla N°2. Se usa align="center" directo en la tabla para MS Word
-  const t2 = `<table align="center" style="width:80%; border-collapse:collapse; margin:10px auto 20px auto; font-size:10pt;">
-    <tr><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">CALIFICACIÓN</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">N°</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">%</th></tr>
-    <tr><td style="border:1px solid #000; padding:6px;">Satisfactorio</td><td style="border:1px solid #000; padding:6px;">${sat}</td><td style="border:1px solid #000; padding:6px;">${_pct(sat,total)}%</td></tr>
-    <tr><td style="border:1px solid #000; padding:6px;">Por Mejorar</td><td style="border:1px solid #000; padding:6px;">${mej}</td><td style="border:1px solid #000; padding:6px;">${_pct(mej,total)}%</td></tr>
-    <tr><td style="border:1px solid #000; padding:6px;">Deficiente</td><td style="border:1px solid #000; padding:6px;">${def}</td><td style="border:1px solid #000; padding:6px;">${_pct(def,total)}%</td></tr>
-    <tr><td style="border:1px solid #000; padding:6px;"><strong>TOTAL</strong></td><td style="border:1px solid #000; padding:6px;"><strong>${total}</strong></td><td style="border:1px solid #000; padding:6px;"><strong>100%</strong></td></tr>
+                      porMes, meses, porServ,
+                      imgPastel, imgBarras, imgServ,
+                      narrativo, anio,
+                      imgMes, imgServ4, imgCumpl) {
+
+  const noCumpl = parseFloat((100 - prom).toFixed(2));
+  const clasif  = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
+
+  // ── Tabla N°1: HCs por mes ───────────────────────────────────
+  const filasT1 = meses.map(m => `
+    <tr>
+      <td style="border:1px solid #000;padding:6px;">${_mesCorto(m)}</td>
+      <td style="border:1px solid #000;padding:6px;">${porMes[m].total}</td>
+      <td style="border:1px solid #000;padding:6px;">${_pct(porMes[m].total,total)}%</td>
+    </tr>`).join('');
+
+  const t1 = `<table align="center" style="width:60%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
+    <tr>
+      <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">Mes</th>
+      <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">N°</th>
+      <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%</th>
+    </tr>
+    ${filasT1}
+    <tr>
+      <td style="border:1px solid #000;padding:6px;"><strong>Total</strong></td>
+      <td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td>
+      <td style="border:1px solid #000;padding:6px;"><strong>100%</strong></td>
+    </tr>
   </table>`;
 
-  // Tabla N°3
-  const hMeses = meses.map(m=>`<th style="border:1px solid #000; background:#e2e8f0; padding:6px;">${_mesCorto(m)}</th>`).join('');
-  const fSat3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${porMes[m].sat}</td>`).join('');
-  const fMej3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${porMes[m].mej}</td>`).join('');
-  const fDef3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${porMes[m].def}</td>`).join('');
-  const fTot3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${porMes[m].total}</td>`).join('');
-  const fPct3  = meses.map(m=>`<td style="border:1px solid #000; padding:6px;">${_pct(porMes[m].sat,porMes[m].total)}%</td>`).join('');
-  
-  const t3 = `<table align="center" style="width:90%; border-collapse:collapse; margin:10px auto 20px auto; font-size:10pt;">
-    <tr><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">CALIFICACIÓN</th>${hMeses}<th style="border:1px solid #000; background:#e2e8f0; padding:6px;">TOTAL</th></tr>
-    <tr><td style="border:1px solid #000; padding:6px;">Satisfactorio</td>${fSat3}<td style="border:1px solid #000; padding:6px;">${sat}</td></tr>
-    <tr><td style="border:1px solid #000; padding:6px;">Por Mejorar</td>${fMej3}<td style="border:1px solid #000; padding:6px;">${mej}</td></tr>
-    <tr><td style="border:1px solid #000; padding:6px;">Deficiente</td>${fDef3}<td style="border:1px solid #000; padding:6px;">${def}</td></tr>
-    <tr><td style="border:1px solid #000; padding:6px;"><strong>TOTAL</strong></td>${fTot3}<td style="border:1px solid #000; padding:6px;"><strong>${total}</strong></td></tr>
-    <tr><td style="border:1px solid #000; padding:6px;"><em>% Satisfactorio</em></td>${fPct3}<td style="border:1px solid #000; padding:6px;"></td></tr>
+  // ── Tabla N°2 ────────────────────────────────────────────────
+  const t2 = `<table align="center" style="width:70%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
+    <tr><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">CALIFICACIÓN</th><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">N°</th><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%</th></tr>
+    <tr><td style="border:1px solid #000;padding:6px;">Satisfactorio</td><td style="border:1px solid #000;padding:6px;">${sat}</td><td style="border:1px solid #000;padding:6px;">${_pct(sat,total)}%</td></tr>
+    <tr><td style="border:1px solid #000;padding:6px;">Por Mejorar</td><td style="border:1px solid #000;padding:6px;">${mej}</td><td style="border:1px solid #000;padding:6px;">${_pct(mej,total)}%</td></tr>
+    <tr><td style="border:1px solid #000;padding:6px;">Deficiente</td><td style="border:1px solid #000;padding:6px;">${def}</td><td style="border:1px solid #000;padding:6px;">${_pct(def,total)}%</td></tr>
+    <tr><td style="border:1px solid #000;padding:6px;"><strong>TOTAL</strong></td><td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td><td style="border:1px solid #000;padding:6px;"><strong>100%</strong></td></tr>
   </table>`;
 
-  // Tabla N°5
+  // ── Tabla N°3 ────────────────────────────────────────────────
+  const hMeses = meses.map(m=>`<th style="border:1px solid #000;background:#e2e8f0;padding:6px;">${_mesCorto(m)}</th>`).join('');
+  const fSat3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${porMes[m].sat}</td>`).join('');
+  const fMej3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${porMes[m].mej}</td>`).join('');
+  const fDef3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${porMes[m].def}</td>`).join('');
+  const fTot3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${porMes[m].total}</td>`).join('');
+  const fPct3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${_pct(porMes[m].sat,porMes[m].total)}%</td>`).join('');
+
+  const t3 = `<table align="center" style="width:90%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
+    <tr><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">CALIFICACIÓN</th>${hMeses}<th style="border:1px solid #000;background:#e2e8f0;padding:6px;">TOTAL</th></tr>
+    <tr><td style="border:1px solid #000;padding:6px;">Satisfactorio</td>${fSat3}<td style="border:1px solid #000;padding:6px;">${sat}</td></tr>
+    <tr><td style="border:1px solid #000;padding:6px;">Por Mejorar</td>${fMej3}<td style="border:1px solid #000;padding:6px;">${mej}</td></tr>
+    <tr><td style="border:1px solid #000;padding:6px;">Deficiente</td>${fDef3}<td style="border:1px solid #000;padding:6px;">${def}</td></tr>
+    <tr><td style="border:1px solid #000;padding:6px;"><strong>TOTAL</strong></td>${fTot3}<td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td></tr>
+    <tr><td style="border:1px solid #000;padding:6px;"><em>% Satisfactorio</em></td>${fPct3}<td style="border:1px solid #000;padding:6px;"></td></tr>
+  </table>`;
+
+  // ── Tabla N°4: Distribución por Servicio ─────────────────────
+  const servList4 = Object.keys(porServ).sort((a,b) => porServ[b].total - porServ[a].total);
+  const filas4 = servList4.map(s => `
+    <tr>
+      <td style="border:1px solid #000;padding:6px;text-align:left;">${s}</td>
+      <td style="border:1px solid #000;padding:6px;">${porServ[s].total}</td>
+      <td style="border:1px solid #000;padding:6px;">${_pct(porServ[s].total,total)}%</td>
+    </tr>`).join('');
+
+  const t4Html = servList4.length > 1 ? `
+    <h3 align="center" style="color:#1e3a6e;text-align:center;">Tabla N° 4. Distribución de HCs auditadas por Departamento / Servicio</h3>
+    <table align="center" style="width:80%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
+      <tr>
+        <th style="border:1px solid #000;background:#e2e8f0;padding:6px;text-align:left;">SERVICIO AUDITADO</th>
+        <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">N° de HCs</th>
+        <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%</th>
+      </tr>
+      ${filas4}
+      <tr>
+        <td style="border:1px solid #000;padding:6px;text-align:left;"><strong>TOTAL</strong></td>
+        <td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td>
+        <td style="border:1px solid #000;padding:6px;"><strong>100%</strong></td>
+      </tr>
+    </table>
+    ${imgServ4 ? `<p align="center" style="text-align:center;"><strong>Gráfico N° 4. Historias Clínicas auditadas por Departamento / Servicio</strong></p>
+    <p align="center" style="text-align:center;"><img src="${imgServ4}" width="520"/></p>
+    <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>` : ''}
+    <br>` : '';
+
+  // ── Tabla N°5: Calidad por Servicio ──────────────────────────
   let t5Html = '';
-  const servsList = Object.keys(porServ);
-  if (servsList.length > 1) {
-    const filas5 = servsList
+  const servsList5 = Object.keys(porServ);
+  if (servsList5.length > 1) {
+    const filas5 = servsList5
       .sort((a,b) => _pct(porServ[b].sat,porServ[b].total)-_pct(porServ[a].sat,porServ[a].total))
       .map(s => {
         const d = porServ[s];
@@ -2038,42 +2226,88 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
         const bg = p>=90?'#dcfce7':p>=75?'#fef3c7':'#fee2e2';
         const co = p>=90?'#166534':p>=75?'#d97706':'#dc2626';
         return `<tr>
-          <td style="border:1px solid #000; padding:6px; text-align:left;">${s}</td>
-          <td style="border:1px solid #000; padding:6px;">${d.sat}</td>
-          <td style="border:1px solid #000; padding:6px; background:${bg}; color:${co}; font-weight:bold;">${p}%</td>
-          <td style="border:1px solid #000; padding:6px;">${d.mej}</td>
-          <td style="border:1px solid #000; padding:6px;">${d.def}</td>
-          <td style="border:1px solid #000; padding:6px;"><strong>${d.total}</strong></td>
+          <td style="border:1px solid #000;padding:6px;text-align:left;">${s}</td>
+          <td style="border:1px solid #000;padding:6px;">${d.sat}</td>
+          <td style="border:1px solid #000;padding:6px;background:${bg};color:${co};font-weight:bold;">${p}%</td>
+          <td style="border:1px solid #000;padding:6px;">${d.mej}</td>
+          <td style="border:1px solid #000;padding:6px;">${d.def}</td>
+          <td style="border:1px solid #000;padding:6px;"><strong>${d.total}</strong></td>
         </tr>`;
       }).join('');
     t5Html = `
-      <h3 align="center" style="color:#1e3a6e; text-align:center;">Tabla N° 5. Calidad de Registro por Departamento / Servicio</h3>
-      <table align="center" style="width:90%; border-collapse:collapse; margin:10px auto 20px auto; font-size:10pt;">
-        <tr><th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:left;">SERVICIO</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">SAT.</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">%SAT.</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">POR MEJ.</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">DEFIC.</th><th style="border:1px solid #000; background:#e2e8f0; padding:6px;">TOTAL</th></tr>
+      <h3 align="center" style="color:#1e3a6e;text-align:center;">Tabla N° 5. Calidad de Registro por Departamento / Servicio</h3>
+      <table align="center" style="width:95%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
+        <tr>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:6px;text-align:left;">SERVICIO</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">SAT.</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%SAT.</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">POR MEJ.</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">DEFIC.</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">TOTAL</th>
+        </tr>
         ${filas5}
-        <tr><td style="border:1px solid #000; padding:6px; text-align:left;"><strong>TOTAL</strong></td><td style="border:1px solid #000; padding:6px;">${sat}</td><td style="border:1px solid #000; padding:6px;">${_pct(sat,total)}%</td><td style="border:1px solid #000; padding:6px;">${mej}</td><td style="border:1px solid #000; padding:6px;">${def}</td><td style="border:1px solid #000; padding:6px;"><strong>${total}</strong></td></tr>
+        <tr>
+          <td style="border:1px solid #000;padding:6px;text-align:left;"><strong>TOTAL</strong></td>
+          <td style="border:1px solid #000;padding:6px;">${sat}</td>
+          <td style="border:1px solid #000;padding:6px;">${_pct(sat,total)}%</td>
+          <td style="border:1px solid #000;padding:6px;">${mej}</td>
+          <td style="border:1px solid #000;padding:6px;">${def}</td>
+          <td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td>
+        </tr>
       </table>
-      ${imgServ ? `<p align="center" style="text-align:center;"><img src="${imgServ}" width="500"/></p>` : ''}
+      ${imgServ ? `<p align="center" style="text-align:center;"><strong>Gráfico N° 5. Porcentaje de Calificación "Satisfactorio" por Departamento / Servicio</strong></p>
+      <p align="center" style="text-align:center;"><img src="${imgServ}" width="520"/></p>
+      <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>` : ''}
       <br>`;
   }
 
-  // Tabla Anexo N°1
+  // ── Tabla Promedio por Área (N°6a) ───────────────────────────
+  const porArea = _calcPorArea(_expData);
+  const areas = Object.keys(porArea);
+  let t6aHtml = '';
+  if (areas.length > 0) {
+    const filas6a = areas.map(a => {
+      const d = porArea[a];
+      const promA = d.prom !== undefined ? d.prom : 0;
+      return `<tr>
+        <td style="border:1px solid #000;padding:6px;">${a}</td>
+        <td style="border:1px solid #000;padding:6px;">${promA}%</td>
+      </tr>`;
+    }).join('');
+    t6aHtml = `
+      <h4 style="color:#1e3a6e;">Tabla N° 6a. Promedio de Cumplimiento por Área de Atención</h4>
+      <table align="center" style="width:60%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
+        <tr>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">ÁREA DE ATENCIÓN</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">% Promedio de Cumplimiento</th>
+        </tr>
+        ${filas6a}
+        <tr>
+          <td style="border:1px solid #000;padding:6px;"><strong>PROMEDIO</strong></td>
+          <td style="border:1px solid #000;padding:6px;"><strong>${prom}%</strong></td>
+        </tr>
+      </table>`;
+  }
+
+  // ── Tabla Anexo N°1 ──────────────────────────────────────────
   const filasAnexo = _expData.map((r,i) => {
     const bg = r.calificacion==='SATISFACTORIO'?'#dcfce7':r.calificacion==='POR MEJORAR'?'#fef3c7':'#fee2e2';
     const co = r.calificacion==='SATISFACTORIO'?'#166534':r.calificacion==='POR MEJORAR'?'#d97706':'#dc2626';
     return `<tr>
-      <td style="border:1px solid #000; padding:6px;">${i+1}</td>
-      <td style="border:1px solid #000; padding:6px;">${r.num_auditoria||''}</td>
-      <td style="border:1px solid #000; padding:6px;">${r.hc||''}</td>
-      <td style="border:1px solid #000; padding:6px; text-align:left;">${r.servicio||''}</td>
-      <td style="border:1px solid #000; padding:6px;">CONSULTA EXTERNA</td>
-      <td style="border:1px solid #000; padding:6px;"><strong>${r.puntaje||''}</strong></td>
-      <td style="border:1px solid #000; padding:6px; background:${bg}; color:${co}; font-weight:bold;">${r.calificacion||''}</td>
+      <td style="border:1px solid #000;padding:6px;">${i+1}</td>
+      <td style="border:1px solid #000;padding:6px;">${r.num_auditoria||''}</td>
+      <td style="border:1px solid #000;padding:6px;">${r.hc||''}</td>
+      <td style="border:1px solid #000;padding:6px;text-align:left;">${r.servicio||''}</td>
+      <td style="border:1px solid #000;padding:6px;">${r.area||'CONSULTA EXTERNA'}</td>
+      <td style="border:1px solid #000;padding:6px;"><strong>${r.puntaje||''}</strong></td>
+      <td style="border:1px solid #000;padding:6px;background:${bg};color:${co};font-weight:bold;">${r.calificacion||''}</td>
     </tr>`;
   }).join('');
 
-  // HTML DEL DOCUMENTO WORD - Ajustado sin "margin:2cm" para evitar el salto a la derecha. 
-  // Uso de <p align="center"> y <table align="center"> nativos para máxima compatibilidad.
+  // Párrafos del narrativo separados
+  const parrafos = narrativo.split('\n\n');
+
+  // ── HTML DEL DOCUMENTO WORD ──────────────────────────────────
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
     xmlns:w='urn:schemas-microsoft-com:office:word'
     xmlns='http://www.w3.org/TR/REC-html40'>
@@ -2082,17 +2316,54 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     body { font-family:Arial,sans-serif; font-size:11pt; }
     .page-break { page-break-before:always; }
     .fuente { font-size:9pt; color:#555; margin-top:4px; text-align:center; }
+    .aviso { background:#fff3cd; border:2px solid #ffc107; border-radius:6px; padding:14px 18px; margin-bottom:24px; font-size:10pt; }
+    .aviso strong { color:#856404; }
   </style>
   </head>
   <body>
-    <h2 align="center" style="color:#1e3a6e; text-align:center;">INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA</h2>
+
+    <!-- ══ MENSAJE DE AVISO ══════════════════════════════════ -->
+    <div class="aviso">
+      <strong>⚠ NOTA IMPORTANTE PARA EL EDITOR DE ESTE INFORME:</strong><br>
+      Este archivo fue generado automáticamente en base a la <strong>data registrada en el archivo Excel del Drive</strong>
+      (Formularios Google — Oficina de Gestión de la Calidad). Los resultados estadísticos, tablas y gráficos
+      reflejan únicamente los datos ingresados hasta la fecha de generación (<strong>${fechaHoy}</strong>).<br>
+      <em>Para completar el Informe Oficial deberá adicionar manualmente: portada institucional, sección de
+      Antecedentes, Base Legal, sección de No Conformidades detallada, firma y sello del responsable, y
+      cualquier otra sección que corresponda según el trimestre auditado.</em>
+    </div>
+
+    <!-- ══ ENCABEZADO ════════════════════════════════════════ -->
+    <h2 align="center" style="color:#1e3a6e;text-align:center;">
+      INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA
+    </h2>
     <p align="center" style="text-align:center;">
-      <strong>Fecha de Emisión:</strong> ${fechaHoy} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Total de HCs evaluadas:</strong> ${total}
+      <strong>Fecha de Emisión:</strong> ${fechaHoy}
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <strong>Período:</strong> ${anio}
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <strong>Total de HCs evaluadas:</strong> ${total}
     </p>
 
-    <h3 style="color:#1e3a6e; text-align:left;">3.3. RESULTADOS</h3>
-    <h4 style="color:#1e3a6e; text-align:left;">3.3.1. Evaluación de la Calidad del Registro</h4>
-    <p style="text-align:justify;">${narrativo.split('\n\n')[0] || ''}</p>
+    <!-- ══ 3.3 RESULTADOS ════════════════════════════════════ -->
+    <h3 style="color:#1e3a6e;">3.3. RESULTADOS</h3>
+
+    <!-- ── 3.3.1 Número de HCs por mes ──────────────────── -->
+    <h4 style="color:#1e3a6e;">3.3.1. Número de Historias Clínicas auditadas</h4>
+    <p style="text-align:justify;">${parrafos[0] || ''}</p>
+
+    <p align="center" style="text-align:center;"><strong>Tabla N° 1. Historias Clínicas auditadas por mes — Hospital Santa Rosa</strong></p>
+    ${t1}
+    <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
+
+    ${imgMes ? `
+    <p align="center" style="text-align:center;"><strong>Gráfico N° 1. Historias Clínicas auditadas por mes</strong></p>
+    <p align="center" style="text-align:center;"><img src="${imgMes}" width="480"/></p>
+    <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
+
+    <!-- ── 3.3.2 Calidad global ───────────────────────── -->
+    <h4 style="color:#1e3a6e;">3.3.2. Evaluación de la Calidad de Registro</h4>
+    <p style="text-align:justify;">${parrafos[1] || ''}</p>
 
     <p align="center" style="text-align:center;"><strong>Tabla N° 2. Calidad de registro de las HCs auditadas — Hospital Santa Rosa</strong></p>
     ${t2}
@@ -2103,38 +2374,61 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p align="center" style="text-align:center;"><img src="${imgPastel}" width="400"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-    <p style="text-align:justify;">${narrativo.split('\n\n')[1] || ''}</p>
+    <!-- ── Evolución por mes ──────────────────────────── -->
+    <p style="text-align:justify;">${parrafos[2] || ''}</p>
 
     <p align="center" style="text-align:center;"><strong>Tabla N° 3. Calidad de Registro por Mes — Hospital Santa Rosa</strong></p>
     ${t3}
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
 
     ${imgBarras ? `
-    <p align="center" style="text-align:center;"><strong>Gráfico N° 3. Evolución por Mes</strong></p>
-    <p align="center" style="text-align:center;"><img src="${imgBarras}" width="450"/></p>
+    <p align="center" style="text-align:center;"><strong>Gráfico N° 3. Evolución de Calidad de Registro por Mes</strong></p>
+    <p align="center" style="text-align:center;"><img src="${imgBarras}" width="480"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
+    <!-- ── Distribución por Servicio (Tabla N°4 + Gráfico N°4) ── -->
+    ${t4Html}
+
+    <!-- ── Calidad por Servicio (Tabla N°5 + Gráfico N°5) ─────── -->
+    ${parrafos[3] ? `<p style="text-align:justify;">${parrafos[3]}</p>` : ''}
     ${t5Html}
 
-    <h4 style="color:#1e3a6e; text-align:left;">3.3.2. Promedio de Cumplimiento del correcto registro</h4>
-    <p style="text-align:justify;">${narrativo.split('\n\n')[2] || ''}</p>
+    <!-- ── 3.3.3 Promedio de Cumplimiento ──────────────── -->
+    <h4 style="color:#1e3a6e;">3.3.3. Promedio de Cumplimiento del correcto registro</h4>
+    <p style="text-align:justify;">${parrafos[4] || ''}</p>
 
-    <br clear="all" style="page-break-before:always" />
+    ${imgCumpl ? `
+    <p align="center" style="text-align:center;"><strong>Gráfico N° 6. Promedio de Cumplimiento Global del correcto registro</strong></p>
+    <p align="center" style="text-align:center;"><img src="${imgCumpl}" width="400"/></p>
+    <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
+
+    ${t6aHtml}
+
+    <!-- ── 3.3.4 No Conformidades (placeholder) ────────── -->
+    <h4 style="color:#1e3a6e;">3.3.4. No Conformidades</h4>
+    <p style="text-align:justify;color:#888;font-style:italic;">
+      [Completar manualmente con las No Conformidades reportadas según área de atención.]
+    </p>
+
+    <!-- ══ SALTO DE PÁGINA — ANEXO N°1 ══════════════════════ -->
+    <br clear="all" style="page-break-before:always"/>
     <div class="page-break"></div>
 
-    <h2 align="center" style="color:#1e3a6e; text-align:center; margin-top:20px;">ANEXO N° 1</h2>
-    <h3 align="center" style="color:#1e3a6e; text-align:center;">Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa</h3>
-    
-    <table align="center" style="width:100%; border-collapse:collapse; margin:10px auto; font-size:10pt;">
+    <h2 align="center" style="color:#1e3a6e;text-align:center;margin-top:20px;">ANEXO N° 1</h2>
+    <h3 align="center" style="color:#1e3a6e;text-align:center;">
+      Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa
+    </h3>
+
+    <table align="center" style="width:100%;border-collapse:collapse;margin:10px auto;font-size:9pt;">
       <thead>
         <tr>
-          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">N°</th>
-          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">MES</th>
-          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">N° HC</th>
-          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">DEPARTAMENTO/SERVICIO AUDITADO</th>
-          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">ÁREA</th>
-          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">PUNTAJE</th>
-          <th style="border:1px solid #000; background:#e2e8f0; padding:6px; text-align:center;">CALIFICACIÓN</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">N°</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">MES</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">N° HC</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">DEPARTAMENTO/SERVICIO AUDITADO</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">ÁREA</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">PUNTAJE</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">CALIFICACIÓN</th>
         </tr>
       </thead>
       <tbody>${filasAnexo}</tbody>
@@ -2150,7 +2444,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 }
 
 // ──────────────────────────────────────────────────────────────
-// 11. HELPERS
+// 13. HELPERS
 // ──────────────────────────────────────────────────────────────
 function _calcGlobal(data) {
   let sat=0, mej=0, def=0, sumPct=0;
@@ -2191,6 +2485,22 @@ function _calcPorServicio(data) {
   return ps;
 }
 
+// NUEVO: calcular promedios por área de atención
+function _calcPorArea(data) {
+  const pa = {};
+  data.forEach(r => {
+    const a = r.area || 'SIN ÁREA';
+    if (!pa[a]) pa[a] = { suma:0, count:0 };
+    pa[a].suma  += (r.porcentaje || 0);
+    pa[a].count++;
+  });
+  const result = {};
+  Object.keys(pa).forEach(a => {
+    result[a] = { prom: pa[a].count ? parseFloat((pa[a].suma/pa[a].count).toFixed(2)) : 0 };
+  });
+  return result;
+}
+
 function _getMesesSelExp() {
   return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
     .map(cb => cb.value);
@@ -2228,7 +2538,7 @@ function _limpiarPreview() {
 }
 
 function _esc(s) {
-  return s.replace(/"/g, '&quot;').replace(/'/g,'&#39;');
+  return s.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // Cerrar dropdowns al hacer click fuera
