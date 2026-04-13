@@ -31,27 +31,26 @@ else:
     CREDENCIALES_PATH = "credenciales.json"
 
 # ============================================================
-# CONFIGURACIÓN DE LOS 3 EXCEL EN DRIVE (ACTUALIZADO CON TUS IDs)
+# CONFIGURACIÓN DE LOS 3 EXCEL EN DRIVE (IDs EXACTOS Y CORREGIDOS)
 # ============================================================
 AREAS_CONFIG = {
     "consulta_externa": {
         "label": "Consulta Externa",
-        "sheet_id": "1yZCRyNLQ4TShZEK_HvpVbmJidvcdjqG_JaCr2z4WjDw", # ID de Consulta Externa
+        "sheet_id": "1yZCRyNLQ4TShZEK_HvpVbmJidvcdjqG_JaCr2z4WjDw",
         "worksheet_name": "NUEVO CE"
     },
     "emergencia": {
         "label": "Emergencia",
-        "sheet_id": "1CMqxZEotUp8HaX-h35YJLfkWC6zBZIjtxGvT3aJH-wY", # ID de Emergencia/Hosp
+        "sheet_id": "1CMqxZEotUp8HaX-h35YJLfkWC6zBZIjtxGvT3aJH-wY",
         "worksheet_name": "E"
     },
     "hospitalizacion": {
         "label": "Hospitalización",
-        "sheet_id": "1BSMXbCf0zInOwxZ-IXGAKmeguNenTlQBZ0JgUtgehYA", # ID EXACTO Y CORREGIDO
+        "sheet_id": "1BSMXbCf0zInOwxZ-IXGAKmeguNenTlQBZ0JgUtgehYA", # ID 100% EXACTO 
         "worksheet_name": "H"
     }
 }
 
-# El sistema de usuarios se valida contra el archivo de Consulta Externa
 USERS_SHEET_ID = AREAS_CONFIG["consulta_externa"]["sheet_id"]
 USERS_SHEET_TAB  = "USUARIOS_SISTEMA"
 
@@ -331,7 +330,7 @@ CRITERIOS_POR_AREA = {
 }
 
 # ============================================================
-# GOOGLE SHEETS CORE (AHORA CON LÓGICA DE IDs Y MANEJO DE ERRORES)
+# GOOGLE SHEETS
 # ============================================================
 def get_client():
     creds = Credentials.from_service_account_file(CREDENCIALES_PATH, scopes=SCOPES)
@@ -342,23 +341,17 @@ def get_dataframe(sheet_id, worksheet_name):
     try:
         hoja = client.open_by_key(sheet_id)
     except Exception as e:
-        raise Exception(f"No se pudo acceder al archivo. Verifica que el ID del archivo sea correcto y que hayas compartido el archivo con el correo del bot.")
-    
+        raise Exception("No se pudo acceder al archivo. Verifica que el ID sea correcto y hayas compartido el archivo.")
     try:
         ws = hoja.worksheet(worksheet_name)
-    except Exception as e:
-        # Si la pestaña no existe, le mostramos al usuario cuáles son las pestañas reales que tiene su archivo
-        disponibles = ", ".join([w.title for w in hoja.worksheets()])
-        raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Las pestañas que existen en este archivo son: {disponibles}")
-        
+    except Exception:
+        disp = ", ".join([w.title for w in hoja.worksheets()])
+        raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Pestañas existentes: {disp}")
     return pd.DataFrame(ws.get_all_records())
 
 def get_users_sheet():
     client = get_client()
-    try:
-        hoja = client.open_by_key(USERS_SHEET_ID)
-    except Exception as e:
-        raise Exception(f"Error al abrir Excel de usuarios (Asegurate de haber configurado el ID de consulta externa).")
+    hoja = client.open_by_key(USERS_SHEET_ID)
     try:
         ws = hoja.worksheet(USERS_SHEET_TAB)
     except Exception:
@@ -370,30 +363,30 @@ def get_users_sheet():
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
-def get_val(row, campo):
-    for k, v in row.items():
-        if str(k).strip() == campo.strip():
-            return str(v).strip().upper()
-    for k, v in row.items():
-        if campo[:30].lower() in str(k).lower():
-            return str(v).strip().upper()
-    return ""
-
 def calcular_row_ce_hosp(row, criterios):
     total=0; na_total=0; secciones={}
     for sec_key, sec in criterios.items():
         sub=0; na_sec=0; items=[]
         for c in sec["items"]:
-            val=get_val(row,c["campo"]); pts=0; estado="sin_dato"
+            # Obtener valor seguro
+            val=""
+            for k, v in row.items():
+                if str(k).strip() == c["campo"].strip() or c["campo"][:30].lower() in str(k).lower():
+                    val = str(v).strip().upper()
+                    break
+                    
+            pts=0; estado="sin_dato"
             if val in ("COMPLETO","C","CONFORME"):   pts=c["completo"]; estado="completo"
             elif val in ("INCOMPLETO","I"):          pts=c.get("incompleto",0); estado="incompleto"
             elif val in ("EN EXCESO","E"):           pts=c.get("enExceso",0); estado="en_exceso"
             elif val in ("NO EXISTE","NE","NO CONFORME"): pts=0; estado="no_existe"
             elif val in ("NO APLICA","NA"):          pts=0; na_sec+=c["completo"]; estado="na"
+            
             items.append({"nombre":c["nombre"],"pts":pts,"max":c["completo"],"estado":estado})
             sub+=pts
         na_total+=na_sec; total+=sub
         secciones[sec_key]={"label":sec["label"],"subtotal":sub,"max":sec["max"],"items":items}
+    
     max_ap=100-na_total
     pct=round((total/max_ap*100),2) if max_ap>0 else 0
     calif="SATISFACTORIO" if pct>=90 else ("POR MEJORAR" if pct>=75 else "DEFICIENTE")
@@ -404,55 +397,59 @@ def calcular_row_eme(row, criterios):
     for sec_key, sec in criterios.items():
         sub=0; na_sec=0; items=[]
         for c in sec["items"]:
-            val=get_val(row,c["campo"]); pts=0; estado="sin_dato"
+            # Obtener valor seguro
+            val=""
+            for k, v in row.items():
+                if str(k).strip() == c["campo"].strip() or c["campo"][:30].lower() in str(k).lower():
+                    val = str(v).strip().upper()
+                    break
+                    
+            pts=0; estado="sin_dato"
             if val in ("CONFORME","C","COMPLETO"):              pts=c["conforme"]; estado="completo"
             elif val in ("NO CONFORME","NC","NO EXISTE","NE","INCOMPLETO","I"): pts=0; estado="no_existe"
             elif val in ("NO APLICA","NA"):                      pts=0; na_sec+=c["conforme"]; estado="na"
+            
             items.append({"nombre":c["nombre"],"pts":pts,"max":c["conforme"],"estado":estado})
             sub+=pts
         na_total+=na_sec; total+=sub
         secciones[sec_key]={"label":sec["label"],"subtotal":sub,"max":sec["max"],"items":items}
+        
     max_ap=100-na_total
     pct=round((total/max_ap*100),2) if max_ap>0 else 0
     calif="SATISFACTORIO" if pct>=90 else ("POR MEJORAR" if pct>=75 else "DEFICIENTE")
     return {"puntaje":round(total,2),"max_aplicable":round(max_ap,2),"porcentaje":pct,"calificacion":calif,"secciones":secciones}
 
 # ==============================================================
-# PROCESAR DATOS CON AÑO Y MES SEPARADOS
+# PROCESAR DATOS CON AÑO Y MES SEPARADOS (FILTRO 2024+)
 # ==============================================================
 def procesar_df(df, area_key, area_label="Área"):
-    results=[]; criterios=CRITERIOS_POR_AREA[area_key]
-    nombres_meses={1:"01 - Enero",2:"02 - Febrero",3:"03 - Marzo",4:"04 - Abril",5:"05 - Mayo",6:"06 - Junio",7:"07 - Julio",8:"08 - Agosto",9:"09 - Septiembre",10:"10 - Octubre",11:"11 - Noviembre",12:"12 - Diciembre"}
+    results = []
+    criterios = CRITERIOS_POR_AREA[area_key]
+    nombres_meses = {1:"01 - Enero", 2:"02 - Febrero", 3:"03 - Marzo", 4:"04 - Abril", 5:"05 - Mayo", 6:"06 - Junio", 7:"07 - Julio", 8:"08 - Agosto", 9:"09 - Septiembre", 10:"10 - Octubre", 11:"11 - Noviembre", 12:"12 - Diciembre"}
     
     for _, row in df.iterrows():
-        r=row.to_dict()
-        marca_temporal=str(r.get("Marca temporal","")).strip()
+        r = row.to_dict()
+        marca_temporal = str(r.get("Marca temporal", "")).strip()
         
-        # 1. Extraer Año de la fecha principal y APLICAR EL FILTRO
+        # 1. Extraer Año de la fecha y APLICAR EL FILTRO (Ignora errores o vacíos)
         try:
-            fe=pd.to_datetime(marca_temporal,dayfirst=True)
-            
-            # =====================================================
-            # NUEVO FILTRO: Solo aceptar data del 2024 en adelante
-            # (Si prefieres desde 2022, cambia el 2024 por 2022)
-            # =====================================================
+            fe = pd.to_datetime(marca_temporal, dayfirst=True)
             if fe.year < 2024:
-                continue  # Salta esta fila y pasa a la siguiente
-                
-            anio_automatico=str(fe.year)
+                continue
+            anio_automatico = str(fe.year)
         except Exception:
-            # Si una fila no tiene fecha válida, la ignoramos para mantener la data limpia
             continue
             
-        # 2. Calcular los puntajes SOLO de las filas que pasaron el filtro (más rápido)
-        calc=calcular_row_eme(r,criterios) if area_key=="emergencia" else calcular_row_ce_hosp(r,criterios)
-            
-        # 3. Extraer Mes de la columna oculta
+        # 2. Calcular los puntajes SOLO si pasó el filtro
+        calc = calcular_row_eme(r, criterios) if area_key == "emergencia" else calcular_row_ce_hosp(r, criterios)
+        
+        # 3. Extraer Mes de la columna Auditoria
         mes_raw = ""
         for k, v in r.items():
             if "úmero de Auditoria" in str(k) or "umero de Auditoria" in str(k):
                 mes_raw = str(v).strip()
                 break
+        
         try:
             mes_num = int(float(mes_raw))
             mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
@@ -461,23 +458,24 @@ def procesar_df(df, area_key, area_label="Área"):
 
         def campo(keys):
             for k in keys:
-                v=str(r.get(k,"")).strip()
-                if v and v!="nan": return v
+                v = str(r.get(k, "")).strip()
+                if v and str(v).lower() != "nan": return v
             return "—"
             
         results.append({
-            "hc":campo(["NÚMERO DE HISTORIA CLÍNICA","NÚMERO DE LA HISTORIA CLÍNICA","NUMERO DE HISTORIA CLINICA"]),
-            "fecha":campo(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
-            "servicio":campo(["SERVICIO AUDITADO:","SERVICIO AUDITADO"]),
-            "auditor":campo(["MIEMBROS DEL COMITÉ DE AUDITORIA (que realizan la auditoría)","MIEMBROS DEL COMITÉ DE AUDITORIA","Miembros del Comité de Auditoria que realizan la auditoría"]),
+            "hc": campo(["NÚMERO DE HISTORIA CLÍNICA","NÚMERO DE LA HISTORIA CLÍNICA","NUMERO DE HISTORIA CLINICA"]),
+            "fecha": campo(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
+            "servicio": campo(["SERVICIO AUDITADO:","SERVICIO AUDITADO"]),
+            "auditor": campo(["MIEMBROS DEL COMITÉ DE AUDITORIA (que realizan la auditoría)","MIEMBROS DEL COMITÉ DE AUDITORIA","Miembros del Comité de Auditoria que realizan la auditoría"]),
             "anio": anio_automatico,
             "num_auditoria": mes_automatico,
-            "diagnostico":campo(["DIAGNÓSTICO DE ALTA","DIAGNÓSTICO","DIAGNOSTICO"]),
-            "cie10":campo(["CIE 10 (en mayúsculas, separando diagnósticos con slash, ejemplo: U07.1 / K35.9)"]),
-            "area":area_label,**calc
+            "diagnostico": campo(["DIAGNÓSTICO DE ALTA","DIAGNÓSTICO","DIAGNOSTICO"]),
+            "cie10": campo(["CIE 10 (en mayúsculas, separando diagnósticos con slash, ejemplo: U07.1 / K35.9)"]),
+            "area": area_label,
+            **calc
         })
         
-    results.sort(key=lambda x:(x['anio'],x['num_auditoria']))
+    results.sort(key=lambda x: (x['anio'], x['num_auditoria']))
     return results
 
 # ============================================================
