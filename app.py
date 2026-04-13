@@ -46,7 +46,7 @@ AREAS_CONFIG = {
     },
     "hospitalizacion": {
         "label": "Hospitalización",
-        "sheet_id": "1CMqxZEotUp8HaX-h35YJLfkWC6zBZIjtxGvT3aJH-wY", # ID de Emergencia/Hosp
+        "sheet_id": "1BSMXbCfOzInOwxZ-lXGAKmeguNeNTlQBZ0JgUtgehYA", # ¡ESTE ES EL ID REAL DE HOSPITALIZACIÓN!
         "worksheet_name": "H"
     }
 }
