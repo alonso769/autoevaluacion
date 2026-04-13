@@ -347,9 +347,18 @@ table.main-tbl tr:hover td{background:#fdf8f0}
       <div class="icon">📋</div>
       <div>
         <span>Auditoría HC</span>
-        <small>Anexo N° 5 — Consulta Externa</small>
+        <small id="areaTitleLabel">Anexo N° 5 — Consulta Externa</small>
       </div>
     </div>
+    
+    <div style="margin-left: 20px;">
+       <select id="areaSelector" onchange="cambiarArea()" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: bold; outline: none; cursor: pointer;">
+          <option value="consulta_externa" style="color: #000;">Consulta Externa</option>
+          <option value="emergencia" style="color: #000;">Emergencia</option>
+          <option value="hospitalizacion" style="color: #000;">Hospitalización</option>
+       </select>
+    </div>
+
     <div class="topbar-nav">
       <button class="nav-btn active" onclick="showPage('dashboard')" id="navDash">📊 Dashboard</button>
       <button class="nav-btn" onclick="showPage('secciones')" id="navSec">📈 Por Sección</button>
@@ -777,6 +786,25 @@ let charts = {};
 let regPage = 1;
 const REG_SIZE = 25;
 
+// ===== NUEVO: CONTROL DE ÁREA =====
+let currentArea = 'consulta_externa';
+
+function cambiarArea() {
+  currentArea = document.getElementById('areaSelector').value;
+  const titulos = {
+    'consulta_externa': 'Anexo N° 5 — Consulta Externa',
+    'emergencia': 'Anexo N° 5 — Emergencia',
+    'hospitalizacion': 'Anexo N° 5 — Hospitalización'
+  };
+  document.getElementById('areaTitleLabel').textContent = titulos[currentArea];
+  
+  // Limpiamos los gráficos visualmente antes de cargar la nueva data
+  _limpiarPreview(); 
+  
+  actualizarDatos(); // Volver a cargar todo con la nueva área
+}
+// ===================================
+
 
 // ===== LOGIN =====
 document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
@@ -838,7 +866,7 @@ async function actualizarDatos() {
   btn.textContent = '⏳ Actualizando...';
   showLoading('Obteniendo datos desde Google Drive...');
   try {
-    const r = await fetch(`${API}/datos`);
+    const r = await fetch(`${API}/datos?area=${currentArea}`);
     const d = await r.json();
     if(d.ok) {
       allData = d.registros;
