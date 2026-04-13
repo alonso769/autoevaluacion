@@ -38,8 +38,8 @@ else:
 # ============================================================
 AREAS_CONFIG = {
     "consulta_externa": {"label":"Consulta Externa","sheet_name":"FORMATO DE CONSULTA EXTERNA-INICIAL (Respuestas)","worksheet_name":"NUEVO CE","area_tag":"CONSULTA EXTERNA"},
-    "emergencia":       {"label":"Emergencia",      "sheet_name":"FORMATO DE EMERGENCIA  (Respuestas)","worksheet_name":"Respuestas de formulario 1","area_tag":"EMERGENCIA"},
-    "hospitalizacion":  {"label":"Hospitalización", "sheet_name":"FORMATO DE HOSPITALIZACIÓN (Respuestas)","worksheet_name":"Respuestas de formulario 1","area_tag":"HOSPITALIZACIÓN"},
+    "emergencia":       {"label":"Emergencia",      "sheet_name":"FORMATO DE EMERGENCIA (Respuestas)","worksheet_name":"E","area_tag":"EMERGENCIA"},
+    "hospitalizacion":  {"label":"Hospitalización", "sheet_name":"FORMATO DE HOSPITALIZACIÓN (Respuestas)","worksheet_name":"H","area_tag":"HOSPITALIZACIÓN"},
 }
 USERS_SHEET_NAME = "FORMATO DE CONSULTA EXTERNA-INICIAL (Respuestas)"
 USERS_SHEET_TAB  = "USUARIOS_SISTEMA"
