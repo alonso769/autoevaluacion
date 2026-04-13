@@ -912,6 +912,7 @@ async function actualizarDatos() {
       await calcularEstadisticas(allData);
       renderDashboard();
       renderSecciones();
+      renderChartOportunidad();
       renderRegistros();
       showToast('✅ Datos actualizados: '+allData.length+' registros', 'ok');
     } else {
