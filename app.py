@@ -450,7 +450,7 @@ def procesar_df(df, area_key, area_label="Área"):
         # 3. Extraer Mes de la columna oculta
         mes_raw = ""
         for k, v in r.items():
-            if "úmero de Auditoria" in str(k) or "umero de Auditoria" in str(k):
+            if "uditoria" in str(k).upper() or "UDITORIA" in str(k).upper():
                 mes_raw = str(v).strip()
                 break
         try:
