@@ -380,12 +380,15 @@ table.main-tbl tr:hover td{background:#fdf8f0}
 
     <!-- ===== DASHBOARD PAGE ===== -->
     <div class="page active" id="pageDashboard">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-        <div>
-          <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:400">Panel General</h2>
+      
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:30px; flex-wrap:wrap; gap:20px; width:100%;">
+        
+        <div style="min-width: 250px;">
+          <h2 style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--navy)">Panel General</h2>
           <p style="font-size:13px;color:var(--muted);margin-top:2px" id="dashSubtitle">Cargando datos...</p>
         </div>
-        <div style="display:flex;gap:10px;align-items:center; flex-wrap:wrap; background:rgba(255,255,255,0.5); padding:10px; border-radius:12px; border:1px solid var(--border)">
+
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; background:#fff; padding:15px; border-radius:12px; border:1px solid var(--border); box-shadow: var(--shadow);">
           
           <div class="fg" style="min-width:180px">
             <label>Estado de Ingreso</label>
@@ -396,29 +399,25 @@ table.main-tbl tr:hover td{background:#fdf8f0}
             </select>
           </div>
 
-          <div class="fg" style="min-width:120px">
+          <div class="fg" style="min-width:100px">
             <label>Año</label>
-            <select id="filtAnio" onchange="aplicarFiltros()" style="height:38px">
-              <option value="">Todos los años</option>
-            </select>
+            <select id="filtAnio" onchange="aplicarFiltros()" style="height:38px"><option value="">Todos</option></select>
           </div>
           
           <div class="custom-ms" id="wrapMesDash" style="margin-top:18px">
             <div class="ms-btn" onclick="document.getElementById('menuMesDash').classList.toggle('show')">
-              <span id="textMesDash">Todos los meses</span> <span>▼</span>
+              <span id="textMesDash">Meses</span> <span>▼</span>
             </div>
             <div class="ms-menu" id="menuMesDash"></div>
           </div>
 
           <div class="fg" style="min-width:200px">
             <label>Servicio</label>
-            <select id="filtServDash" onchange="aplicarFiltros()" style="height:38px">
-              <option value="">Todos los servicios</option>
-            </select>
+            <select id="filtServDash" onchange="aplicarFiltros()" style="height:38px"><option value="">Todos los servicios</option></select>
           </div>
 
-          <button class="fbtn primary" onclick="abrirAnalisisExtemporaneo()" style="background:var(--navy2); border:1.5px solid var(--gold); align-self:flex-end; height:38px; display:flex; align-items:center; gap:8px; white-space:nowrap">
-            <span>🔎</span> Analizar Extemporáneos
+          <button class="fbtn primary" onclick="abrirAnalisisExtemporaneo()" style="background:var(--navy2); border:1.5px solid var(--gold); align-self:flex-end; height:38px; display:flex; align-items:center; gap:8px">
+            <span>🔎</span> Detalle Extemporáneo
           </button>
         </div>
 
@@ -1012,23 +1011,25 @@ function aplicarFiltrosGlobal(e) {
 }
 
 function aplicarFiltros() {
-  // 1. FEEDBACK VISUAL: Atenuamos la pantalla e indicamos que está cargando
+  // 1. FEEDBACK VISUAL
   const contentDiv = document.querySelector('.content');
   if(contentDiv) contentDiv.style.opacity = '0.5';
   document.body.style.cursor = 'wait';
 
-  // 2. DEBOUNCE: Cancelamos el cálculo anterior si hay clics rápidos
+  // 2. DEBOUNCE
   clearTimeout(timerFiltrosDash);
 
-  // 3. Programamos el trabajo pesado para cuando termine de hacer clic (400ms)
+  // 3. Programamos el cálculo
   timerFiltrosDash = setTimeout(() => {
+    // --- CAPTURAMOS EL NUEVO FILTRO DE OPORTUNIDAD ---
+    const opSel = document.getElementById('filtOportunidad').value;
     const anioSel = document.getElementById('filtAnio').value;
     
-    // Capturar los checkboxes que el usuario ha marcado
+    // Capturar checkboxes de meses
     const checks = document.querySelectorAll('#menuMesDash input[type="checkbox"]:checked');
     const mesesSel = Array.from(checks).map(cb => cb.value);
     
-    // Actualizar el texto del botón para que se vea profesional
+    // Actualizar texto del botón de meses
     const textBtn = document.getElementById('textMesDash');
     if (textBtn) {
       if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
@@ -1039,8 +1040,9 @@ function aplicarFiltros() {
     const selectorServicio = document.getElementById('filtServDash');
     const servSel = selectorServicio.value;
 
-    // --- LÓGICA DE FILTROS EN CASCADA ---
+    // --- LÓGICA DE FILTROS EN CASCADA (También debe respetar la oportunidad) ---
     const serviciosDisponibles = [...new Set(allData.filter(r => {
+      if (opSel !== 'TODOS' && r.oportunidad !== opSel) return false; // NUEVO
       if (anioSel && r.anio !== anioSel) return false;
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
       return true;
@@ -1055,6 +1057,7 @@ function aplicarFiltros() {
 
     // --- FILTRADO FINAL DE LA DATA PARA GRÁFICOS ---
     filtData = allData.filter(r => {
+      if (opSel !== 'TODOS' && r.oportunidad !== opSel) return false; // NUEVO
       if (anioSel && r.anio !== anioSel) return false; 
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
       if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
@@ -1067,11 +1070,11 @@ function aplicarFiltros() {
       renderSecciones(); 
       renderRegistros(); 
       
-      // 5. RESTAURAMOS LA PANTALLA (Efecto de carga terminada)
+      // 5. RESTAURAMOS LA PANTALLA
       if(contentDiv) contentDiv.style.opacity = '1';
       document.body.style.cursor = 'default';
     });
-  }, 400); // 400ms de espera inteligente
+  }, 400); 
 }
 
 
