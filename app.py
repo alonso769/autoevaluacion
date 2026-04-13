@@ -426,18 +426,28 @@ def procesar_df(df, area_key, area_label="Área"):
     
     for _, row in df.iterrows():
         r=row.to_dict()
-        calc=calcular_row_eme(r,criterios) if area_key=="emergencia" else calcular_row_ce_hosp(r,criterios)
-        
         marca_temporal=str(r.get("Marca temporal","")).strip()
         
-        # Extraer Año de la fecha principal
+        # 1. Extraer Año de la fecha principal y APLICAR EL FILTRO
         try:
             fe=pd.to_datetime(marca_temporal,dayfirst=True)
+            
+            # =====================================================
+            # NUEVO FILTRO: Solo aceptar data del 2024 en adelante
+            # (Si prefieres desde 2022, cambia el 2024 por 2022)
+            # =====================================================
+            if fe.year < 2024:
+                continue  # Salta esta fila y pasa a la siguiente
+                
             anio_automatico=str(fe.year)
         except Exception:
-            anio_automatico="Sin Año"
+            # Si una fila no tiene fecha válida, la ignoramos para mantener la data limpia
+            continue
             
-        # Extraer Mes de la columna oculta
+        # 2. Calcular los puntajes SOLO de las filas que pasaron el filtro (más rápido)
+        calc=calcular_row_eme(r,criterios) if area_key=="emergencia" else calcular_row_ce_hosp(r,criterios)
+            
+        # 3. Extraer Mes de la columna oculta
         mes_raw = ""
         for k, v in r.items():
             if "úmero de Auditoria" in str(k) or "umero de Auditoria" in str(k):
