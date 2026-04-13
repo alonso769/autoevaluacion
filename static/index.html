@@ -385,22 +385,42 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:400">Panel General</h2>
           <p style="font-size:13px;color:var(--muted);margin-top:2px" id="dashSubtitle">Cargando datos...</p>
         </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnio" onchange="aplicarFiltros()">
-            <option value="">Todos los años</option>
-        </select>
-        <div class="custom-ms" id="wrapMesDash">
-          <div class="ms-btn" onclick="document.getElementById('menuMesDash').classList.toggle('show')">
-            <span id="textMesDash">Todos los meses</span> <span>▼</span>
+        <div style="display:flex;gap:10px;align-items:center; flex-wrap:wrap; background:rgba(255,255,255,0.5); padding:10px; border-radius:12px; border:1px solid var(--border)">
+          
+          <div class="fg" style="min-width:180px">
+            <label>Estado de Ingreso</label>
+            <select id="filtOportunidad" onchange="aplicarFiltros()" style="border:1.5px solid var(--gold); background:#fffef0; font-weight:bold; height:38px">
+              <option value="A TIEMPO" selected>✅ Solo a tiempo (Mes Actual)</option>
+              <option value="FUERA DE FECHA">⚠️ Solo fuera de fecha</option>
+              <option value="TODOS">🌐 Toda la data (Consolidado)</option>
+            </select>
           </div>
-          <div class="ms-menu" id="menuMesDash">
+
+          <div class="fg" style="min-width:120px">
+            <label>Año</label>
+            <select id="filtAnio" onchange="aplicarFiltros()" style="height:38px">
+              <option value="">Todos los años</option>
+            </select>
+          </div>
+          
+          <div class="custom-ms" id="wrapMesDash" style="margin-top:18px">
+            <div class="ms-btn" onclick="document.getElementById('menuMesDash').classList.toggle('show')">
+              <span id="textMesDash">Todos los meses</span> <span>▼</span>
             </div>
+            <div class="ms-menu" id="menuMesDash"></div>
+          </div>
+
+          <div class="fg" style="min-width:200px">
+            <label>Servicio</label>
+            <select id="filtServDash" onchange="aplicarFiltros()" style="height:38px">
+              <option value="">Todos los servicios</option>
+            </select>
+          </div>
+
+          <button class="fbtn primary" onclick="abrirAnalisisExtemporaneo()" style="background:var(--navy2); border:1.5px solid var(--gold); align-self:flex-end; height:38px; display:flex; align-items:center; gap:8px; white-space:nowrap">
+            <span>🔎</span> Analizar Extemporáneos
+          </button>
         </div>
-          <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServDash" onchange="aplicarFiltros()">
-            <option value="">Todos los servicios</option>
-          </select>
-        </div>
-      </div>
 
       <!-- KPIs -->
       <div class="kpi-grid">
@@ -422,14 +442,6 @@ table.main-tbl tr:hover td{background:#fdf8f0}
         </div>
       </div>
 
-      <div class="section-card wide" style="margin-bottom:20px">
-        <div class="card-head"><h3>🕒 Oportunidad de Registro (A tiempo vs Extemporáneo)</h3></div>
-        <div class="card-body">
-          <div style="position:relative;height:250px">
-            <canvas id="chartOportunidad"></canvas>
-          </div>
-        </div>
-      </div>
 
       <div class="section-card wide" style="margin-bottom:20px">
         <div class="card-head"><h3>🏥 Rendimiento por Servicio</h3><span class="badge" id="totalServBadge">0 servicios</span></div>
@@ -912,7 +924,6 @@ async function actualizarDatos() {
       await calcularEstadisticas(allData);
       renderDashboard();
       renderSecciones();
-      renderChartOportunidad();
       renderRegistros();
       showToast('✅ Datos actualizados: '+allData.length+' registros', 'ok');
     } else {
@@ -2616,6 +2627,115 @@ document.addEventListener('click', e => {
     document.getElementById('menuMesExp')?.classList.remove('show');
 });
 
+// ==============================================================
+// LÓGICA PARA ANÁLISIS DE DATA FUERA DE FECHA
+// ==============================================================
+let chExt1, chExt2, chExt3;
+
+function abrirAnalisisExtemporaneo() {
+    // Filtramos solo lo que Python marcó como FUERA DE FECHA
+    const extData = allData.filter(r => r.oportunidad === 'FUERA DE FECHA');
+    const tbody = document.getElementById('bodyExtemporaneo');
+    
+    if(extData.length === 0) {
+        showToast('✅ Excelente: No hay data fuera de fecha registrada.', 'ok');
+        return;
+    }
+
+    tbody.innerHTML = extData.map(r => `
+        <tr>
+            <td style="font-size:11px">${r.fecha}</td>
+            <td><span class="pill pm">${r.num_auditoria}</span></td>
+            <td><strong>${r.hc}</strong></td>
+            <td style="font-size:11px">${r.servicio}</td>
+            <td style="font-weight:600">${r.auditor}</td>
+        </tr>
+    `).join('');
+
+    document.getElementById('modalExtemporaneo').classList.add('open');
+    
+    // Dibujamos los gráficos del modal con un pequeño delay
+    setTimeout(() => { renderChartsExt(extData); }, 400);
+}
+
+function renderChartsExt(data) {
+    if(chExt1) chExt1.destroy();
+    if(chExt2) chExt2.destroy();
+    if(chExt3) chExt3.destroy();
+
+    const meses = {}; data.forEach(r => meses[r.num_auditoria] = (meses[r.num_auditoria]||0)+1);
+    const servs = {}; data.forEach(r => servs[r.servicio] = (servs[r.servicio]||0)+1);
+    const auds = {}; data.forEach(r => auds[r.auditor] = (auds[r.auditor]||0)+1);
+
+    // 1. Por Mes
+    chExt1 = new Chart(document.getElementById('chartExtMes'), {
+        type: 'bar',
+        data: { labels: Object.keys(meses), datasets: [{ label: 'Registros con retraso', data: Object.values(meses), backgroundColor: '#f59e0b' }] },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 2. Por Servicio (Top 10)
+    const topServs = Object.entries(servs).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    chExt2 = new Chart(document.getElementById('chartExtServicio'), {
+        type: 'bar',
+        data: { labels: topServs.map(s=>s[0].substring(0,20)), datasets: [{ label: 'Cantidad', data: topServs.map(s=>s[1]), backgroundColor: '#ef4444' }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+    });
+
+    // 3. Por Auditor
+    chExt3 = new Chart(document.getElementById('chartExtAuditor'), {
+        type: 'bar',
+        data: { labels: Object.keys(auds).map(a=>a.substring(0,25)), datasets: [{ label: 'Ingresos tardíos', data: Object.values(auds), backgroundColor: '#1e3a6e' }] },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+function cerrarExtemporaneo() {
+    document.getElementById('modalExtemporaneo').classList.remove('open');
+}
+
 </script>
+
+<div class="modal-overlay" id="modalExtemporaneo" onclick="if(event.target.id==='modalExtemporaneo') cerrarExtemporaneo()">
+  <div class="modal" style="max-width:1100px; border:2px solid var(--red)">
+      <div class="modal-head" style="background:linear-gradient(135deg, #991b1b 0%, #dc2626 100%)">
+          <h2 style="color:#fff">⚠️ Análisis de Ingresos Fuera de Fecha</h2>
+          <p style="color:rgba(255,255,255,0.8)">Registros cuya fecha de ingreso no coincide con el mes de la auditoría</p>
+          <button class="modal-close" onclick="cerrarExtemporaneo()">✕</button>
+      </div>
+      <div class="modal-body" style="background:var(--cream)">
+          <div class="section-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:20px">
+              <div class="section-card">
+                  <div class="card-head"><h3>📅 Retraso por Mes Auditado</h3></div>
+                  <div class="card-body"><div style="height:250px"><canvas id="chartExtMes"></canvas></div></div>
+              </div>
+              <div class="section-card">
+                  <div class="card-head"><h3>🏥 Servicios con mayor desfase</h3></div>
+                  <div class="card-body"><div style="height:250px"><canvas id="chartExtServicio"></canvas></div></div>
+              </div>
+          </div>
+          
+          <div class="section-card wide">
+              <div class="card-head"><h3>👥 Auditores que ingresaron data extemporánea</h3></div>
+              <div class="card-body"><div style="height:250px"><canvas id="chartExtAuditor"></canvas></div></div>
+          </div>
+
+          <div class="section-card wide" style="margin-top:20px">
+              <div class="card-head"><h3>📋 Listado Detallado de Incumplimiento</h3></div>
+              <div class="tbl-wrap">
+                  <table class="main-tbl">
+                      <thead>
+                          <tr style="background:var(--red2)">
+                              <th>Fecha de Ingreso</th><th>Mes Auditado</th><th>N° HC</th><th>Servicio</th><th>Auditor</th>
+                          </tr>
+                      </thead>
+                      <tbody id="bodyExtemporaneo"></tbody>
+                  </table>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+
 </body>
 </html>
