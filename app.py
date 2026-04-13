@@ -347,10 +347,23 @@ def get_dataframe(sheet_id, worksheet_name):
     try:
         ws = hoja.worksheet(worksheet_name)
     except Exception as e:
-        # Si la pestaña no existe, le mostramos al usuario cuáles son las pestañas reales que tiene su archivo
         disponibles = ", ".join([w.title for w in hoja.worksheets()])
         raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Las pestañas que existen en este archivo son: {disponibles}")
-        
+    
+    # Para Hospitalización (hojas grandes) usar get_all_values para evitar memory overflow
+    if worksheet_name == "H":
+        all_values = ws.get_all_values()
+        if not all_values:
+            return pd.DataFrame()
+        headers = all_values[0]
+        rows = all_values[1:]
+        # Solo últimas 1500 filas con datos reales (no vacías)
+        rows = [r for r in rows if any(v.strip() for v in r)]
+        if len(rows) > 1500:
+            rows = rows[-1500:]
+        return pd.DataFrame(rows, columns=headers)
+    
+    # Para CE y Emergencia usar el método original que funciona bien
     return pd.DataFrame(ws.get_all_records())
 
 def get_users_sheet():
