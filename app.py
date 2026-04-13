@@ -563,7 +563,15 @@ def get_estadisticas():
         for s in servicios: servicios[s]['promedio']=round(servicios[s]['pct_sum']/servicios[s]['total'],2)
         return jsonify({"total":total,"satisfactorio":sat,"por_mejorar":mej,"deficiente":deft,"promedio_pct":prom,"secciones":secciones_stats,"por_servicio":servicios})
     except Exception as e: return jsonify({"error":str(e)}),500
-
+@app.route('/api/debug_hosp')
+def debug_hosp():
+    try:
+        client = get_client()
+        hoja = client.open_by_key("1BSMXbCf0zInOwxZ-IXGAKmeguNenTlQBZ0JgUtgehYA")
+        pestanas = [w.title for w in hoja.worksheets()]
+        return jsonify({"ok": True, "pestanas": pestanas})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 if __name__=='__main__':
     port=int(os.environ.get("PORT",5000))
     app.run(host='0.0.0.0',port=port,debug=True)
