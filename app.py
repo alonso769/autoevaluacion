@@ -46,7 +46,7 @@ AREAS_CONFIG = {
     },
     "hospitalizacion": {
         "label": "Hospitalización",
-        "sheet_id": "1BSMXbCfOzInOwxZ-lXGAKmeguNeNTlQBZ0JgUtgehYA", # ¡ESTE ES EL ID REAL DE HOSPITALIZACIÓN!
+        "sheet_id": "1BSMXbCf0zInOwxZ-IXGAKmeguNenTlQBZ0JgUtgehYA", # ID EXACTO Y CORREGIDO
         "worksheet_name": "H"
     }
 }
