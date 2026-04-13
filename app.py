@@ -6,9 +6,6 @@ import pandas as pd
 import os, ssl, hashlib, tempfile
 import urllib3, requests
 
-# ====================================================================
-# PARCHE PARA SALTAR EL FIREWALL DEL HOSPITAL
-# ====================================================================
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 old_merge = requests.Session.merge_environment_settings
 def merge_environment_settings(self, url, proxies, stream, verify, cert):
@@ -34,14 +31,28 @@ else:
     CREDENCIALES_PATH = "credenciales.json"
 
 # ============================================================
-# CONFIGURACIÓN DE LOS 3 EXCEL EN DRIVE
+# CONFIGURACIÓN DE LOS 3 EXCEL EN DRIVE (ACTUALIZADO CON TUS IDs)
 # ============================================================
 AREAS_CONFIG = {
-    "consulta_externa": {"label":"Consulta Externa","sheet_name":"FORMATO DE CONSULTA EXTERNA-INICIAL (Respuestas)","worksheet_name":"NUEVO CE","area_tag":"CONSULTA EXTERNA"},
-    "emergencia":       {"label":"Emergencia",      "sheet_name":"FORMATO DE EMERGENCIA (Respuestas)","worksheet_name":"E","area_tag":"EMERGENCIA"},
-    "hospitalizacion":  {"label":"Hospitalización", "sheet_name":"FORMATO DE HOSPITALIZACIÓN (Respuestas)","worksheet_name":"H","area_tag":"HOSPITALIZACIÓN"},
+    "consulta_externa": {
+        "label": "Consulta Externa",
+        "sheet_id": "1yZCRyNLQ4TShZEK_HvpVbmJidvcdjqG_JaCr2z4WjDw", # ID de Consulta Externa
+        "worksheet_name": "NUEVO CE"
+    },
+    "emergencia": {
+        "label": "Emergencia",
+        "sheet_id": "1CMqxZEotUp8HaX-h35YJLfkWC6zBZIjtxGvT3aJH-wY", # ID de Emergencia/Hosp
+        "worksheet_name": "E"
+    },
+    "hospitalizacion": {
+        "label": "Hospitalización",
+        "sheet_id": "1CMqxZEotUp8HaX-h35YJLfkWC6zBZIjtxGvT3aJH-wY", # ID de Emergencia/Hosp
+        "worksheet_name": "H"
+    }
 }
-USERS_SHEET_NAME = "FORMATO DE CONSULTA EXTERNA-INICIAL (Respuestas)"
+
+# El sistema de usuarios se valida contra el archivo de Consulta Externa
+USERS_SHEET_ID = AREAS_CONFIG["consulta_externa"]["sheet_id"]
 USERS_SHEET_TAB  = "USUARIOS_SISTEMA"
 
 # ============================================================
@@ -320,21 +331,34 @@ CRITERIOS_POR_AREA = {
 }
 
 # ============================================================
-# GOOGLE SHEETS
+# GOOGLE SHEETS CORE (AHORA CON LÓGICA DE IDs Y MANEJO DE ERRORES)
 # ============================================================
 def get_client():
     creds = Credentials.from_service_account_file(CREDENCIALES_PATH, scopes=SCOPES)
     return gspread.authorize(creds)
 
-def get_dataframe(sheet_name, worksheet_name):
+def get_dataframe(sheet_id, worksheet_name):
     client = get_client()
-    hoja   = client.open(sheet_name)
-    ws     = hoja.worksheet(worksheet_name)
+    try:
+        hoja = client.open_by_key(sheet_id)
+    except Exception as e:
+        raise Exception(f"No se pudo acceder al archivo. Verifica que el ID del archivo sea correcto y que hayas compartido el archivo con el correo del bot.")
+    
+    try:
+        ws = hoja.worksheet(worksheet_name)
+    except Exception as e:
+        # Si la pestaña no existe, le mostramos al usuario cuáles son las pestañas reales que tiene su archivo
+        disponibles = ", ".join([w.title for w in hoja.worksheets()])
+        raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Las pestañas que existen en este archivo son: {disponibles}")
+        
     return pd.DataFrame(ws.get_all_records())
 
 def get_users_sheet():
     client = get_client()
-    hoja   = client.open(USERS_SHEET_NAME)
+    try:
+        hoja = client.open_by_key(USERS_SHEET_ID)
+    except Exception as e:
+        raise Exception(f"Error al abrir Excel de usuarios (Asegurate de haber configurado el ID de consulta externa).")
     try:
         ws = hoja.worksheet(USERS_SHEET_TAB)
     except Exception:
@@ -484,7 +508,7 @@ def get_datos():
     if ak not in AREAS_CONFIG: return jsonify({"ok":False,"error":f"Área '{ak}' no válida"}),400
     cfg=AREAS_CONFIG[ak]
     try:
-        df=get_dataframe(cfg["sheet_name"],cfg["worksheet_name"])
+        df=get_dataframe(cfg["sheet_id"],cfg["worksheet_name"])
         results=procesar_df(df,ak,area_label=cfg["label"])
         return jsonify({"ok":True,"area":ak,"area_label":cfg["label"],"total":len(results),"registros":results,
             "servicios":sorted({r['servicio'] for r in results if r['servicio']!='—'}),
