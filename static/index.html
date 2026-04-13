@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 <html lang="es">
@@ -441,8 +440,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:va
 
 
 
-
-
 /* REGISTROS TABLE */
 
 .tbl-wrap{overflow-x:auto}
@@ -597,6 +594,87 @@ table.main-tbl tr:hover td{background:#fdf8f0}
 
 }
 
+/* ================================================================
+   MEJORA 3: ESTILOS DE IMPRESIÓN A PDF
+   Solo se activan al imprimir — no afectan la pantalla en absoluto.
+   ================================================================ */
+@media print {
+
+  /* Ocultar todo lo que NO debe aparecer en el PDF */
+  .topbar,
+  .filters-bar,
+  .pag,
+  .btn-sm,
+  .btn-update,
+  .btn-logout,
+  #btnPrint,
+  .nav-btn,
+  .topbar-nav,
+  .topbar-right,
+  .loading-overlay,
+  .toast,
+  .modal-overlay,
+  button,
+  select,
+  .custom-ms,
+  #pageSecciones,
+  #pageRegistros,
+  #pageUsuarios {
+    display: none !important;
+  }
+
+  /* Fondo blanco limpio para el PDF */
+  body, .content, .kpi, .section-card {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Asegurar que el dashboard sea visible y bien formateado */
+  #appPage {
+    display: block !important;
+  }
+
+  .page {
+    display: none !important;
+  }
+
+  #pageDashboard {
+    display: block !important;
+  }
+
+  /* KPIs en una sola fila sin salto de página */
+  .kpi-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    page-break-inside: avoid;
+  }
+
+  /* Evitar que los gráficos se corten */
+  .section-card, .section-grid, .kpi {
+    page-break-inside: avoid;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+  }
+
+  /* Cabecera de impresión con info del reporte */
+  .content::before {
+    content: "Informe de Auditoría de Historias Clínicas — Hospital Santa Rosa";
+    display: block;
+    font-family: Georgia, serif;
+    font-size: 18pt;
+    font-weight: bold;
+    color: #0d1b3e;
+    text-align: center;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #0d1b3e;
+    padding-bottom: 8px;
+  }
+
+  /* Que las secciones queden bien distribuidas */
+  .section-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
 </style>
 
 </head>
@@ -734,6 +812,9 @@ table.main-tbl tr:hover td{background:#fdf8f0}
     </div>
 
     <div class="topbar-right">
+
+      <!-- MEJORA 3: Botón de impresión a PDF -->
+      <button class="btn-update" id="btnPrint" onclick="imprimirReporte()" style="background:var(--navy2);border:1px solid rgba(255,255,255,0.2);">🖨️ Imprimir PDF</button>
 
       <button class="btn-update" onclick="actualizarDatos()" id="btnUpdate">🔄 Actualizar Drive</button>
 
@@ -1072,28 +1153,23 @@ table.main-tbl tr:hover td{background:#fdf8f0}
 
 
   </div><!-- /content -->
-
 </div><!-- /appPage -->
 
-
+<!-- Detail modal overlay — fuera del appPage para que funcione en cualquier página -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head" style="position:relative">
+      <h2 id="modalTitle">Detalle de HC</h2>
+      <p id="modalSub"></p>
+      <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
 
 <!-- ============================================================
-
      MODAL EXPORTACIÓN — GENERADOR DE INFORMES OFICIALES v2.0
-
-     Analizado en base a informes reales del Hospital Santa Rosa
-
-     Mejoras: selección múltiple de servicios, texto narrativo
-
-     automático, Tabla N°3 por mes, Tabla N°5 por servicio,
-
-     gráficos adicionales, Word con estructura oficial completa.
-
      ============================================================ -->
-
-
-
-<!-- ── MODAL EXPORTACIÓN ─────────────────────────────────────── -->
 
 <div class="modal-overlay" id="modalExportOverlay"
 
@@ -1587,29 +1663,93 @@ let regPage = 1;
 
 const REG_SIZE = 25;
 
-
-
 // ===== NUEVO: CONTROL DE ÁREA =====
-
 let currentArea = 'consulta_externa';
 
+
+// ================================================================
+// MEJORA 1: PERSISTENCIA DE SESIÓN CON localStorage
+// ================================================================
+
+const SESSION_KEY = 'hc_auditoria_session';
+
+/**
+ * Guarda la sesión del usuario en localStorage para persistir entre recargas (F5).
+ */
+function guardarSesion(datos) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(datos));
+  } catch(e) {
+    console.warn('No se pudo guardar la sesión en localStorage:', e);
+  }
+}
+
+/**
+ * Recupera la sesión guardada. Retorna null si no existe o está corrupta.
+ */
+function recuperarSesion() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+/**
+ * Elimina la sesión del localStorage al hacer logout.
+ */
+function borrarSesion() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+/**
+ * Al cargar la página, verifica si hay una sesión activa y salta el login.
+ * Se ejecuta una sola vez al inicio.
+ */
+function verificarSesionAlInicio() {
+  const sesionGuardada = recuperarSesion();
+  if (sesionGuardada && sesionGuardada.nombre && sesionGuardada.rol) {
+    // Hay sesión activa — restaurar sin necesidad de re-login
+    session = sesionGuardada;
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('appPage').style.display = 'flex';
+    document.getElementById('userName').textContent = session.nombre;
+    document.getElementById('userAvatar').textContent = session.nombre[0].toUpperCase();
+    if (session.rol === 'admin') {
+      document.getElementById('navUsers').style.display = 'flex';
+    }
+    actualizarDatos();
+  }
+  // Si no hay sesión, se muestra la pantalla de login normalmente (comportamiento original)
+}
+
+// Ejecutar verificación de sesión tan pronto como el DOM esté listo
+document.addEventListener('DOMContentLoaded', verificarSesionAlInicio);
+
+// ================================================================
+// FIN MEJORA 1
+// ================================================================
 
 
 function renderChartOportunidad() {
 
   destroyChart('oportunidad');
 
-  if(!filtData.length) return;
+  // MEJORA 4: Validación para evitar errores en consola cuando no hay data
+  if (!filtData || !filtData.length) return;
 
   const aTiempo = filtData.filter(r => r.oportunidad === 'A TIEMPO').length;
 
   const fueraFecha = filtData.filter(r => r.oportunidad === 'FUERA DE FECHA').length;
 
-  
+  // Si ambos son 0, no renderizar el gráfico vacío
+  if (aTiempo === 0 && fueraFecha === 0) return;
 
-  const ctx = document.getElementById('chartOportunidad').getContext('2d');
+  const ctx = document.getElementById('chartOportunidad');
+  if (!ctx) return; // MEJORA 4: Verificar que el canvas existe
 
-  charts['oportunidad'] = new Chart(ctx, {
+  charts['oportunidad'] = new Chart(ctx.getContext('2d'), {
 
       type: 'doughnut',
 
@@ -1661,29 +1801,21 @@ function cambiarArea() {
 
   document.getElementById('areaTitleLabel').textContent = titulos[currentArea];
 
-  
+  _limpiarPreview();
 
-  // Limpiamos los gráficos visualmente antes de cargar la nueva data
-
-  _limpiarPreview(); 
-
-  
-
-  actualizarDatos(); // Volver a cargar todo con la nueva área
+  actualizarDatos();
 
 }
-
-// ===================================
-
-
-
 
 
 // ===== LOGIN =====
 
-document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-
-document.getElementById('loginUser').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.addEventListener('DOMContentLoaded', () => {
+  const passInput = document.getElementById('loginPass');
+  const userInput = document.getElementById('loginUser');
+  if (passInput) passInput.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  if (userInput) userInput.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+});
 
 
 
@@ -1710,6 +1842,9 @@ async function doLogin() {
     if(d.ok){
 
       session = d;
+
+      // MEJORA 1: Guardar sesión al hacer login exitoso
+      guardarSesion(d);
 
       document.getElementById('loginPage').style.display='none';
 
@@ -1750,6 +1885,9 @@ async function doLogin() {
 
 
 function logout() {
+
+  // MEJORA 1: Eliminar sesión del localStorage al hacer logout
+  borrarSesion();
 
   session = null; allData = []; filtData = [];
 
@@ -1809,17 +1947,7 @@ async function actualizarDatos() {
 
       filtData = [...allData];
 
-      
-
-      // ============================================================
-
-      // CORRECCIÓN AQUÍ: Agregamos d.anios y d.meses
-
-      // ============================================================
-
       populateFilters(d.servicios, d.auditores, d.anios, d.meses);
-
-      
 
       await calcularEstadisticas(allData);
 
@@ -1857,13 +1985,19 @@ async function actualizarDatos() {
 
 async function calcularEstadisticas(data) {
 
+  // MEJORA 4: Validación de entrada
+  if (!data || !data.length) {
+    stats = null;
+    return;
+  }
+
   try {
 
     const r = await fetch(`${API}/estadisticas`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({registros:data})});
 
     stats = await r.json();
 
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error('Error al calcular estadísticas:', e); }
 
 }
 
@@ -1879,7 +2013,11 @@ async function calcularEstadisticas(data) {
 
 function populateFilters(servicios, auditores, anios, meses) {
 
-  // --- 1. Filtros de Años ---
+  // MEJORA 4: Validaciones de entrada
+  if (!servicios) servicios = [];
+  if (!auditores) auditores = [];
+  if (!anios) anios = [];
+  if (!meses) meses = [];
 
   const selAnio = document.getElementById('filtAnio');
 
@@ -1893,15 +2031,13 @@ function populateFilters(servicios, auditores, anios, meses) {
 
 
 
-  // --- 2. Filtros de Servicios (Dashboard, Registros y Sección) ---
-
   ['filtServDash','filtServ','filtServSec'].forEach(id => {
 
     const s = document.getElementById(id);
 
     if (s) {
 
-      s.innerHTML = '<option value="">Todos los servicios</option>' + 
+      s.innerHTML = '<option value="">Todos los servicios</option>' +
 
         servicios.map(sv => `<option value="${sv}">${sv.length > 40 ? sv.substring(0, 40) + '...' : sv}</option>`).join('');
 
@@ -1911,13 +2047,11 @@ function populateFilters(servicios, auditores, anios, meses) {
 
 
 
-  // --- 3. Selector de AUDITOR (Para la pestaña de Registros) ---
-
   const selAud = document.getElementById('filtAud');
 
   if (selAud) {
 
-    selAud.innerHTML = '<option value="">Todos</option>' + 
+    selAud.innerHTML = '<option value="">Todos</option>' +
 
       auditores.map(a => `<option value="${a}">${a.length > 40 ? a.substring(0, 40) + '...' : a}</option>`).join('');
 
@@ -1925,15 +2059,11 @@ function populateFilters(servicios, auditores, anios, meses) {
 
 
 
-  // --- 4. NUEVO: Checkboxes de Meses (Dashboard y Secciones) ---
-
   const menuDash = document.getElementById('menuMesDash');
 
   const menuSec = document.getElementById('menuMesSec');
 
-  
 
-  // Creamos el HTML de los checkboxes basándonos en los meses del Excel
 
   const checkboxesHTML = meses.map(m => `
 
@@ -1948,8 +2078,6 @@ function populateFilters(servicios, auditores, anios, meses) {
 
 
   if(menuDash) menuDash.innerHTML = checkboxesHTML;
-
-  // Para la sección secundaria, cambiamos la función que se ejecuta al hacer clic
 
   if(menuSec) menuSec.innerHTML = checkboxesHTML.replace(/aplicarFiltrosGlobal/g, 'aplicarFiltrosGlobalSec');
 
@@ -1971,8 +2099,6 @@ document.addEventListener('click', function(e) {
 
 
 
-
-
 // =====================================================================
 
 // VARIABLES GLOBALES PARA OPTIMIZACIÓN (DEBOUNCE)
@@ -1985,8 +2111,6 @@ let timerFiltrosSec;
 
 
 
-
-
 // =====================================================================
 
 // LÓGICA DEL DASHBOARD (PANEL GENERAL)
@@ -1995,17 +2119,15 @@ let timerFiltrosSec;
 
 
 
-function aplicarFiltrosGlobal(e) { 
+function aplicarFiltrosGlobal(e) {
 
-  aplicarFiltros(); 
+  aplicarFiltros();
 
 }
 
 
 
 function aplicarFiltros() {
-
-  // 1. FEEDBACK VISUAL: Atenuamos la pantalla e indicamos que está cargando
 
   const contentDiv = document.querySelector('.content');
 
@@ -2015,29 +2137,17 @@ function aplicarFiltros() {
 
 
 
-  // 2. DEBOUNCE: Cancelamos el cálculo anterior si hay clics rápidos
-
   clearTimeout(timerFiltrosDash);
 
 
-
-  // 3. Programamos el trabajo pesado para cuando termine de hacer clic (400ms)
 
   timerFiltrosDash = setTimeout(() => {
 
     const anioSel = document.getElementById('filtAnio').value;
 
-    
-
-    // Capturar los checkboxes que el usuario ha marcado
-
     const checks = document.querySelectorAll('#menuMesDash input[type="checkbox"]:checked');
 
     const mesesSel = Array.from(checks).map(cb => cb.value);
-
-    
-
-    // Actualizar el texto del botón para que se vea profesional
 
     const textBtn = document.getElementById('textMesDash');
 
@@ -2045,7 +2155,7 @@ function aplicarFiltros() {
 
       if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
 
-      else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0]; 
+      else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
 
       else textBtn.textContent = `${mesesSel.length} seleccionados`;
 
@@ -2059,8 +2169,6 @@ function aplicarFiltros() {
 
 
 
-    // --- LÓGICA DE FILTROS EN CASCADA ---
-
     const serviciosDisponibles = [...new Set(allData.filter(r => {
 
       if (anioSel && r.anio !== anioSel) return false;
@@ -2073,11 +2181,11 @@ function aplicarFiltros() {
 
 
 
-    selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
+    selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' +
 
       serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
 
-    
+
 
     if (serviciosDisponibles.includes(servSel)) {
 
@@ -2087,11 +2195,9 @@ function aplicarFiltros() {
 
 
 
-    // --- FILTRADO FINAL DE LA DATA PARA GRÁFICOS ---
-
     filtData = allData.filter(r => {
 
-      if (anioSel && r.anio !== anioSel) return false; 
+      if (anioSel && r.anio !== anioSel) return false;
 
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
 
@@ -2103,19 +2209,13 @@ function aplicarFiltros() {
 
 
 
-    // 4. Calculamos y actualizamos gráficas
+    calcularEstadisticas(filtData).then(() => {
 
-    calcularEstadisticas(filtData).then(() => { 
+      renderDashboard();
 
-      renderDashboard(); 
+      renderSecciones();
 
-      renderSecciones(); 
-
-      renderRegistros(); 
-
-      
-
-      // 5. RESTAURAMOS LA PANTALLA (Efecto de carga terminada)
+      renderRegistros();
 
       if(contentDiv) contentDiv.style.opacity = '1';
 
@@ -2123,11 +2223,9 @@ function aplicarFiltros() {
 
     });
 
-  }, 400); // 400ms de espera inteligente
+  }, 400);
 
 }
-
-
 
 
 
@@ -2139,17 +2237,15 @@ function aplicarFiltros() {
 
 
 
-function aplicarFiltrosGlobalSec(e) { 
+function aplicarFiltrosGlobalSec(e) {
 
-  aplicarFiltrosSec(); 
+  aplicarFiltrosSec();
 
 }
 
 
 
 function aplicarFiltrosSec() {
-
-  // 1. FEEDBACK VISUAL
 
   const contentDiv = document.querySelector('.content');
 
@@ -2159,8 +2255,6 @@ function aplicarFiltrosSec() {
 
 
 
-  // 2. DEBOUNCE
-
   clearTimeout(timerFiltrosSec);
 
 
@@ -2169,17 +2263,9 @@ function aplicarFiltrosSec() {
 
     const anioSel = document.getElementById('filtAnioSec').value;
 
-    
-
-    // Capturar los checkboxes marcados
-
     const checks = document.querySelectorAll('#menuMesSec input[type="checkbox"]:checked');
 
     const mesesSel = Array.from(checks).map(cb => cb.value);
-
-    
-
-    // Actualizar el texto del botón
 
     const textBtn = document.getElementById('textMesSec');
 
@@ -2201,8 +2287,6 @@ function aplicarFiltrosSec() {
 
 
 
-    // --- LÓGICA DE FILTROS EN CASCADA ---
-
     const serviciosDisponibles = [...new Set(allData.filter(r => {
 
       if (anioSel && r.anio !== anioSel) return false;
@@ -2215,11 +2299,11 @@ function aplicarFiltrosSec() {
 
 
 
-    selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' + 
+    selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' +
 
       serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
 
-    
+
 
     if (serviciosDisponibles.includes(servSel)) {
 
@@ -2228,8 +2312,6 @@ function aplicarFiltrosSec() {
     }
 
 
-
-    // --- FILTRADO FINAL ---
 
     filtData = allData.filter(r => {
 
@@ -2245,15 +2327,9 @@ function aplicarFiltrosSec() {
 
 
 
-    // 4. Calculamos y actualizamos la interfaz
+    calcularEstadisticas(filtData).then(() => {
 
-    calcularEstadisticas(filtData).then(() => { 
-
-      renderSecciones(); 
-
-      
-
-      // 5. RESTAURAMOS LA PANTALLA
+      renderSecciones();
 
       if(contentDiv) contentDiv.style.opacity = '1';
 
@@ -2261,7 +2337,7 @@ function aplicarFiltrosSec() {
 
     });
 
-  }, 400); // 400ms de espera inteligente
+  }, 400);
 
 }
 
@@ -2271,17 +2347,18 @@ function aplicarFiltrosSec() {
 
 function renderDashboard() {
 
+  // MEJORA 4: Validación de stats
   if(!stats) return;
 
-  document.getElementById('kpiTotal').textContent = stats.total;
+  document.getElementById('kpiTotal').textContent = stats.total || '—';
 
-  document.getElementById('kpiSat').textContent = stats.satisfactorio;
+  document.getElementById('kpiSat').textContent = stats.satisfactorio || '—';
 
-  document.getElementById('kpiMej').textContent = stats.por_mejorar;
+  document.getElementById('kpiMej').textContent = stats.por_mejorar || '—';
 
-  document.getElementById('kpiDef').textContent = stats.deficiente;
+  document.getElementById('kpiDef').textContent = stats.deficiente || '—';
 
-  document.getElementById('kpiProm').textContent = stats.promedio_pct+'%';
+  document.getElementById('kpiProm').textContent = (stats.promedio_pct || '—') + '%';
 
   document.getElementById('dashSubtitle').textContent = `${stats.total} historias clínicas evaluadas — Promedio: ${stats.promedio_pct}%`;
 
@@ -2295,6 +2372,8 @@ function renderDashboard() {
 
   renderChartTendencia();
 
+  renderChartOportunidad();
+
 }
 
 
@@ -2307,9 +2386,13 @@ function renderChartCalif() {
 
   destroyChart('calif');
 
-  const ctx = document.getElementById('chartCalif').getContext('2d');
+  // MEJORA 4: Validaciones antes de renderizar
+  if (!stats || !stats.total) return;
 
-  charts['calif'] = new Chart(ctx, {
+  const ctx = document.getElementById('chartCalif');
+  if (!ctx) return;
+
+  charts['calif'] = new Chart(ctx.getContext('2d'), {
 
     type:'doughnut',
 
@@ -2333,17 +2416,22 @@ function renderChartSecciones() {
 
   destroyChart('secs');
 
-  if(!stats.secciones) return;
+  // MEJORA 4: Validaciones
+  if (!stats || !stats.secciones) return;
+
+  const ctx = document.getElementById('chartSecciones');
+  if (!ctx) return;
 
   const labels = Object.values(stats.secciones).map(s=>s.label);
 
   const pcts = Object.values(stats.secciones).map(s=>s.porcentaje);
 
+  // MEJORA 4: Si no hay datos numéricos válidos, salir
+  if (!labels.length || !pcts.length) return;
+
   const colors = pcts.map(p => p>=90?'#22c55e':p>=75?'#f59e0b':'#ef4444');
 
-  const ctx = document.getElementById('chartSecciones').getContext('2d');
-
-  charts['secs'] = new Chart(ctx, {
+  charts['secs'] = new Chart(ctx.getContext('2d'), {
 
     type:'bar',
 
@@ -2369,9 +2457,15 @@ function renderChartServicios() {
 
   destroyChart('serv');
 
-  if(!stats.por_servicio) return;
+  // MEJORA 4: Validaciones
+  if (!stats || !stats.por_servicio) return;
+
+  const ctx = document.getElementById('chartServicios');
+  if (!ctx) return;
 
   const servs = Object.entries(stats.por_servicio).sort((a,b)=>b[1].promedio-a[1].promedio).slice(0,15);
+
+  if (!servs.length) return;
 
   document.getElementById('totalServBadge').textContent = Object.keys(stats.por_servicio).length+' servicios';
 
@@ -2383,9 +2477,7 @@ function renderChartServicios() {
 
   const def = servs.map(([,v])=>v.def);
 
-  const ctx = document.getElementById('chartServicios').getContext('2d');
-
-  charts['serv'] = new Chart(ctx, {
+  charts['serv'] = new Chart(ctx.getContext('2d'), {
 
     type:'bar',
 
@@ -2419,6 +2511,12 @@ function renderChartTendencia() {
 
   destroyChart('tend');
 
+  // MEJORA 4: Validaciones
+  if (!filtData || !filtData.length) return;
+
+  const ctx = document.getElementById('chartTendencia');
+  if (!ctx) return;
+
   const porMes = {};
 
   filtData.forEach(r => {
@@ -2439,11 +2537,11 @@ function renderChartTendencia() {
 
   const meses = Object.keys(porMes).sort((a,b)=>Number(a)-Number(b));
 
+  if (!meses.length) return;
+
   const promedios = meses.map(m=>+(porMes[m].sum/porMes[m].cnt).toFixed(2));
 
-  const ctx = document.getElementById('chartTendencia').getContext('2d');
-
-  charts['tend'] = new Chart(ctx, {
+  charts['tend'] = new Chart(ctx.getContext('2d'), {
 
     type:'line',
 
@@ -2469,9 +2567,12 @@ function renderChartTendencia() {
 
 function renderSecciones() {
 
+  // MEJORA 4: Validaciones
   if(!stats||!stats.secciones) return;
 
   const cont = document.getElementById('seccionesContainer');
+
+  if (!cont) return;
 
   cont.innerHTML = '';
 
@@ -2494,8 +2595,6 @@ function renderSecciones() {
     card.style.cssText = 'background:#fff;border-radius:16px;border:1px solid var(--border);margin-bottom:20px;overflow:hidden';
 
 
-
-    // Header
 
     card.innerHTML = `<div style="padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
 
@@ -2525,8 +2624,6 @@ function renderSecciones() {
 
 
 
-    // LEFT: Gráfica de barras por criterio
-
     const leftDiv = document.createElement('div');
 
     leftDiv.style.cssText = 'padding:20px 22px;border-right:1px solid var(--border)';
@@ -2551,8 +2648,6 @@ function renderSecciones() {
 
 
 
-    // RIGHT: Tabla de estados por criterio
-
     const rightDiv = document.createElement('div');
 
     rightDiv.style.cssText = 'padding:20px 22px';
@@ -2562,10 +2657,6 @@ function renderSecciones() {
 
 
     const items = sec.items;
-
-    const total = stats.total;
-
-
 
     const stackDiv = document.createElement('div');
 
@@ -2635,11 +2726,12 @@ function renderSecciones() {
 
 
 
-    // Render chart after DOM insertion
-
     setTimeout(() => {
 
       destroyChart(chartId);
+
+      // MEJORA 4: Verificar que el canvas sigue en el DOM
+      if (!document.getElementById(chartId)) return;
 
       const itemNames = Object.keys(items).map(n=>n.length>18?n.substring(0,18)+'...':n);
 
@@ -2650,6 +2742,9 @@ function renderSecciones() {
         return +((cnts.completo||0)/tot*100).toFixed(1);
 
       });
+
+      // MEJORA 4: No renderizar si no hay datos
+      if (!itemNames.length) return;
 
       const colors2 = completoPcts.map(p=>p>=90?'#22c55e':p>=75?'#f59e0b':'#ef4444');
 
@@ -2739,6 +2834,9 @@ function limpiarFiltros() {
 
 function renderRegistros() {
 
+  // MEJORA 4: Validación
+  if (!filtData) return;
+
   const start = (regPage-1)*REG_SIZE;
 
   const page = filtData.slice(start, start+REG_SIZE);
@@ -2747,9 +2845,11 @@ function renderRegistros() {
 
   const tbody = document.getElementById('regBody');
 
+  if(!tbody) return;
+
   if(!filtData.length){
 
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">🔍</div><h3>Sin resultados</h3><p>Ajusta los filtros</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="icon">🔍</div><h3>Sin resultados</h3><p>Ajusta los filtros</p></div></td></tr>`;
 
     document.getElementById('regPag').innerHTML = '';
 
@@ -2763,13 +2863,7 @@ function renderRegistros() {
 
     const cls = r.calificacion==='SATISFACTORIO'?'s':r.calificacion==='POR MEJORAR'?'pm':'d';
 
-    
-
-    // --- NUEVA LÓGICA DE COLOR PARA OPORTUNIDAD ---
-
     const opCls = r.oportunidad === 'A TIEMPO' ? 'pill s' : 'pill pm';
-
-    
 
     const srvShort = String(r.servicio).length>28?String(r.servicio).substring(0,28)+'...':r.servicio;
 
@@ -2805,8 +2899,6 @@ function renderRegistros() {
 
       <td><span class="${opCls}" style="font-size:10px; min-width:80px; text-align:center;">${r.oportunidad}</span></td>
 
-      
-
       <td><span class="pill ${cls}">${r.calificacion}</span></td>
 
       <td><button class="btn-sm dark" onclick="showDetail(${start+i})">Ver</button></td>
@@ -2826,6 +2918,8 @@ function renderPag() {
   const total = Math.ceil(filtData.length/REG_SIZE);
 
   const pag = document.getElementById('regPag');
+
+  if(!pag) return;
 
   if(total<=1){pag.innerHTML='';return;}
 
@@ -2848,6 +2942,9 @@ function goReg(p){regPage=p;renderRegistros();document.querySelector('.section-c
 // ===== DETAIL MODAL =====
 
 function showDetail(idx) {
+
+  // MEJORA 4: Validación de índice
+  if (!filtData || idx < 0 || idx >= filtData.length) return;
 
   const d = filtData[idx];
 
@@ -2891,23 +2988,21 @@ function showDetail(idx) {
 
 
 
-  // --- ORDEN EXACTO ---
-
   const ORDEN_SECCIONES = [
 
-      "FILIACION", 
+      "FILIACION",
 
-      "ANAMNESIS", 
+      "ANAMNESIS",
 
-      "EXAMEN_CLINICO", 
+      "EXAMEN_CLINICO",
 
-      "DIAGNOSTICOS", 
+      "DIAGNOSTICOS",
 
-      "PLAN_TRABAJO", 
+      "PLAN_TRABAJO",
 
-      "TRATAMIENTO", 
+      "TRATAMIENTO",
 
-      "ATRIBUTOS", 
+      "ATRIBUTOS",
 
       "SEGUIMIENTO"
 
@@ -2917,7 +3012,7 @@ function showDetail(idx) {
 
   for(const key of ORDEN_SECCIONES) {
 
-    const sec = d.secciones[key];
+    const sec = d.secciones ? d.secciones[key] : null;
 
     if (!sec) continue;
 
@@ -2933,19 +3028,13 @@ function showDetail(idx) {
 
         let cls='z',score=item.pts.toFixed(2);
 
-        
-
-        // --- AQUÍ ASIGNAMOS LOS COLORES (INCLUYENDO MORADO PARA EXCESO) ---
-
         if(item.estado==='na'){cls='n';score='N/A';}
 
-        else if(item.estado==='en_exceso' || item.estado==='enExceso'){cls='e';} // Exceso (Morado)
+        else if(item.estado==='en_exceso' || item.estado==='enExceso'){cls='e';}
 
-        else if(item.pts>=item.max&&item.max>0) cls='f'; // Completo (Verde)
+        else if(item.pts>=item.max&&item.max>0) cls='f';
 
-        else if(item.pts>0) cls='p'; // Incompleto (Naranja)
-
-        
+        else if(item.pts>0) cls='p';
 
         return `<div class="crit-row">
 
@@ -2962,8 +3051,6 @@ function showDetail(idx) {
   }
 
 
-
-  // --- AGREGAMOS LA LEYENDA AL FINAL ---
 
   html += `
 
@@ -3007,7 +3094,12 @@ async function loadUsuarios() {
 
     const users = await r.json();
 
+    // MEJORA 4: Validar que users es un array
+    if (!Array.isArray(users)) return;
+
     const grid = document.getElementById('userList');
+
+    if (!grid) return;
 
     grid.innerHTML = users.map(u=>`
 
@@ -3074,10 +3166,39 @@ async function crearUsuario() {
 }
 
 
+// ================================================================
+// MEJORA 3: FUNCIÓN DE IMPRESIÓN A PDF
+// ================================================================
+
+/**
+ * Activa la impresión del navegador enfocada en el Dashboard.
+ * El CSS @media print se encarga de limpiar la vista antes de imprimir.
+ */
+function imprimirReporte() {
+  // Asegurarse de que el Dashboard esté activo antes de imprimir
+  const dashPage = document.getElementById('pageDashboard');
+  if (dashPage && !dashPage.classList.contains('active')) {
+    showPage('dashboard');
+    // Pequeño delay para que los gráficos se rendericen antes de imprimir
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  } else {
+    window.print();
+  }
+}
+
+// ================================================================
+// FIN MEJORA 3
+// ================================================================
+
 
 // ===== EXPORT =====
 
 function exportarExcel() {
+
+  // MEJORA 4: Validación
+  if (!filtData || !filtData.length) { showToast('No hay datos para exportar', 'err'); return; }
 
   const rows = filtData.map(r=>({
 
@@ -3125,31 +3246,15 @@ function showToast(msg,type=''){const t=document.getElementById('toast');t.textC
 
 // =====================================================================
 
-// ── Instancias de Chart.js ────────────────────────────────────
-
 let _ch2 = null, _ch3 = null, _ch5 = null;
 
-
-
-// ── Datos computados para exportación ────────────────────────
-
 let _expData = [];
-
-
-
-// ── Servicios seleccionados (multi) ──────────────────────────
 
 let _serviciosSelExp = new Set();
 
 let _isFirstLoadExp = true;
 
 
-
-// ──────────────────────────────────────────────────────────────
-
-// 1. ABRIR MODAL
-
-// ──────────────────────────────────────────────────────────────
 
 function abrirModalExportacion() {
 
@@ -3188,12 +3293,6 @@ function cerrarModalExport() {
 }
 
 
-
-// ──────────────────────────────────────────────────────────────
-
-// 2. LÓGICA DE CASCADA Y POBLAR SERVICIOS
-
-// ──────────────────────────────────────────────────────────────
 
 function cambioFiltroPrincipal() {
 
@@ -3343,11 +3442,9 @@ function toggleMesExp()  { document.getElementById('menuMesExp').classList.toggl
 
 
 
-// ──────────────────────────────────────────────────────────────
+function actualizarFiltrosCascada() { cambioFiltroPrincipal(); }
 
-// 3. ACTUALIZAR PREVIEW
 
-// ──────────────────────────────────────────────────────────────
 
 function actualizarPreviewExport() {
 
@@ -3415,12 +3512,6 @@ function actualizarPreviewExport() {
 
 
 
-// ──────────────────────────────────────────────────────────────
-
-// 4. RESUMEN RÁPIDO (badges)
-
-// ──────────────────────────────────────────────────────────────
-
 function _renderResumen() {
 
   const { sat, mej, def, total, prom } = _calcGlobal(_expData);
@@ -3442,12 +3533,6 @@ function _renderResumen() {
 }
 
 
-
-// ──────────────────────────────────────────────────────────────
-
-// 5. TABLA N°2
-
-// ──────────────────────────────────────────────────────────────
 
 function _renderTabla2() {
 
@@ -3476,12 +3561,6 @@ function _renderTabla2() {
 }
 
 
-
-// ──────────────────────────────────────────────────────────────
-
-// 6. TABLA N°3 (por mes)
-
-// ──────────────────────────────────────────────────────────────
 
 function _renderTabla3() {
 
@@ -3536,12 +3615,6 @@ function _renderTabla3() {
 }
 
 
-
-// ──────────────────────────────────────────────────────────────
-
-// 7. TABLA N°5 (por servicio)
-
-// ──────────────────────────────────────────────────────────────
 
 function _renderTabla5() {
 
@@ -3629,23 +3702,23 @@ function _renderTabla5() {
 
 
 
-// ──────────────────────────────────────────────────────────────
-
-// 8. GRÁFICOS (preview)
-
-// ──────────────────────────────────────────────────────────────
-
 const COLORS = { sat:'#82c91e', mej:'#facc15', def:'#ef4444' };
 
 
 
 function _renderGraf2() {
 
+  // MEJORA 4: Validación
+  if (!_expData || !_expData.length) return;
+
   const { sat, mej, def, total } = _calcGlobal(_expData);
 
   if (_ch2) _ch2.destroy();
 
-  _ch2 = new Chart(document.getElementById('expChart2').getContext('2d'), {
+  const ctx = document.getElementById('expChart2');
+  if (!ctx) return;
+
+  _ch2 = new Chart(ctx.getContext('2d'), {
 
     type: 'pie',
 
@@ -3681,13 +3754,21 @@ function _renderGraf2() {
 
 function _renderGraf3() {
 
+  // MEJORA 4: Validación
+  if (!_expData || !_expData.length) return;
+
   const porMes = _calcPorMes(_expData);
 
   const meses  = Object.keys(porMes).sort();
 
+  if (!meses.length) return;
+
   if (_ch3) _ch3.destroy();
 
-  _ch3 = new Chart(document.getElementById('expChart3').getContext('2d'), {
+  const ctx = document.getElementById('expChart3');
+  if (!ctx) return;
+
+  _ch3 = new Chart(ctx.getContext('2d'), {
 
     type: 'bar',
 
@@ -3725,6 +3806,9 @@ function _renderGraf3() {
 
 function _renderGraf5() {
 
+  // MEJORA 4: Validación
+  if (!_expData || !_expData.length) return;
+
   const porServ = _calcPorServicio(_expData);
 
   if (Object.keys(porServ).length <= 1) return;
@@ -3745,7 +3829,10 @@ function _renderGraf5() {
 
   if (_ch5) _ch5.destroy();
 
-  _ch5 = new Chart(document.getElementById('expChart5').getContext('2d'), {
+  const ctx = document.getElementById('expChart5');
+  if (!ctx) return;
+
+  _ch5 = new Chart(ctx.getContext('2d'), {
 
     type: 'bar',
 
@@ -3797,13 +3884,10 @@ function _renderGraf5() {
 
 
 
-// ──────────────────────────────────────────────────────────────
-
-// 9. TEXTO NARRATIVO AUTOMÁTICO
-
-// ──────────────────────────────────────────────────────────────
-
 function _renderNarrativo() {
+
+  // MEJORA 4: Validación
+  if (!_expData || !_expData.length) return;
 
   const { sat, mej, def, total, prom } = _calcGlobal(_expData);
 
@@ -3837,10 +3921,6 @@ function _renderNarrativo() {
 
 
 
-  // Tabla N°1 — HCs por mes
-
-  const totalOct = porMes[Object.keys(porMes).find(k=>k.includes('OCTUBRE'))||''] || {total:0};
-
   const textoMeses = meses.map(m => {
 
     const d = porMes[m];
@@ -3855,8 +3935,6 @@ function _renderNarrativo() {
 
 
 
-  // Párrafo 1 — HCs por mes (Tabla N°1, Gráfico N°1)
-
   if (meses.length > 0) {
 
     texto += `En el período seleccionado (${anio}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
@@ -3867,13 +3945,9 @@ function _renderNarrativo() {
 
 
 
-  // Párrafo 2 — Calidad global (Tabla N°2, Gráfico N°2)
-
   texto += `De las ${total} Historias Clínicas auditadas, ${sat} HCs (${_pct(sat,total)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${_pct(mej,total)}%) resultado "Por Mejorar" y ${def} HCs (${_pct(def,total)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla N° 2 y el Gráfico N° 2.\n\n`;
 
 
-
-  // Párrafo 3 — Evolución por mes (Tabla N°3, Gráfico N°3)
 
   if (meses.length > 0) {
 
@@ -3888,8 +3962,6 @@ function _renderNarrativo() {
   }
 
 
-
-  // Párrafo 4 — Por servicio (Tabla N°5, Gráfico N°5)
 
   if (servs.length > 1) {
 
@@ -3913,8 +3985,6 @@ function _renderNarrativo() {
 
 
 
-  // Párrafo 5 — Promedio de cumplimiento (Gráfico N°6)
-
   texto += `El Promedio de Cumplimiento del correcto registro en las HCs auditadas fue de ${prom}%, correspondiendo a la calificación "${clasif}" según los criterios de la NTS N° 029-MINSA/DIGEPRES-V.02, tal como se presenta en el Gráfico N° 6.`;
 
 
@@ -3929,37 +3999,29 @@ function copiarNarrativo() {
 
   const t = document.getElementById('expNarrativo').textContent;
 
+  if (!t) { showToast('No hay texto para copiar', 'err'); return; }
+
   navigator.clipboard.writeText(t).then(() => showToast('Texto copiado al portapapeles ✓', 'ok'));
 
 }
 
 
 
-// ──────────────────────────────────────────────────────────────
-
-// 10. GENERAR ARCHIVOS
-
-// ──────────────────────────────────────────────────────────────
-
 function generarReporteFinal(formato) {
 
-  if (_expData.length === 0) { showToast('No hay datos para exportar.', 'err'); return; }
+  if (!_expData || _expData.length === 0) { showToast('No hay datos para exportar.', 'err'); return; }
 
   showLoading(`Generando archivo ${formato.toUpperCase()}…`);
 
 
 
-  // Capturar todos los canvas ANTES del timeout
+  const imgPastel   = _canvasToImg('expChart2');
 
-  const imgPastel   = _canvasToImg('expChart2');   // Gráfico N°2 — pastel calidad global
+  const imgBarras   = _canvasToImg('expChart3');
 
-  const imgBarras   = _canvasToImg('expChart3');   // Gráfico N°3 — barras por mes
-
-  const imgServ     = _canvasToImg('expChart5');   // Gráfico N°5 — horizontal por servicio
+  const imgServ     = _canvasToImg('expChart5');
 
 
-
-  // Gráficos adicionales que se generan off-screen para el Word/Excel
 
   const fechaHoy = new Date().toLocaleDateString('es-PE');
 
@@ -3976,8 +4038,6 @@ function generarReporteFinal(formato) {
   const narrativo = document.getElementById('expNarrativo').textContent;
 
 
-
-  // Generamos gráficos off-screen adicionales (N°1, N°4, N°6)
 
   _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, mej, def, (imgMes, imgServ4, imgCumpl) => {
 
@@ -4019,21 +4079,7 @@ function generarReporteFinal(formato) {
 
 
 
-// ──────────────────────────────────────────────────────────────
-
-// 10b. GENERAR GRÁFICOS ADICIONALES OFF-SCREEN
-
-//      Gráfico N°1 (HCs por mes - barras simples)
-
-//      Gráfico N°4 (HCs por servicio - barras simples)
-
-//      Gráfico N°6 (Promedio cumplimiento - pastel)
-
-// ──────────────────────────────────────────────────────────────
-
 function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, mej, def, callback) {
-
-  // Contenedor off-screen
 
   const wrap = document.createElement('div');
 
@@ -4050,8 +4096,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, m
   function check() { pendientes--; if (pendientes <= 0) { document.body.removeChild(wrap); callback(imgMes, imgServ4, imgCumpl); } }
 
 
-
-  // ── Gráfico N°1: HCs auditadas por mes (barra azul) ─────────
 
   const c1 = document.createElement('canvas'); c1.width=700; c1.height=340; wrap.appendChild(c1);
 
@@ -4083,31 +4127,7 @@ function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, m
 
       responsive: false,
 
-      plugins: {
-
-        legend: { display: false },
-
-        title: { display: false },
-
-        datalabels: {
-
-          display: true,
-
-          anchor: 'end', align: 'top',
-
-          formatter: (v,ctx) => {
-
-            const t = meses.map(m=>porMes[m].total).reduce((a,b)=>a+b,0);
-
-            return `${v}\n${_pct(v,t)}%`;
-
-          },
-
-          color: '#1e3a6e', font: { weight:'bold', size:11 }
-
-        }
-
-      },
+      plugins: { legend: { display: false } },
 
       scales: {
 
@@ -4124,8 +4144,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, m
   setTimeout(() => { imgMes = c1.toDataURL('image/png',1.0); ch1.destroy(); check(); }, 300);
 
 
-
-  // ── Gráfico N°4: HCs por Departamento/Servicio (barra azul horizontal) ─
 
   const c4 = document.createElement('canvas'); c4.width=700; c4.height=340; wrap.appendChild(c4);
 
@@ -4159,23 +4177,7 @@ function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, m
 
       responsive: false,
 
-      plugins: {
-
-        legend: { display:false },
-
-        datalabels: {
-
-          display: true,
-
-          anchor:'end', align:'top',
-
-          formatter: v => v,
-
-          color:'#1e3a6e', font:{ weight:'bold', size:10 }
-
-        }
-
-      },
+      plugins: { legend: { display:false } },
 
       scales: {
 
@@ -4192,8 +4194,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, m
   setTimeout(() => { imgServ4 = c4.toDataURL('image/png',1.0); ch4.destroy(); check(); }, 350);
 
 
-
-  // ── Gráfico N°6: Promedio de Cumplimiento global (pastel/doughnut) ──────
 
   const c6 = document.createElement('canvas'); c6.width=500; c6.height=340; wrap.appendChild(c6);
 
@@ -4243,19 +4243,11 @@ function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, m
 
 
 
-// ──────────────────────────────────────────────────────────────
-
-// 11. EXCEL — todas las tablas en hojas separadas
-
-// ──────────────────────────────────────────────────────────────
-
 function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ) {
 
   const wb = XLSX.utils.book_new();
 
 
-
-  // ── Hoja 1: Resumen ─────────────────────────────────────────
 
   const resData = [
 
@@ -4319,8 +4311,6 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
 
 
 
-  // ── Hoja 2: Por Servicio ─────────────────────────────────────
-
   if (Object.keys(porServ).length > 1) {
 
     const servData = [
@@ -4357,8 +4347,6 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
 
 
 
-  // ── Hoja 3: Anexo N°1 detalle ────────────────────────────────
-
   const anexoData = _expData.map((r, i) => ({
 
     'N°': i+1,
@@ -4387,12 +4375,6 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
 
 
 
-// ──────────────────────────────────────────────────────────────
-
-// 12. WORD — documento oficial completo con TODOS los gráficos
-
-// ──────────────────────────────────────────────────────────────
-
 function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
                       porMes, meses, porServ,
@@ -4410,8 +4392,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
   const clasif  = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
 
 
-
-  // ── Tabla N°1: HCs por mes ───────────────────────────────────
 
   const filasT1 = meses.map(m => `
 
@@ -4455,8 +4435,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
 
 
-  // ── Tabla N°2 ────────────────────────────────────────────────
-
   const t2 = `<table align="center" style="width:70%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
 
     <tr><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">CALIFICACIÓN</th><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">N°</th><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%</th></tr>
@@ -4472,8 +4450,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
   </table>`;
 
 
-
-  // ── Tabla N°3 ────────────────────────────────────────────────
 
   const hMeses = meses.map(m=>`<th style="border:1px solid #000;background:#e2e8f0;padding:6px;">${_mesCorto(m)}</th>`).join('');
 
@@ -4506,8 +4482,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
   </table>`;
 
 
-
-  // ── Tabla N°4: Distribución por Servicio ─────────────────────
 
   const servList4 = Object.keys(porServ).sort((a,b) => porServ[b].total - porServ[a].total);
 
@@ -4564,8 +4538,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <br>` : '';
 
 
-
-  // ── Tabla N°5: Calidad por Servicio ──────────────────────────
 
   let t5Html = '';
 
@@ -4659,8 +4631,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
 
 
-  // ── Tabla Promedio por Área (N°6a) ───────────────────────────
-
   const porArea = _calcPorArea(_expData);
 
   const areas = Object.keys(porArea);
@@ -4715,8 +4685,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
 
 
-  // ── Tabla Anexo N°1 ──────────────────────────────────────────
-
   const filasAnexo = _expData.map((r,i) => {
 
     const bg = r.calificacion==='SATISFACTORIO'?'#dcfce7':r.calificacion==='POR MEJORAR'?'#fef3c7':'#fee2e2';
@@ -4745,13 +4713,9 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
 
 
-  // Párrafos del narrativo separados
-
   const parrafos = narrativo.split('\n\n');
 
 
-
-  // ── HTML DEL DOCUMENTO WORD ──────────────────────────────────
 
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
 
@@ -4779,10 +4743,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
   <body>
 
-
-
-    <!-- ══ MENSAJE DE AVISO ══════════════════════════════════ -->
-
     <div class="aviso">
 
       <strong>⚠ NOTA IMPORTANTE PARA EL EDITOR DE ESTE INFORME:</strong><br>
@@ -4800,10 +4760,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       cualquier otra sección que corresponda según el trimestre auditado.</em>
 
     </div>
-
-
-
-    <!-- ══ ENCABEZADO ════════════════════════════════════════ -->
 
     <h2 align="center" style="color:#1e3a6e;text-align:center;">
 
@@ -4825,29 +4781,17 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     </p>
 
-
-
-    <!-- ══ 3.3 RESULTADOS ════════════════════════════════════ -->
-
     <h3 style="color:#1e3a6e;">3.3. RESULTADOS</h3>
-
-
-
-    <!-- ── 3.3.1 Número de HCs por mes ──────────────────── -->
 
     <h4 style="color:#1e3a6e;">3.3.1. Número de Historias Clínicas auditadas</h4>
 
     <p style="text-align:justify;">${parrafos[0] || ''}</p>
-
-
 
     <p align="center" style="text-align:center;"><strong>Tabla N° 1. Historias Clínicas auditadas por mes — Hospital Santa Rosa</strong></p>
 
     ${t1}
 
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-
-
 
     ${imgMes ? `
 
@@ -4857,23 +4801,15 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-
-
-    <!-- ── 3.3.2 Calidad global ───────────────────────── -->
-
     <h4 style="color:#1e3a6e;">3.3.2. Evaluación de la Calidad de Registro</h4>
 
     <p style="text-align:justify;">${parrafos[1] || ''}</p>
-
-
 
     <p align="center" style="text-align:center;"><strong>Tabla N° 2. Calidad de registro de las HCs auditadas — Hospital Santa Rosa</strong></p>
 
     ${t2}
 
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-
-
 
     ${imgPastel ? `
 
@@ -4883,21 +4819,13 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-
-
-    <!-- ── Evolución por mes ──────────────────────────── -->
-
     <p style="text-align:justify;">${parrafos[2] || ''}</p>
-
-
 
     <p align="center" style="text-align:center;"><strong>Tabla N° 3. Calidad de Registro por Mes — Hospital Santa Rosa</strong></p>
 
     ${t3}
 
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-
-
 
     ${imgBarras ? `
 
@@ -4907,29 +4835,15 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-
-
-    <!-- ── Distribución por Servicio (Tabla N°4 + Gráfico N°4) ── -->
-
     ${t4Html}
-
-
-
-    <!-- ── Calidad por Servicio (Tabla N°5 + Gráfico N°5) ─────── -->
 
     ${parrafos[3] ? `<p style="text-align:justify;">${parrafos[3]}</p>` : ''}
 
     ${t5Html}
 
-
-
-    <!-- ── 3.3.3 Promedio de Cumplimiento ──────────────── -->
-
     <h4 style="color:#1e3a6e;">3.3.3. Promedio de Cumplimiento del correcto registro</h4>
 
     <p style="text-align:justify;">${parrafos[4] || ''}</p>
-
-
 
     ${imgCumpl ? `
 
@@ -4939,13 +4853,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-
-
     ${t6aHtml}
-
-
-
-    <!-- ── 3.3.4 No Conformidades (placeholder) ────────── -->
 
     <h4 style="color:#1e3a6e;">3.3.4. No Conformidades</h4>
 
@@ -4955,15 +4863,9 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     </p>
 
-
-
-    <!-- ══ SALTO DE PÁGINA — ANEXO N°1 ══════════════════════ -->
-
     <br clear="all" style="page-break-before:always"/>
 
     <div class="page-break"></div>
-
-
 
     <h2 align="center" style="color:#1e3a6e;text-align:center;margin-top:20px;">ANEXO N° 1</h2>
 
@@ -4972,8 +4874,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa
 
     </h3>
-
-
 
     <table align="center" style="width:100%;border-collapse:collapse;margin:10px auto;font-size:9pt;">
 
@@ -5003,8 +4903,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     </table>
 
-
-
   </body></html>`;
 
 
@@ -5023,13 +4921,11 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
 
 
-// ──────────────────────────────────────────────────────────────
-
-// 13. HELPERS
-
-// ──────────────────────────────────────────────────────────────
+// ===== HELPERS =====
 
 function _calcGlobal(data) {
+
+  if (!data || !data.length) return { sat:0, mej:0, def:0, total:0, prom:0 };
 
   let sat=0, mej=0, def=0, sumPct=0;
 
@@ -5057,6 +4953,8 @@ function _calcGlobal(data) {
 
 function _calcPorMes(data) {
 
+  if (!data) return {};
+
   const pm = {};
 
   data.forEach(r => {
@@ -5083,6 +4981,8 @@ function _calcPorMes(data) {
 
 function _calcPorServicio(data) {
 
+  if (!data) return {};
+
   const ps = {};
 
   data.forEach(r => {
@@ -5107,9 +5007,9 @@ function _calcPorServicio(data) {
 
 
 
-// NUEVO: calcular promedios por área de atención
-
 function _calcPorArea(data) {
+
+  if (!data) return {};
 
   const pa = {};
 
