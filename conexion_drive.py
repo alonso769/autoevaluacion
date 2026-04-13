@@ -3,12 +3,20 @@ import pandas as pd
 from google.oauth2.service_account import Credentials
 import urllib3
 import os
+import ssl
 
+# ====================================================================
+# PARCHE PARA SALTAR EL FIREWALL DEL HOSPITAL
+# ====================================================================
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 os.environ['PYTHONHTTPSVERIFY'] = '0'
-
-import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
+
+AREAS = {
+    "consulta_externa": {"sheet": "FORMATO DE CONSULTA EXTERNA-INICIAL (Respuestas)", "tab": "NUEVO CE", "out": "datos_ce.xlsx"},
+    "emergencia":       {"sheet": "FORMATO DE EMERGENCIA (Respuestas)", "tab": "E", "out": "datos_emergencia.xlsx"},
+    "hospitalizacion":  {"sheet": "FORMATO DE HOSPITALIZACIÓN (Respuestas)", "tab": "H", "out": "datos_hospitalizacion.xlsx"}
+}
 
 try:
     print("Paso 1: Conectando credenciales...")
@@ -21,18 +29,22 @@ try:
     print("Paso 2: Autorizando cliente...")
     cliente = gspread.authorize(creds)
 
-    print("Paso 3: Abriendo hoja...")
-    hoja = cliente.open("FORMATO DE CONSULTA EXTERNA-INICIAL (Respuestas)")
-
-    print("Paso 4: Leyendo pestaña NUEVO CE...")
-    pestaña = hoja.worksheet("NUEVO CE")
-    datos = pestaña.get_all_records()
-    df = pd.DataFrame(datos)
-
-    print(f"✅ Total de registros: {len(df)}")
-    print(df.head())
-    df.to_excel("datos_auditoria.xlsx", index=False)
-    print("✅ Guardado en datos_auditoria.xlsx")
+    for area, config in AREAS.items():
+        print(f"\n--- Procesando {area.upper()} ---")
+        try:
+            print(f"Abriendo hoja: {config['sheet']} ...")
+            hoja = cliente.open(config['sheet'])
+            
+            print(f"Leyendo pestaña: {config['tab']} ...")
+            pestaña = hoja.worksheet(config['tab'])
+            datos = pestaña.get_all_records()
+            df = pd.DataFrame(datos)
+            
+            print(f"✅ Total de registros: {len(df)}")
+            df.to_excel(config['out'], index=False)
+            print(f"✅ Copia de seguridad guardada en: {config['out']}")
+        except Exception as e:
+            print(f"❌ ERROR al procesar {area}: {e}")
 
 except Exception as e:
-    print(f"❌ ERROR: {e}")
+    print(f"❌ ERROR GENERAL: {e}")
