@@ -433,6 +433,9 @@ def calcular_row_eme(row, criterios):
 # ==============================================================
 # PROCESAR DATOS CON AÑO Y MES SEPARADOS
 # ==============================================================
+# ==============================================================
+# PROCESAR DATOS CON AÑO Y MES SEPARADOS
+# ==============================================================
 def procesar_df(df, area_key, area_label="Área"):
     results=[]; criterios=CRITERIOS_POR_AREA[area_key]
     nombres_meses={1:"01 - Enero",2:"02 - Febrero",3:"03 - Marzo",4:"04 - Abril",5:"05 - Mayo",6:"06 - Junio",7:"07 - Julio",8:"08 - Agosto",9:"09 - Septiembre",10:"10 - Octubre",11:"11 - Noviembre",12:"12 - Diciembre"}
@@ -446,27 +449,30 @@ def procesar_df(df, area_key, area_label="Área"):
             fe=pd.to_datetime(marca_temporal,dayfirst=True)
             
             # =====================================================
-            # NUEVO FILTRO: Solo aceptar data del 2024 en adelante
-            # (Si prefieres desde 2022, cambia el 2024 por 2022)
+            # FILTRO: Solo aceptar data del 2022 en adelante
             # =====================================================
-            if fe.year < 2024:
+            if fe.year < 2022:
                 continue  # Salta esta fila y pasa a la siguiente
                 
             anio_automatico=str(fe.year)
         except Exception:
-            # Si una fila no tiene fecha válida, la ignoramos para mantener la data limpia
+            # Si una fila no tiene fecha válida, la ignoramos
             continue
             
-        # 2. Calcular los puntajes SOLO de las filas que pasaron el filtro (más rápido)
+        # 2. Calcular los puntajes SOLO de las filas que pasaron el filtro
         calc=calcular_row_eme(r,criterios) if area_key=="emergencia" else calcular_row_ce_hosp(r,criterios)
             
-        # 3. Extraer Mes de la columna oculta
+        # 3. Extraer Mes de la columna exacta
         mes_raw = ""
         for k, v in r.items():
-            if "uditoria" in str(k).upper() or "UDITORIA" in str(k).upper():
+            key_upper = str(k).upper()
+            # BÚSQUEDA EXACTA: Ignoramos tildes buscando este fragmento
+            if "MERO DE AUDITOR" in key_upper:
                 mes_raw = str(v).strip()
                 break
+                
         try:
+            # Ahora sí convertirá el "1", "2" o "7" en el mes correcto
             mes_num = int(float(mes_raw))
             mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
         except Exception:
@@ -475,7 +481,7 @@ def procesar_df(df, area_key, area_label="Área"):
         def campo(keys):
             for k in keys:
                 v=str(r.get(k,"")).strip()
-                if v and v!="nan": return v
+                if v and str(v).lower() != "nan": return v
             return "—"
             
         results.append({
