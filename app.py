@@ -433,70 +433,69 @@ def calcular_row_eme(row, criterios):
 # ==============================================================
 # PROCESAR DATOS CON AÑO Y MES SEPARADOS
 # ==============================================================
-# ==============================================================
-# PROCESAR DATOS CON AÑO Y MES SEPARADOS
-# ==============================================================
 def procesar_df(df, area_key, area_label="Área"):
-    results=[]; criterios=CRITERIOS_POR_AREA[area_key]
-    nombres_meses={1:"01 - Enero",2:"02 - Febrero",3:"03 - Marzo",4:"04 - Abril",5:"05 - Mayo",6:"06 - Junio",7:"07 - Julio",8:"08 - Agosto",9:"09 - Septiembre",10:"10 - Octubre",11:"11 - Noviembre",12:"12 - Diciembre"}
+    results = []
+    criterios = CRITERIOS_POR_AREA[area_key]
+    nombres_meses = {1:"01 - Enero", 2:"02 - Febrero", 3:"03 - Marzo", 4:"04 - Abril", 5:"05 - Mayo", 6:"06 - Junio", 7:"07 - Julio", 8:"08 - Agosto", 9:"09 - Septiembre", 10:"10 - Octubre", 11:"11 - Noviembre", 12:"12 - Diciembre"}
     
     for _, row in df.iterrows():
-        r=row.to_dict()
-        marca_temporal=str(r.get("Marca temporal","")).strip()
+        r = row.to_dict()
+        marca_temporal = str(r.get("Marca temporal", "")).strip()
         
-        # 1. Extraer Año de la fecha principal y APLICAR EL FILTRO
         try:
-            fe=pd.to_datetime(marca_temporal,dayfirst=True)
-            
-            # =====================================================
-            # FILTRO: Solo aceptar data del 2022 en adelante
-            # =====================================================
+            fe = pd.to_datetime(marca_temporal, dayfirst=True)
             if fe.year < 2022:
-                continue  # Salta esta fila y pasa a la siguiente
-                
-            anio_automatico=str(fe.year)
+                continue
+            
+            mes_ingreso = fe.month
+            anio_ingreso = fe.year
+            
+            # Extraer Mes de la columna Auditoria
+            mes_raw = ""
+            for k, v in r.items():
+                if "MERO DE AUDITOR" in str(k).upper():
+                    mes_raw = str(v).strip()
+                    break
+            
+            mes_num = int(float(mes_raw)) if mes_raw else 0
+            
+            # --- LÓGICA DE OPORTUNIDAD Y AÑO INTELIGENTE ---
+            oportunidad = "A TIEMPO" if mes_num == mes_ingreso else "FUERA DE FECHA"
+            
+            # Si se ingresa en 2026 un mes futuro (ej. 12), es del 2025
+            anio_final = str(anio_ingreso)
+            if anio_ingreso == 2026 and mes_num > mes_ingreso:
+                anio_final = "2025"
+            
+            anio_automatico = anio_final
+            mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
+            
         except Exception:
-            # Si una fila no tiene fecha válida, la ignoramos
             continue
             
-        # 2. Calcular los puntajes SOLO de las filas que pasaron el filtro
-        calc=calcular_row_eme(r,criterios) if area_key=="emergencia" else calcular_row_ce_hosp(r,criterios)
-            
-        # 3. Extraer Mes de la columna exacta
-        mes_raw = ""
-        for k, v in r.items():
-            key_upper = str(k).upper()
-            # BÚSQUEDA EXACTA: Ignoramos tildes buscando este fragmento
-            if "MERO DE AUDITOR" in key_upper:
-                mes_raw = str(v).strip()
-                break
-                
-        try:
-            # Ahora sí convertirá el "1", "2" o "7" en el mes correcto
-            mes_num = int(float(mes_raw))
-            mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
-        except Exception:
-            mes_automatico = "Sin Mes"
+        calc = calcular_row_eme(r, criterios) if area_key == "emergencia" else calcular_row_ce_hosp(r, criterios)
 
         def campo(keys):
             for k in keys:
-                v=str(r.get(k,"")).strip()
+                v = str(r.get(k, "")).strip()
                 if v and str(v).lower() != "nan": return v
             return "—"
             
         results.append({
-            "hc":campo(["NÚMERO DE HISTORIA CLÍNICA","NÚMERO DE LA HISTORIA CLÍNICA","NUMERO DE HISTORIA CLINICA"]),
-            "fecha":campo(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
-            "servicio":campo(["SERVICIO AUDITADO:","SERVICIO AUDITADO"]),
-            "auditor":campo(["MIEMBROS DEL COMITÉ DE AUDITORIA (que realizan la auditoría)","MIEMBROS DEL COMITÉ DE AUDITORIA","Miembros del Comité de Auditoria que realizan la auditoría"]),
+            "hc": campo(["NÚMERO DE HISTORIA CLÍNICA","NÚMERO DE LA HISTORIA CLÍNICA","NUMERO DE HISTORIA CLINICA"]),
+            "fecha": campo(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
+            "servicio": campo(["SERVICIO AUDITADO:","SERVICIO AUDITADO"]),
+            "auditor": campo(["MIEMBROS DEL COMITÉ DE AUDITORIA (que realizan la auditoría)","MIEMBROS DEL COMITÉ DE AUDITORIA","Miembros del Comité de Auditoria que realizan la auditoría"]),
             "anio": anio_automatico,
             "num_auditoria": mes_automatico,
-            "diagnostico":campo(["DIAGNÓSTICO DE ALTA","DIAGNÓSTICO","DIAGNOSTICO"]),
-            "cie10":campo(["CIE 10 (en mayúsculas, separando diagnósticos con slash, ejemplo: U07.1 / K35.9)"]),
-            "area":area_label,**calc
+            "oportunidad": oportunidad, # Nuevo campo
+            "diagnostico": campo(["DIAGNÓSTICO DE ALTA","DIAGNÓSTICO","DIAGNOSTICO"]),
+            "cie10": campo(["CIE 10 (en mayúsculas, separando diagnósticos con slash, ejemplo: U07.1 / K35.9)"]),
+            "area": area_label,
+            **calc
         })
         
-    results.sort(key=lambda x:(x['anio'],x['num_auditoria']))
+    results.sort(key=lambda x: (x['anio'], x['num_auditoria']))
     return results
 
 # ============================================================

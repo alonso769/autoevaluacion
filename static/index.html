@@ -411,7 +411,6 @@ table.main-tbl tr:hover td{background:#fdf8f0}
         <div class="kpi prom"><div class="lbl">Promedio</div><div class="val" id="kpiProm">—</div><div class="sub">% cumplimiento</div></div>
       </div>
 
-      <!-- CHARTS ROW 1 -->
       <div class="section-grid">
         <div class="section-card">
           <div class="card-head"><h3>🍩 Distribución de Calificaciones</h3></div>
@@ -423,7 +422,15 @@ table.main-tbl tr:hover td{background:#fdf8f0}
         </div>
       </div>
 
-      <!-- CHART SERVICIOS -->
+      <div class="section-card wide" style="margin-bottom:20px">
+        <div class="card-head"><h3>🕒 Oportunidad de Registro (A tiempo vs Extemporáneo)</h3></div>
+        <div class="card-body">
+          <div style="position:relative;height:250px">
+            <canvas id="chartOportunidad"></canvas>
+          </div>
+        </div>
+      </div>
+
       <div class="section-card wide" style="margin-bottom:20px">
         <div class="card-head"><h3>🏥 Rendimiento por Servicio</h3><span class="badge" id="totalServBadge">0 servicios</span></div>
         <div class="card-body"><div style="position:relative;height:300px"><canvas id="chartServicios"></canvas></div></div>
@@ -492,7 +499,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           <table class="main-tbl">
             <thead><tr>
               <th>#</th><th>N° HC</th><th>Fecha Auditoría</th><th>Servicio</th>
-              <th>Auditor</th><th>Puntaje</th><th>% Cumplim.</th><th>Calificación</th><th>Detalle</th>
+              <th>Auditor</th><th>Puntaje</th><th>% Cumplim.</th><th>Oportunidad</th><th>Calificación</th><th>Detalle</th>
             </tr></thead>
             <tbody id="regBody"></tbody>
           </table>
@@ -788,6 +795,31 @@ const REG_SIZE = 25;
 
 // ===== NUEVO: CONTROL DE ÁREA =====
 let currentArea = 'consulta_externa';
+
+function renderChartOportunidad() {
+  destroyChart('oportunidad');
+  if(!filtData.length) return;
+  const aTiempo = filtData.filter(r => r.oportunidad === 'A TIEMPO').length;
+  const fueraFecha = filtData.filter(r => r.oportunidad === 'FUERA DE FECHA').length;
+  
+  const ctx = document.getElementById('chartOportunidad').getContext('2d');
+  charts['oportunidad'] = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+          labels: ['A Tiempo', 'Fuera de Fecha'],
+          datasets: [{
+              data: [aTiempo, fueraFecha],
+              backgroundColor: ['#22c55e', '#f59e0b'],
+              hoverOffset: 8
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } }
+      }
+  });
+}
 
 function cambiarArea() {
   currentArea = document.getElementById('areaSelector').value;
@@ -1347,9 +1379,13 @@ function renderRegistros() {
   tbody.innerHTML = page.map((r,i) => {
     const pct = r.porcentaje.toFixed(1);
     const cls = r.calificacion==='SATISFACTORIO'?'s':r.calificacion==='POR MEJORAR'?'pm':'d';
-    const pillCls = r.calificacion==='SATISFACTORIO'?'s':r.calificacion==='POR MEJORAR'?'pm':'d';
+    
+    // --- NUEVA LÓGICA DE COLOR PARA OPORTUNIDAD ---
+    const opCls = r.oportunidad === 'A TIEMPO' ? 'pill s' : 'pill pm';
+    
     const srvShort = String(r.servicio).length>28?String(r.servicio).substring(0,28)+'...':r.servicio;
     const audShort = String(r.auditor).length>28?String(r.auditor).substring(0,28)+'...':r.auditor;
+
     return `<tr>
       <td style="color:var(--muted);font-size:12px">${start+i+1}</td>
       <td><strong>${r.hc}</strong></td>
@@ -1363,10 +1399,12 @@ function renderRegistros() {
           <span class="prog-pct" style="color:${cls==='s'?'#16a34a':cls==='pm'?'#d97706':'#dc2626'}">${pct}%</span>
         </div>
       </td>
-      <td><span class="pill ${pillCls}">${r.calificacion}</span></td>
+      <td><span class="${opCls}" style="font-size:10px; min-width:80px; text-align:center;">${r.oportunidad}</span></td>
+      
+      <td><span class="pill ${cls}">${r.calificacion}</span></td>
       <td><button class="btn-sm dark" onclick="showDetail(${start+i})">Ver</button></td>
     </tr>`;
-  }).join('');
+}).join('');
   renderPag();
 }
 
