@@ -347,18 +347,11 @@ def get_dataframe(sheet_id, worksheet_name):
     try:
         ws = hoja.worksheet(worksheet_name)
     except Exception as e:
+        # Si la pestaña no existe, le mostramos al usuario cuáles son las pestañas reales que tiene su archivo
         disponibles = ", ".join([w.title for w in hoja.worksheets()])
         raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Las pestañas que existen en este archivo son: {disponibles}")
-    
-    # Limitar filas para evitar memory overflow en Render
-    all_values = ws.get_all_values()
-    if not all_values:
-        return pd.DataFrame()
-    headers = all_values[0]
-    rows = all_values[1:]
-    if len(rows) > 1000:
-        rows = rows[-1000:]
-    return pd.DataFrame(rows, columns=headers)
+        
+    return pd.DataFrame(ws.get_all_records())
 
 def get_users_sheet():
     client = get_client()
