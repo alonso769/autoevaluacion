@@ -355,9 +355,8 @@ def get_dataframe(sheet_id, worksheet_name):
             return pd.DataFrame()
         headers = all_values[0]
         rows = all_values[1:]
+        # Solo limpia filas vacías, YA NO recorta el límite a 1500
         rows = [r for r in rows if any(v.strip() for v in r)]
-        if len(rows) > 1500:
-            rows = rows[-1500:]
         return pd.DataFrame(rows, columns=headers)
     
     return pd.DataFrame(ws.get_all_records())
