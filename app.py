@@ -330,7 +330,7 @@ CRITERIOS_POR_AREA = {
 }
 
 # ============================================================
-# GOOGLE SHEETS CORE 
+# GOOGLE SHEETS CORE - EL SALVAVIDAS ANTI-OOM
 # ============================================================
 def get_client():
     creds = Credentials.from_service_account_file(CREDENCIALES_PATH, scopes=SCOPES)
@@ -341,45 +341,59 @@ def get_dataframe(sheet_id, worksheet_name):
     try:
         hoja = client.open_by_key(sheet_id)
     except Exception as e:
-        raise Exception(f"No se pudo acceder al archivo. Verifica que el ID del archivo sea correcto y que hayas compartido el archivo con el correo del bot.")
+        raise Exception(f"No se pudo acceder al archivo. Verifica que el ID sea correcto.")
     
     try:
         ws = hoja.worksheet(worksheet_name)
     except Exception as e:
         disponibles = ", ".join([w.title for w in hoja.worksheets()])
-        raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Las pestañas que existen en este archivo son: {disponibles}")
+        raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Disponibles: {disponibles}")
     
-    if worksheet_name == "H":
-        all_values = ws.get_all_values()
-        if not all_values:
-            return pd.DataFrame()
+    # Leemos la sábana entera de manera liviana
+    all_values = ws.get_all_values()
+    if not all_values:
+        return pd.DataFrame()
+        
+    headers_raw = all_values[0]
+    
+    # === LA MAGIA: EVITAR EL COLAPSO DE MEMORIA (OOM) ===
+    # Filtramos SOLO las columnas que tienen un título escrito (ignoramos miles de columnas invisibles Z, AA...)
+    valid_indices = []
+    clean_headers = []
+    seen_headers = {}
+    
+    for i, h in enumerate(headers_raw):
+        h_str = str(h).strip()
+        if h_str:
+            valid_indices.append(i)
+            # Prevenir nombres duplicados (evita errores internos en Python)
+            if h_str in seen_headers:
+                seen_headers[h_str] += 1
+                h_str = f"{h_str}_{seen_headers[h_str]}"
+            else:
+                seen_headers[h_str] = 0
+            clean_headers.append(h_str)
             
-        headers = all_values[0]
+    if not valid_indices:
+        return pd.DataFrame()
         
-        # --- EL SALVAVIDAS DE MEMORIA RAM ---
-        # 1. Encontramos la última columna real para ignorar las columnas invisibles infinitas
-        last_valid_col = 0
-        for i, h in enumerate(headers):
-            if str(h).strip():
-                last_valid_col = i
-                
-        # 2. Recortamos las cabeceras hasta la última columna con texto
-        headers = headers[:last_valid_col + 1]
-        
-        # 3. Recortamos las filas para que no guarden miles de celdas vacías
-        rows = []
-        for r in all_values[1:]:
-            r_recortada = r[:last_valid_col + 1]
-            # Solo guardamos la fila si tiene algún dato
-            if any(str(v).strip() for v in r_recortada):
-                # Igualamos la longitud por seguridad
-                if len(r_recortada) < len(headers):
-                    r_recortada.extend([''] * (len(headers) - len(r_recortada)))
-                rows.append(r_recortada)
-                
-        return pd.DataFrame(rows, columns=headers)
-    
-    return pd.DataFrame(ws.get_all_records())
+    # Construimos las filas extrayendo ÚNICAMENTE las celdas de las columnas válidas
+    rows = []
+    for r_raw in all_values[1:]:
+        r_filtered = []
+        has_data = False
+        for i in valid_indices:
+            val = r_raw[i] if i < len(r_raw) else ""
+            val_str = str(val).strip()
+            if val_str:
+                has_data = True
+            r_filtered.append(val_str)
+            
+        # Solo agregamos la fila si tiene al menos un dato escrito
+        if has_data:
+            rows.append(r_filtered)
+            
+    return pd.DataFrame(rows, columns=clean_headers)
 
 def get_users_sheet():
     client = get_client()
@@ -398,6 +412,7 @@ def get_users_sheet():
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
+# === LÓGICA INTACTA DE CONSULTA EXTERNA Y EMERGENCIA ===
 def get_val(row, campo):
     for k, v in row.items():
         if str(k).strip() == campo.strip():
@@ -446,7 +461,7 @@ def calcular_row_eme(row, criterios):
     return {"puntaje":round(total,2),"max_aplicable":round(max_ap,2),"porcentaje":pct,"calificacion":calif,"secciones":secciones}
 
 # ==============================================================
-# PROCESAR DATOS CON AÑO Y MES SEPARADOS + LÓGICA EXTEMPORÁNEOS
+# PROCESAR DATOS CON AÑO Y MES SEPARADOS (CE y EME - INTACTO)
 # ==============================================================
 def procesar_df(df, area_key, area_label="Área"):
     results = []
@@ -465,7 +480,6 @@ def procesar_df(df, area_key, area_label="Área"):
             mes_ingreso = fe.month
             anio_ingreso = fe.year
             
-            # Extraer Mes de la columna Auditoria
             mes_raw = ""
             for k, v in r.items():
                 if "MERO DE AUDITOR" in str(k).upper():
@@ -474,14 +488,10 @@ def procesar_df(df, area_key, area_label="Área"):
             
             mes_num = int(float(mes_raw)) if mes_raw else 0
             
-            # --- LÓGICA DE OPORTUNIDAD Y AÑO INTELIGENTE MEJORADA ---
             anio_final = anio_ingreso
-            # Si el mes que ingreso (ej: 12) es mayor al mes de la marca temporal (ej: 4 abril),
-            # significa que es del año pasado.
             if mes_num > mes_ingreso:
                 anio_final = anio_ingreso - 1
             
-            # Es a tiempo SOLO si el mes coincide y el año calculado es el de ingreso.
             if mes_num == mes_ingreso and anio_final == anio_ingreso:
                 oportunidad = "A TIEMPO"
             else:
@@ -536,7 +546,11 @@ def procesar_df_hosp(df, area_key, area_label="Área"):
         # Esto convierte "  NÚMERO DE LA HISTORIA CLÍNICA " en "NÚMERO DE LA HISTORIA CLÍNICA"
         r_clean = {" ".join(str(k).split()).upper(): v for k, v in r.items()}
         
-        marca_temporal = str(r_clean.get("MARCA TEMPORAL", "")).strip()
+        marca_temporal = ""
+        for k, v in r_clean.items():
+            if "MARCA TEMPORAL" in k:
+                marca_temporal = str(v).strip()
+                break
         
         try:
             fe = pd.to_datetime(marca_temporal, dayfirst=True)
@@ -546,7 +560,6 @@ def procesar_df_hosp(df, area_key, area_label="Área"):
             mes_ingreso = fe.month
             anio_ingreso = fe.year
             
-            # Extraer Mes de la columna Auditoria
             mes_raw = ""
             for k, v in r_clean.items():
                 if "NÚMERO DE AUDITORÍA" in k or "NUMERO DE AUDITORIA" in k or "MERO DE AUDITOR" in k:
@@ -573,11 +586,10 @@ def procesar_df_hosp(df, area_key, area_label="Área"):
         # Función interna de get_val exclusiva para hospitalización
         def get_val_hosp(clean_row, campo):
             campo_clean = " ".join(str(campo).split()).upper()
-            # Búsqueda exacta
             if campo_clean in clean_row:
                 return str(clean_row[campo_clean]).strip().upper()
-            # Búsqueda parcial (25 caracteres)
-            short_campo = campo_clean[:25]
+            # Búsqueda parcial más segura (15 caracteres)
+            short_campo = campo_clean[:15]
             for k, v in clean_row.items():
                 if short_campo in k:
                     return str(v).strip().upper()
@@ -605,19 +617,22 @@ def procesar_df_hosp(df, area_key, area_label="Área"):
         calif="SATISFACTORIO" if pct>=90 else ("POR MEJORAR" if pct>=75 else "DEFICIENTE")
         calc = {"puntaje":round(total,2),"max_aplicable":round(max_ap,2),"porcentaje":pct,"calificacion":calif,"secciones":secciones}
 
-        # Función de búsqueda para campos principales blindada
         def campo_hosp(keys):
+            # Intento exacto
             for k in keys:
                 k_clean = " ".join(str(k).split()).upper()
-                # Coincidencia exacta
                 if k_clean in r_clean:
                     v = str(r_clean[k_clean]).strip()
                     if v and str(v).lower() != "nan": return v
-                # Coincidencia parcial
-                for rk, rv in r_clean.items():
-                    if k_clean[:20] in rk:
-                        v = str(rv).strip()
-                        if v and str(v).lower() != "nan": return v
+            # Intento parcial
+            for k in keys:
+                k_clean = " ".join(str(k).split()).upper()
+                if len(k_clean) > 4:
+                    short_k = k_clean[:15]
+                    for rk, rv in r_clean.items():
+                        if short_k in rk:
+                            v = str(rv).strip()
+                            if v and str(v).lower() != "nan": return v
             return "—"
             
         results.append({
@@ -676,13 +691,12 @@ def crear_usuario():
 def get_datos():
     ak=request.args.get('area','consulta_externa').lower().strip()
     
-    # NUEVA LÓGICA PARA CARGAR TODAS LAS ÁREAS (Reportes Generales)
+    # NUEVA LÓGICA PARA CARGAR TODAS LAS ÁREAS
     if ak == 'todas':
         results = []
         for k, cfg in AREAS_CONFIG.items():
             try:
                 df = get_dataframe(cfg["sheet_id"], cfg["worksheet_name"])
-                # Aquí derivamos a la función correcta dependiendo del área
                 if k == 'hospitalizacion':
                     results.extend(procesar_df_hosp(df, k, area_label=cfg["label"]))
                 else:
@@ -704,7 +718,6 @@ def get_datos():
     try:
         df=get_dataframe(cfg["sheet_id"],cfg["worksheet_name"])
         
-        # Aquí derivamos a la función correcta dependiendo del área elegida
         if ak == 'hospitalizacion':
             results = procesar_df_hosp(df, ak, area_label=cfg["label"])
         else:
