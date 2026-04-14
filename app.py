@@ -381,21 +381,23 @@ def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
 def normalize_str(s):
-    # Elimina espacios dobles/extras, saltos de línea y convierte a minúsculas
-    return re.sub(r'\s+', ' ', str(s)).strip().lower()
+    # Usamos split() y join() nativos. Hacen lo mismo que 're' pero NO gastan memoria RAM
+    return ' '.join(str(s).split()).lower()
 
 def get_val(row, campo):
     norm_campo = normalize_str(campo)
-    # 1. Intento de coincidencia exacta pero normalizada (sin espacios extra)
+    short_campo = norm_campo[:30]
+    
+    # 1. Búsqueda exacta blindada
     for k, v in row.items():
         if normalize_str(k) == norm_campo:
             return str(v).strip().upper()
-    
-    # 2. Si no coincide exactamente, buscar por los primeros 30 caracteres
-    short_campo = norm_campo[:30]
+            
+    # 2. Búsqueda parcial (primeros 30 caracteres)
     for k, v in row.items():
         if short_campo in normalize_str(k):
             return str(v).strip().upper()
+            
     return ""
 
 def calcular_row_ce_hosp(row, criterios):
@@ -447,10 +449,13 @@ def procesar_df(df, area_key, area_label="Área"):
     for _, row in df.iterrows():
         r = row.to_dict()
         
+        # Crear diccionario normalizado UNA VEZ por fila para ahorrar toda la RAM
+        r_norm = {normalize_str(k): v for k, v in r.items()}
+        
         # 1. Extraer Marca Temporal blindado contra espacios
         marca_temporal = ""
-        for k, v in r.items():
-            if "marca temporal" in normalize_str(k):
+        for k, v in r_norm.items():
+            if "marca temporal" in k:
                 marca_temporal = str(v).strip()
                 break
         
@@ -464,8 +469,8 @@ def procesar_df(df, area_key, area_label="Área"):
             
             # 2. Extraer Mes de Auditoría blindado contra espacios
             mes_raw = ""
-            for k, v in r.items():
-                if "mero de auditor" in normalize_str(k):
+            for k, v in r_norm.items():
+                if "mero de auditor" in k:
                     mes_raw = str(v).strip()
                     break
             
@@ -473,12 +478,9 @@ def procesar_df(df, area_key, area_label="Área"):
             
             # --- LÓGICA DE OPORTUNIDAD Y AÑO INTELIGENTE MEJORADA ---
             anio_final = anio_ingreso
-            # Si el mes que ingreso (ej: 12) es mayor al mes de la marca temporal (ej: 4 abril),
-            # significa que es del año pasado.
             if mes_num > mes_ingreso:
                 anio_final = anio_ingreso - 1
             
-            # Es a tiempo SOLO si el mes coincide y el año calculado es el de ingreso.
             if mes_num == mes_ingreso and anio_final == anio_ingreso:
                 oportunidad = "A TIEMPO"
             else:
@@ -492,14 +494,13 @@ def procesar_df(df, area_key, area_label="Área"):
             
         calc = calcular_row_eme(r, criterios) if area_key == "emergencia" else calcular_row_ce_hosp(r, criterios)
 
-        # 3. Buscador de campos de cabecera blindado contra espacios
+        # 3. Buscador de campos hiper-optimizado
         def campo(keys):
             for k in keys:
                 norm_k = normalize_str(k)
-                for r_k, r_v in r.items():
-                    if normalize_str(r_k) == norm_k:
-                        v = str(r_v).strip()
-                        if v and str(v).lower() != "nan": return v
+                if norm_k in r_norm:
+                    v = str(r_norm[norm_k]).strip()
+                    if v and str(v).lower() != "nan": return v
             return "—"
             
         results.append({
