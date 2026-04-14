@@ -421,12 +421,13 @@ table.main-tbl tr:hover td{background:#fdf8f0}
       <div class="icon">📋</div>
       <div>
         <span>Auditoría HC</span>
-        <small id="areaTitleLabel">Anexo N° 5 — Consulta Externa</small>
+        <small id="areaTitleLabel">Anexo N° 5 — Todas las Áreas (Consolidado)</small>
       </div>
     </div>
     
     <div style="margin-left: 20px;">
        <select id="areaSelector" onchange="cambiarArea()" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: bold; outline: none; cursor: pointer;">
+          <option value="todas" style="color: #000;" selected>Todas las Áreas (Consolidado)</option>
           <option value="consulta_externa" style="color: #000;">Consulta Externa</option>
           <option value="emergencia" style="color: #000;">Emergencia</option>
           <option value="hospitalizacion" style="color: #000;">Hospitalización</option>
@@ -549,6 +550,13 @@ table.main-tbl tr:hover td{background:#fdf8f0}
             <option value="DEFICIENTE">Deficiente</option>
           </select>
         </div>
+        <div class="fg"><label>Oportunidad</label>
+          <select id="filtOportReg">
+            <option value="">Todas</option>
+            <option value="A TIEMPO">A Tiempo</option>
+            <option value="FUERA DE FECHA">Fuera de Fecha</option>
+          </select>
+        </div>
         <div class="fg"><label>Auditor</label><select id="filtAud"><option value="">Todos</option></select></div>
         <div class="fg"><label>N° Auditoría</label><input type="text" id="filtNum" placeholder="Ej: 7"></div>
         <button class="fbtn primary" onclick="filtrarRegistros()">Filtrar</button>
@@ -563,7 +571,7 @@ table.main-tbl tr:hover td{background:#fdf8f0}
         <div class="tbl-wrap">
           <table class="main-tbl">
             <thead><tr>
-              <th>#</th><th>N° HC</th><th>Fecha Auditoría</th><th>Servicio</th>
+              <th>#</th><th>Área</th><th>N° HC</th><th>Fecha Auditoría</th><th>Servicio</th>
               <th>Auditor</th><th>Puntaje</th><th>% Cumplim.</th><th>Oportunidad</th><th>Calificación</th><th>Detalle</th>
             </tr></thead>
             <tbody id="regBody"></tbody>
@@ -650,6 +658,15 @@ table.main-tbl tr:hover td{background:#fdf8f0}
         <div class="fg">
           <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">AÑO</label>
           <select id="expAnio" onchange="actualizarFiltrosCascada()"></select>
+        </div>
+
+        <div class="fg">
+          <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">OPORTUNIDAD</label>
+          <select id="expOportunidad" onchange="actualizarFiltrosCascada()">
+            <option value="">Todos</option>
+            <option value="A TIEMPO">A Tiempo</option>
+            <option value="FUERA DE FECHA">Fuera de Fecha</option>
+          </select>
         </div>
 
         <div class="custom-ms" id="wrapMesExp" style="flex:1.2">
@@ -877,8 +894,8 @@ let stats = null;
 let charts = {};
 let regPage = 1;
 const REG_SIZE = 25;
-// ===== CONTROL DE ÁREA =====
-let currentArea = 'consulta_externa';
+// ===== CONTROL DE ÁREA (Por defecto TODAS) =====
+let currentArea = 'todas';
 
 // ================================================================
 // PERSISTENCIA DE SESIÓN CON localStorage
@@ -944,13 +961,66 @@ document.addEventListener('DOMContentLoaded', verificarSesionAlInicio);
 function cambiarArea() {
   currentArea = document.getElementById('areaSelector').value;
   const titulos = {
+    'todas': 'Anexo N° 5 — Todas las Áreas (Consolidado)',
     'consulta_externa': 'Anexo N° 5 — Consulta Externa',
     'emergencia': 'Anexo N° 5 — Emergencia',
     'hospitalizacion': 'Anexo N° 5 — Hospitalización'
   };
-  document.getElementById('areaTitleLabel').textContent = titulos[currentArea];
+  document.getElementById('areaTitleLabel').textContent = titulos[currentArea] || 'Auditoría HC';
   _limpiarPreview();
   actualizarDatos();
+}
+
+// ===== PARSEO INTELIGENTE DE FECHA =====
+function parseRealDate(dateStr) {
+    if (!dateStr) return null;
+    const match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (match) { return { year: parseInt(match[3], 10), month: parseInt(match[2], 10) }; }
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) { return { year: d.getFullYear(), month: d.getMonth() + 1 }; }
+    return null;
+}
+
+// ===== APLICACIÓN DE LÓGICA DE FECHAS =====
+function aplicarLogicaFechas(dataArray) {
+  dataArray.forEach(r => {
+    if (r.fecha_ingreso_real && r.num_auditoria) {
+      const realDate = parseRealDate(r.fecha_ingreso_real);
+      const matchMonth = String(r.num_auditoria).match(/^(\d+)/); // Extrae número ej. "12" de "12 - Diciembre"
+      if (realDate && matchMonth) {
+        const auditMonth = parseInt(matchMonth[1], 10);
+        // 1. Ajuste de año
+        if (auditMonth > realDate.month) {
+          r.anio = (realDate.year - 1).toString();
+        } else {
+          r.anio = realDate.year.toString();
+        }
+        // 2. Ajuste de oportunidad
+        let monthDiff;
+        if (realDate.year > parseInt(r.anio, 10)) {
+          monthDiff = (realDate.month + 12) - auditMonth;
+        } else {
+          monthDiff = realDate.month - auditMonth;
+        }
+        r.oportunidad = (monthDiff > 1) ? 'FUERA DE FECHA' : 'A TIEMPO';
+      } else {
+        if (!r.oportunidad) r.oportunidad = 'A TIEMPO';
+      }
+    } else {
+      if (!r.oportunidad) r.oportunidad = 'A TIEMPO';
+    }
+  });
+}
+
+// Helper fetch area
+async function fetchArea(area) {
+  try {
+    const res = await fetch(`${API}/datos?area=${area}`);
+    return await res.json();
+  } catch (e) {
+    console.error(e);
+    return { ok: false, registros: [] };
+  }
 }
 
 
@@ -1020,27 +1090,55 @@ async function actualizarDatos() {
   btn.classList.add('loading');
   btn.textContent = '⏳ Actualizando...';
   showLoading('Obteniendo datos desde Google Drive...');
-  try {
-    const r = await fetch(`${API}/datos?area=${currentArea}`);
-    const d = await r.json();
-    if(d.ok) {
-      allData = d.registros;
-      filtData = [...allData];
-      populateFilters(d.servicios, d.auditores, d.anios, d.meses);
-      await calcularEstadisticas(allData);
-      renderDashboard();
-      renderSecciones();
-      renderRegistros();
-      showToast('✅ Datos actualizados: '+allData.length+' registros', 'ok');
+  
+  let areasToFetch = currentArea === 'todas' ? ['consulta_externa', 'emergencia', 'hospitalizacion'] : [currentArea];
+  let combinedRegistros = [];
+  let combinedServicios = new Set();
+  let combinedAuditores = new Set();
+  let combinedAnios = new Set();
+  let combinedMeses = new Set();
+  let hasError = false;
+  let errorMessage = '';
+
+  for (let a of areasToFetch) {
+    const d = await fetchArea(a);
+    if (d.ok) {
+      d.registros.forEach(r => {
+        if (!r.area) {
+          r.area = a === 'consulta_externa' ? 'CONSULTA EXTERNA' :
+                   a === 'emergencia' ? 'EMERGENCIA' :
+                   a === 'hospitalizacion' ? 'HOSPITALIZACIÓN' : 'CONSULTA EXTERNA';
+        }
+        combinedRegistros.push(r);
+      });
+      if (d.servicios) d.servicios.forEach(s => combinedServicios.add(s));
+      if (d.auditores) d.auditores.forEach(aud => combinedAuditores.add(aud));
+      if (d.anios) d.anios.forEach(yr => combinedAnios.add(yr));
+      if (d.meses) d.meses.forEach(m => combinedMeses.add(m));
     } else {
-      showToast('❌ Error: '+d.error, 'err');
+      hasError = true;
+      errorMessage = d.error || 'Error desconocido';
     }
-  } catch(e) {
-    showToast('❌ Error de conexión: '+e.message, 'err');
   }
+
   hideLoading();
   btn.classList.remove('loading');
   btn.textContent = '🔄 Actualizar Drive';
+
+  if (!hasError || combinedRegistros.length > 0) {
+    allData = combinedRegistros;
+    aplicarLogicaFechas(allData); // Lógica de Oportunidad y Año recalculada
+    filtData = [...allData];
+    
+    populateFilters(Array.from(combinedServicios), Array.from(combinedAuditores), Array.from(combinedAnios), Array.from(combinedMeses));
+    await calcularEstadisticas(allData);
+    renderDashboard();
+    renderSecciones();
+    renderRegistros();
+    showToast('✅ Datos actualizados: '+allData.length+' registros', 'ok');
+  } else {
+    showToast('❌ Error: '+errorMessage, 'err');
+  }
 }
 
 async function calcularEstadisticas(data) {
@@ -1061,14 +1159,16 @@ async function calcularEstadisticas(data) {
 function populateFilters(servicios, auditores, anios, meses) {
   if (!servicios) servicios = [];
   if (!auditores) auditores = [];
-  if (!anios) anios = [];
-  if (!meses) meses = [];
+  
+  // Recalcular años y meses basados en allData ya que pudieron ser ajustados por la lógica
+  const aniosSet = [...new Set(allData.map(r=>r.anio).filter(a=>a&&a!='Sin Año'))].sort();
+  const mesesSet = [...new Set(allData.map(r=>r.num_auditoria).filter(a=>a&&a!='Sin Fecha'))].sort();
 
   const selAnio = document.getElementById('filtAnio');
-  if(selAnio) selAnio.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+  if(selAnio) selAnio.innerHTML = '<option value="">Todos los años</option>' + aniosSet.map(a => `<option value="${a}">${a}</option>`).join('');
 
   const selAnioSec = document.getElementById('filtAnioSec');
-  if(selAnioSec) selAnioSec.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+  if(selAnioSec) selAnioSec.innerHTML = '<option value="">Todos los años</option>' + aniosSet.map(a => `<option value="${a}">${a}</option>`).join('');
 
   ['filtServDash','filtServ','filtServSec'].forEach(id => {
     const s = document.getElementById(id);
@@ -1087,7 +1187,7 @@ function populateFilters(servicios, auditores, anios, meses) {
   const menuDash = document.getElementById('menuMesDash');
   const menuSec = document.getElementById('menuMesSec');
 
-  const checkboxesHTML = meses.map(m => `
+  const checkboxesHTML = mesesSet.map(m => `
     <label class="ms-item">
       <input type="checkbox" value="${m}" onchange="aplicarFiltrosGlobal(event)"> ${m}
     </label>
@@ -1448,11 +1548,13 @@ function filtrarRegistros() {
   const calif = document.getElementById('filtCalif').value;
   const aud = document.getElementById('filtAud').value;
   const num = document.getElementById('filtNum').value.trim();
+  const oport = document.getElementById('filtOportReg').value;
   filtData = allData.filter(r => {
     if(serv && r.servicio !== serv) return false;
     if(calif && r.calificacion !== calif) return false;
     if(aud && r.auditor !== aud) return false;
     if(num && String(r.num_auditoria) !== num) return false;
+    if(oport && r.oportunidad !== oport) return false;
     return true;
   });
   regPage = 1;
@@ -1460,7 +1562,7 @@ function filtrarRegistros() {
 }
 
 function limpiarFiltros() {
-  ['filtServ','filtCalif','filtAud'].forEach(id=>document.getElementById(id).value='');
+  ['filtServ','filtCalif','filtAud','filtOportReg'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('filtNum').value='';
   filtData = [...allData];
   regPage = 1;
@@ -1475,7 +1577,7 @@ function renderRegistros() {
   const tbody = document.getElementById('regBody');
   if(!tbody) return;
   if(!filtData.length){
-    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="icon">🔍</div><h3>Sin resultados</h3><p>Ajusta los filtros</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="icon">🔍</div><h3>Sin resultados</h3><p>Ajusta los filtros</p></div></td></tr>`;
     document.getElementById('regPag').innerHTML = '';
     return;
   }
@@ -1488,6 +1590,7 @@ function renderRegistros() {
 
     return `<tr>
       <td style="color:var(--muted);font-size:12px">${start+i+1}</td>
+      <td><span class="pill b" style="font-size:10px">${r.area || 'CONSULTA EXTERNA'}</span></td>
       <td><strong>${r.hc}</strong></td>
       <td style="white-space:nowrap;font-size:12px">${String(r.fecha_ingreso_real||'').substring(0,10)}</td>
       <td title="${r.servicio}" style="font-size:12px">${srvShort}</td>
@@ -1525,7 +1628,7 @@ function showDetail(idx) {
   if (!filtData || idx < 0 || idx >= filtData.length) return;
   const d = filtData[idx];
   document.getElementById('modalTitle').textContent = `HC N° ${d.hc}`;
-  document.getElementById('modalSub').textContent = `${d.servicio} — Ingreso Real: ${String(d.fecha_ingreso_real||'').substring(0,10)}`;
+  document.getElementById('modalSub').textContent = `${d.area || 'Consulta Externa'} | ${d.servicio} — Ingreso Real: ${String(d.fecha_ingreso_real||'').substring(0,10)}`;
   const pillCls = d.calificacion==='SATISFACTORIO'?'s':d.calificacion==='POR MEJORAR'?'pm':'d';
 
   let html = `
@@ -1592,7 +1695,10 @@ function abrirModalExtemporaneos() {
   
   let au={}; ext.forEach(r=>{au[r.auditor]=(au[r.auditor]||0)+1});
   let ms={}; ext.forEach(r=>{
-    const mk = `Auditoría: ${r.num_auditoria} | Drive: Mes ${r.mes_ingreso} (${r.anio_ingreso})`;
+    const pd = parseRealDate(r.fecha_ingreso_real);
+    const mReal = pd ? pd.month : '?';
+    const aReal = pd ? pd.year : '?';
+    const mk = `Auditoría: ${r.num_auditoria} | Drive: Mes ${mReal} (${aReal})`;
     ms[mk] = (ms[mk]||0)+1;
   });
   let sv={}; ext.forEach(r=>{sv[r.servicio]=(sv[r.servicio]||0)+1});
@@ -1697,13 +1803,29 @@ async function cargarDatosExportacion() {
   } else {
     showLoading('Obteniendo datos '+(a==='todas'?'CONSOLIDADOS':'del área')+'...');
     try {
-      const r = await fetch(API+'/datos?area='+a);
-      const d = await r.json();
-      if(d.ok) {
-        _expDataRaw = d.registros;
+      let areasToFetch = a === 'todas' ? ['consulta_externa', 'emergencia', 'hospitalizacion'] : [a];
+      let combined = [];
+      let error = false;
+      for (let area of areasToFetch) {
+        const d = await fetchArea(area);
+        if (d.ok) {
+          d.registros.forEach(r => {
+            if (!r.area) {
+              r.area = area === 'consulta_externa' ? 'CONSULTA EXTERNA' :
+                       area === 'emergencia' ? 'EMERGENCIA' :
+                       area === 'hospitalizacion' ? 'HOSPITALIZACIÓN' : 'CONSULTA EXTERNA';
+            }
+            combined.push(r);
+          });
+        } else {
+          error = true;
+          showToast('Error: ' + d.error, 'err');
+        }
+      }
+      if (!error || combined.length > 0) {
+        _expDataRaw = combined;
+        aplicarLogicaFechas(_expDataRaw); // Aplicamos la misma lógica precisa
         _initExportFilters();
-      } else {
-        showToast('Error: ' + d.error, 'err');
       }
     } catch(e) { showToast('Error cargando datos', 'err'); }
     hideLoading();
@@ -1741,11 +1863,13 @@ function cerrarModalExport() {
 function cambioFiltroPrincipal() {
   const anioSel = document.getElementById('expAnio').value;
   const mesesSel = _getMesesSelExp();
+  const oportSel = document.getElementById('expOportunidad').value;
 
   const serviciosDisponibles = [...new Set(
     _expDataRaw.filter(r => {
       if (anioSel && r.anio !== anioSel) return false;
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+      if (oportSel && r.oportunidad !== oportSel) return false;
       return true;
     }).map(r => r.servicio).filter(s => s && s !== '—')
   )].sort();
@@ -1818,6 +1942,7 @@ function actualizarPreviewExport() {
   const anioSel  = document.getElementById('expAnio').value;
   const mesesSel = _getMesesSelExp();
   const servsSel = _getServsSelExp();
+  const oportSel = document.getElementById('expOportunidad').value;
 
   const textMes = document.getElementById('textMesExp');
   if (textMes) {
@@ -1831,6 +1956,7 @@ function actualizarPreviewExport() {
   _expData = _expDataRaw.filter(r => {
     if (anioSel && r.anio !== anioSel) return false;
     if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+    if (oportSel && r.oportunidad !== oportSel) return false;
     if (!servsSel.includes(r.servicio)) return false;
     return true;
   });
@@ -2270,6 +2396,7 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
     'N° HC': r.hc,
     'DPTO/SERVICIO AUDITADO': r.servicio,
     'ÁREA': r.area || 'CONSULTA EXTERNA',
+    'OPORTUNIDAD': r.oportunidad || 'A TIEMPO',
     'PUNTAJE': r.puntaje,
     'CALIFICACIÓN': r.calificacion
   }));
@@ -2442,6 +2569,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       <td style="border:1px solid #000;padding:6px;">${r.hc||''}</td>
       <td style="border:1px solid #000;padding:6px;text-align:left;">${r.servicio||''}</td>
       <td style="border:1px solid #000;padding:6px;">${r.area||'CONSULTA EXTERNA'}</td>
+      <td style="border:1px solid #000;padding:6px;">${r.oportunidad||'A TIEMPO'}</td>
       <td style="border:1px solid #000;padding:6px;"><strong>${r.puntaje||''}</strong></td>
       <td style="border:1px solid #000;padding:6px;background:${bg};color:${co};font-weight:bold;">${r.calificacion||''}</td>
     </tr>`;
@@ -2536,6 +2664,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">N° HC</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">DEPARTAMENTO/SERVICIO AUDITADO</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">ÁREA</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">OPORTUNIDAD</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">PUNTAJE</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">CALIFICACIÓN</th>
         </tr>
