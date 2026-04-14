@@ -257,16 +257,18 @@ CRITERIOS_HOSP = {
         {"campo":"EXAMEN CLÍNICO [Examen Clínico Regional]","nombre":"Examen Clínico Regional","completo":4,"incompleto":2,"noExiste":0},
     ]},
     "DIAGNOSTICOS":{"label":"Diagnósticos","max":20,"items":[
-        {"campo":"DIAGNÓSTICOS [Presuntivo coherente y concordante.]","nombre":"Presuntivo coherente","completo":8,"incompleto":4,"noExiste":0,"naOk":True},
-        {"campo":"DIAGNÓSTICOS [Definitivo coherente y concordante.]","nombre":"Definitivo coherente","completo":8,"incompleto":4,"noExiste":0,"naOk":True},
-        {"campo":"DIAGNÓSTICOS [Uso del CIE 10]","nombre":"Uso del CIE 10","completo":4,"incompleto":2,"noExiste":0},
+        # DOBLE ESPACIO — así está en el Excel real
+        {"campo":"DIAGNÓSTICOS  [Presuntivo coherente y concordante.]","nombre":"Presuntivo coherente","completo":8,"incompleto":4,"noExiste":0,"naOk":True},
+        {"campo":"DIAGNÓSTICOS  [Definitivo coherente y concordante.]","nombre":"Definitivo coherente","completo":8,"incompleto":4,"noExiste":0,"naOk":True},
+        {"campo":"DIAGNÓSTICOS  [Uso del CIE 10]","nombre":"Uso del CIE 10","completo":4,"incompleto":2,"noExiste":0},
     ]},
     "PLAN_TRABAJO":{"label":"Plan de Trabajo","max":19,"items":[
-        {"campo":"PLAN DE TRABAJO [Exámenes de Patología Clínica pertinentes]","nombre":"Patología Clínica","completo":3,"incompleto":1,"enExceso":2,"noExiste":0,"naOk":True},
-        {"campo":"PLAN DE TRABAJO [Exámenes de Diagnóstico por imágenes pertinentes]","nombre":"Diagnóstico por Imágenes","completo":4,"incompleto":1,"enExceso":2,"noExiste":0,"naOk":True},
-        {"campo":"PLAN DE TRABAJO [Interconsultas pertinentes]","nombre":"Interconsultas","completo":4,"incompleto":1,"enExceso":2,"noExiste":0,"naOk":True},
-        {"campo":"PLAN DE TRABAJO [Referencias Oportunas]","nombre":"Referencias Oportunas","completo":4,"incompleto":0,"noExiste":0,"naOk":True},
-        {"campo":"PLAN DE TRABAJO [Procedimientos diagnósticos y/o terapéuticos pertinentes]","nombre":"Procedimientos dx/tx","completo":4,"incompleto":1,"enExceso":2,"noExiste":0,"naOk":True},
+        # DOBLE ESPACIO — así está en el Excel real
+        {"campo":"PLAN DE TRABAJO  [Exámenes de Patología Clínica pertinentes]","nombre":"Patología Clínica","completo":3,"incompleto":1,"enExceso":2,"noExiste":0,"naOk":True},
+        {"campo":"PLAN DE TRABAJO  [Exámenes de Diagnóstico por imágenes pertinentes]","nombre":"Diagnóstico por Imágenes","completo":4,"incompleto":1,"enExceso":2,"noExiste":0,"naOk":True},
+        {"campo":"PLAN DE TRABAJO  [Interconsultas pertinentes]","nombre":"Interconsultas","completo":4,"incompleto":1,"enExceso":2,"noExiste":0,"naOk":True},
+        {"campo":"PLAN DE TRABAJO  [Referencias Oportunas]","nombre":"Referencias Oportunas","completo":4,"incompleto":0,"noExiste":0,"naOk":True},
+        {"campo":"PLAN DE TRABAJO  [Procedimientos diagnósticos y/o terapéuticos pertinentes]","nombre":"Procedimientos dx/tx","completo":4,"incompleto":1,"enExceso":2,"noExiste":0,"naOk":True},
     ]},
     "TRATAMIENTO":{"label":"Tratamiento","max":14,"items":[
         {"campo":"TRATAMIENTO [Régimen higiénico-dietético y medidas generales concordantes y coherentes.]","nombre":"Régimen higiénico-dietético","completo":4,"incompleto":2,"noExiste":0},
@@ -282,7 +284,8 @@ CRITERIOS_HOSP = {
         {"campo":"NOTAS DE EVOLUCIÓN [Apreciación subjetiva]","nombre":"Apreciación subjetiva","completo":0.5,"incompleto":0,"noExiste":0},
         {"campo":"NOTAS DE EVOLUCIÓN [Apreciación objetiva]","nombre":"Apreciación objetiva","completo":0.5,"incompleto":0,"noExiste":0},
         {"campo":"NOTAS DE EVOLUCIÓN [Verificación del tratamiento y dieta]","nombre":"Verificación trat./dieta","completo":0.5,"incompleto":0,"noExiste":0,"naOk":True},
-        {"campo":"NOTAS DE EVOLUCIÓN [Interpretación de exámenes de apoyo al diagnóstico y comentario]","nombre":"Interpretación exámenes","completo":0.5,"incompleto":0,"noExiste":0},
+        # DOBLE ESPACIO antes de "y comentario" — así está en el Excel real
+        {"campo":"NOTAS DE EVOLUCIÓN [Interpretación de exámenes de apoyo al diagnóstico  y comentario]","nombre":"Interpretación exámenes","completo":0.5,"incompleto":0,"noExiste":0},
         {"campo":"NOTAS DE EVOLUCIÓN [Plan diagnóstico]","nombre":"Plan diagnóstico","completo":0.5,"incompleto":0,"noExiste":0,"naOk":True},
         {"campo":"NOTAS DE EVOLUCIÓN [Plan terapéutico]","nombre":"Plan terapéutico","completo":0.5,"incompleto":0,"noExiste":0},
         {"campo":"NOTAS DE EVOLUCIÓN [Firma y sello del médico que evoluciona]","nombre":"Firma/sello médico evolución","completo":0.5,"incompleto":0,"noExiste":0},
@@ -301,7 +304,8 @@ CRITERIOS_HOSP = {
         {"campo":"ESPECIFICA INDICACIONES DE ALTA [Cuidados generales e indicaciones de reevaluación posterior por consulta externa]","nombre":"Cuidados e indicaciones","completo":1,"incompleto":0,"noExiste":0},
     ]},
     "ATRIBUTOS":{"label":"Atributos de la HC","max":5,"items":[
-        {"campo":"ATRIBUTOS DE HISTORIA CLÍNICA [Firma y sello del médico tratante]","nombre":"Firma/sello médico","completo":1,"incompleto":0,"noExiste":0},
+        # DOBLE ESPACIO antes de "del médico" — así está en el Excel real
+        {"campo":"ATRIBUTOS DE HISTORIA CLÍNICA [Firma y sello  del médico tratante]","nombre":"Firma/sello médico","completo":1,"incompleto":0,"noExiste":0},
         {"campo":"ATRIBUTOS DE HISTORIA CLÍNICA [Orden cronológico de las hojas de la historia clínica]","nombre":"Orden cronológico","completo":1,"incompleto":0,"noExiste":0},
         {"campo":"ATRIBUTOS DE HISTORIA CLÍNICA [Pulcritud]","nombre":"Pulcritud","completo":1,"incompleto":0,"noExiste":0},
         {"campo":"ATRIBUTOS DE HISTORIA CLÍNICA [Legibilidad]","nombre":"Legibilidad","completo":1,"incompleto":0,"noExiste":0},
@@ -355,7 +359,7 @@ def get_dataframe(sheet_id, worksheet_name):
             return pd.DataFrame()
         headers = all_values[0]
         rows = all_values[1:]
-        # Filtrar solo filas que tengan al menos un valor no vacío
+        # Filtrar filas completamente vacías
         rows = [r for r in rows if any(str(v).strip() for v in r)]
         # Normalizar longitud de filas para que coincidan con los headers
         n_cols = len(headers)
@@ -510,116 +514,116 @@ def procesar_df(df, area_key, area_label="Área"):
 def procesar_df_hosp(df, area_key, area_label="Área"):
     results = []
     criterios = CRITERIOS_POR_AREA[area_key]
-    nombres_meses = {1:"01 - Enero", 2:"02 - Febrero", 3:"03 - Marzo", 4:"04 - Abril", 5:"05 - Mayo", 6:"06 - Junio", 7:"07 - Julio", 8:"08 - Agosto", 9:"09 - Septiembre", 10:"10 - Octubre", 11:"11 - Noviembre", 12:"12 - Diciembre"}
-    
+    nombres_meses = {1:"01 - Enero", 2:"02 - Febrero", 3:"03 - Marzo", 4:"04 - Abril",
+                     5:"05 - Mayo", 6:"06 - Junio", 7:"07 - Julio", 8:"08 - Agosto",
+                     9:"09 - Septiembre", 10:"10 - Octubre", 11:"11 - Noviembre", 12:"12 - Diciembre"}
+
+    # Construir mapa de columnas exactas del DataFrame (sin normalizar) para búsqueda rápida
+    col_map = {str(c): c for c in df.columns}  # valor real → nombre columna
+
+    def get_val_hosp_exact(row, campo):
+        """Busca el campo EXACTAMENTE como está en CRITERIOS_HOSP (ya corregido con espacios reales del Excel).
+        Fallback: búsqueda normalizada si no encuentra exacto."""
+        # 1. Búsqueda exacta
+        if campo in col_map:
+            return str(row[col_map[campo]]).strip().upper()
+        # 2. Fallback: normalizar espacios
+        campo_norm = " ".join(campo.split()).upper()
+        for c_real in df.columns:
+            if " ".join(str(c_real).split()).upper() == campo_norm:
+                return str(row[c_real]).strip().upper()
+        return ""
+
     for _, row in df.iterrows():
-        r = row.to_dict()
-        
-        # Limpieza extrema de las cabeceras (Solo para Hospitalización, no afecta lo demás)
-        r_clean = {" ".join(str(k).split()).upper(): v for k, v in r.items()}
-        
-        marca_temporal = str(r_clean.get("MARCA TEMPORAL", "")).strip()
-        
+        marca_temporal = str(row.get("Marca temporal", "")).strip()
+
+        # --- Valores por defecto si la fecha falla ---
         mes_ingreso = 0
         anio_ingreso = 0
         anio_automatico = "Sin Año"
         mes_automatico = "Sin Mes"
         oportunidad = "SIN FECHA"
-        
+
         try:
-            fe = pd.to_datetime(marca_temporal, dayfirst=True, errors='coerce')
-            if fe is pd.NaT or pd.isna(fe):
-                # Intentar formato alternativo
-                fe = pd.to_datetime(marca_temporal, infer_datetime_format=True, errors='coerce')
-            
-            if fe is not pd.NaT and not pd.isna(fe):
+            fe = pd.to_datetime(marca_temporal, dayfirst=True, errors="coerce")
+            if pd.isna(fe):
+                fe = pd.to_datetime(marca_temporal, errors="coerce")
+
+            if not pd.isna(fe):
                 if fe.year < 2024:
-                    continue  # Registros anteriores a 2024 sí se descartan
-                
+                    continue  # Registros previos a 2024 se excluyen intencionalmente
+
                 mes_ingreso = fe.month
                 anio_ingreso = fe.year
-                
-                # Extraer Mes de la columna Auditoria
+
+                # Número de auditoría = mes del período auditado
                 mes_raw = ""
-                for k, v in r_clean.items():
-                    if "NÚMERO DE AUDITORÍA" in k or "NUMERO DE AUDITORIA" in k or "MERO DE AUDITOR" in k:
-                        mes_raw = str(v).strip()
+                for col in df.columns:
+                    if "MERO DE AUDITOR" in str(col).upper():
+                        mes_raw = str(row[col]).strip()
                         break
-                
+
                 try:
-                    mes_num = int(float(mes_raw)) if mes_raw else 0
+                    mes_num = int(float(mes_raw)) if mes_raw and mes_raw.lower() not in ("", "nan") else 0
                 except (ValueError, TypeError):
                     mes_num = 0
-                
+
                 anio_final = anio_ingreso
                 if mes_num > mes_ingreso:
                     anio_final = anio_ingreso - 1
-                
+
                 if mes_num == mes_ingreso and anio_final == anio_ingreso:
                     oportunidad = "A TIEMPO"
                 else:
                     oportunidad = "FUERA DE FECHA"
-                
+
                 anio_automatico = str(anio_final)
                 mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
-            # Si la fecha no se puede parsear, igual procesamos la fila con valores por defecto
-            # (no hacemos continue, solo dejamos los valores de sin fecha)
+            # Si la fecha no se puede parsear: la fila igual se procesa con valores por defecto
         except Exception:
             pass  # No descartar — seguimos con valores por defecto
-            
-        # Función interna de get_val exclusiva para hospitalización
-        def get_val_hosp(clean_row, campo):
-            campo_clean = " ".join(str(campo).split()).upper()
-            # Búsqueda exacta
-            if campo_clean in clean_row:
-                return str(clean_row[campo_clean]).strip().upper()
-            # Búsqueda parcial (25 caracteres)
-            short_campo = campo_clean[:25]
-            for k, v in clean_row.items():
-                if short_campo in k:
-                    return str(v).strip().upper()
-            return ""
 
-        total=0; na_total=0; secciones={}
+        # --- Calcular puntaje usando campos exactos del Excel ---
+        total = 0; na_total = 0; secciones = {}
         for sec_key, sec in criterios.items():
-            sub=0; na_sec=0; items=[]
+            sub = 0; na_sec = 0; items = []
             for c in sec["items"]:
-                val = get_val_hosp(r_clean, c["campo"])
-                pts=0; estado="sin_dato"
-                if val in ("COMPLETO","C","CONFORME"):   pts=c["completo"]; estado="completo"
-                elif val in ("INCOMPLETO","I"):          pts=c.get("incompleto",0); estado="incompleto"
-                elif val in ("EN EXCESO","E"):           pts=c.get("enExceso",0); estado="en_exceso"
-                elif val in ("NO EXISTE","NE","NO CONFORME"): pts=0; estado="no_existe"
-                elif val in ("NO APLICA","NA"):          pts=0; na_sec+=c["completo"]; estado="na"
-                
-                items.append({"nombre":c["nombre"],"pts":pts,"max":c["completo"],"estado":estado})
-                sub+=pts
-            na_total+=na_sec; total+=sub
-            secciones[sec_key]={"label":sec["label"],"subtotal":sub,"max":sec["max"],"items":items}
-        
-        max_ap=100-na_total
-        pct=round((total/max_ap*100),2) if max_ap>0 else 0
-        calif="SATISFACTORIO" if pct>=90 else ("POR MEJORAR" if pct>=75 else "DEFICIENTE")
-        calc = {"puntaje":round(total,2),"max_aplicable":round(max_ap,2),"porcentaje":pct,"calificacion":calif,"secciones":secciones}
+                val = get_val_hosp_exact(row, c["campo"])
+                pts = 0; estado = "sin_dato"
+                if val in ("COMPLETO", "C", "CONFORME"):        pts = c["completo"];           estado = "completo"
+                elif val in ("INCOMPLETO", "I"):                pts = c.get("incompleto", 0);  estado = "incompleto"
+                elif val in ("EN EXCESO", "E"):                 pts = c.get("enExceso", 0);    estado = "en_exceso"
+                elif val in ("NO EXISTE", "NE", "NO CONFORME"): pts = 0;                       estado = "no_existe"
+                elif val in ("NO APLICA", "NA"):                pts = 0; na_sec += c["completo"]; estado = "na"
+                items.append({"nombre": c["nombre"], "pts": pts, "max": c["completo"], "estado": estado})
+                sub += pts
+            na_total += na_sec; total += sub
+            secciones[sec_key] = {"label": sec["label"], "subtotal": sub, "max": sec["max"], "items": items}
 
-        # Función de búsqueda para campos principales blindada
+        max_ap = 100 - na_total
+        pct = round((total / max_ap * 100), 2) if max_ap > 0 else 0
+        calif = "SATISFACTORIO" if pct >= 90 else ("POR MEJORAR" if pct >= 75 else "DEFICIENTE")
+        calc = {"puntaje": round(total, 2), "max_aplicable": round(max_ap, 2),
+                "porcentaje": pct, "calificacion": calif, "secciones": secciones}
+
         def campo_hosp(keys):
             for k in keys:
-                k_clean = " ".join(str(k).split()).upper()
-                # Coincidencia exacta
-                if k_clean in r_clean:
-                    v = str(r_clean[k_clean]).strip()
-                    if v and str(v).lower() != "nan": return v
-                # Coincidencia parcial
-                for rk, rv in r_clean.items():
-                    if k_clean[:20] in rk:
-                        v = str(rv).strip()
-                        if v and str(v).lower() != "nan": return v
+                # Exacto
+                if k in col_map:
+                    v = str(row[col_map[k]]).strip()
+                    if v and v.lower() != "nan": return v
+                # Parcial normalizado
+                k_norm = " ".join(k.split()).upper()
+                for c_real in df.columns:
+                    if " ".join(str(c_real).split()).upper().startswith(k_norm[:20]):
+                        v = str(row[c_real]).strip()
+                        if v and v.lower() != "nan": return v
             return "—"
-            
+
         results.append({
-            "hc": campo_hosp(["NÚMERO DE LA HISTORIA CLÍNICA","NÚMERO DE HISTORIA CLÍNICA","NUMERO DE LA HISTORIA CLINICA","NUMERO DE HISTORIA CLINICA"]),
-            "fecha_auditoria": campo_hosp(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
+            "hc": campo_hosp(["NÚMERO DE LA HISTORIA CLÍNICA", "NÚMERO DE HISTORIA CLÍNICA",
+                               "NUMERO DE LA HISTORIA CLINICA", "NUMERO DE HISTORIA CLINICA"]),
+            "fecha_auditoria": campo_hosp(["FECHA DE AUDITORÍA", "FECHA DE AUDITORIA"]),
             "fecha_ingreso_real": marca_temporal,
             "mes_ingreso": mes_ingreso,
             "anio_ingreso": anio_ingreso,
@@ -628,13 +632,13 @@ def procesar_df_hosp(df, area_key, area_label="Área"):
             "anio": anio_automatico,
             "num_auditoria": mes_automatico,
             "oportunidad": oportunidad,
-            "diagnostico": campo_hosp(["DIAGNÓSTICO DE ALTA","DIAGNOSTICO DE ALTA"]),
+            "diagnostico": campo_hosp(["DIAGNÓSTICO DE ALTA", "DIAGNOSTICO DE ALTA"]),
             "cie10": campo_hosp(["CIE 10"]),
             "area": area_label,
             **calc
         })
-        
-    results.sort(key=lambda x: (x['anio'], x['num_auditoria']))
+
+    results.sort(key=lambda x: (x["anio"], x["num_auditoria"]))
     return results
 
 # ============================================================
