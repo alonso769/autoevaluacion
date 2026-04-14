@@ -353,25 +353,12 @@ def get_dataframe(sheet_id, worksheet_name):
         all_values = ws.get_all_values()
         if not all_values:
             return pd.DataFrame()
-        
-        # === SALVAVIDAS ANTI OUT OF MEMORY (Abre hasta 10,000 filas sin problema) ===
-        # Cortamos el excel en la columna 85. Esto desecha miles de columnas infinitas vacías hacia la derecha (Z, AA, ZZZ)
-        # que provocaban que Python consumiera los 512MB de RAM de Render y se apagara.
-        headers = all_values[0][:85]
+        headers = all_values[0]
         rows = all_values[1:]
-        
-        rows_limpias = []
-        for r in rows:
-            r_corta = r[:85]
-            # Si hay al menos una celda con datos en la fila recortada, la guardamos
-            if any(str(v).strip() for v in r_corta):
-                # Rellenar con vacíos si la fila recortada es menor que las cabeceras para emparejar
-                if len(r_corta) < len(headers):
-                    r_corta.extend([''] * (len(headers) - len(r_corta)))
-                rows_limpias.append(r_corta)
-                
-        # Ya eliminamos la restricción de [-1500:], así que cargarán las 2080 historias.
-        return pd.DataFrame(rows_limpias, columns=headers)
+        rows = [r for r in rows if any(v.strip() for v in r)]
+        if len(rows) > 1500:
+            rows = rows[-1500:]
+        return pd.DataFrame(rows, columns=headers)
     
     return pd.DataFrame(ws.get_all_records())
 
@@ -393,20 +380,12 @@ def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
 def get_val(row, campo):
-    # Buscador blindado contra espacios dobles y letras mayúsculas/minúsculas mezcladas
-    c_clean = " ".join(str(campo).split()).lower()
-    short_c = c_clean[:25]
-    
     for k, v in row.items():
-        k_clean = " ".join(str(k).split()).lower()
-        if k_clean == c_clean:
+        if str(k).strip() == campo.strip():
             return str(v).strip().upper()
-            
     for k, v in row.items():
-        k_clean = " ".join(str(k).split()).lower()
-        if short_c in k_clean:
+        if campo[:30].lower() in str(k).lower():
             return str(v).strip().upper()
-            
     return ""
 
 def calcular_row_ce_hosp(row, criterios):
@@ -457,13 +436,7 @@ def procesar_df(df, area_key, area_label="Área"):
     
     for _, row in df.iterrows():
         r = row.to_dict()
-        
-        # Búsqueda de marca temporal blindada
-        marca_temporal = ""
-        for k, v in r.items():
-            if "marca temporal" in " ".join(str(k).split()).lower():
-                marca_temporal = str(v).strip()
-                break
+        marca_temporal = str(r.get("Marca temporal", "")).strip()
         
         try:
             fe = pd.to_datetime(marca_temporal, dayfirst=True)
@@ -473,10 +446,10 @@ def procesar_df(df, area_key, area_label="Área"):
             mes_ingreso = fe.month
             anio_ingreso = fe.year
             
-            # Extraer Mes de la columna Auditoria blindada
+            # Extraer Mes de la columna Auditoria
             mes_raw = ""
             for k, v in r.items():
-                if "mero de auditor" in " ".join(str(k).split()).lower():
+                if "MERO DE AUDITOR" in str(k).upper():
                     mes_raw = str(v).strip()
                     break
             
@@ -504,13 +477,9 @@ def procesar_df(df, area_key, area_label="Área"):
         calc = calcular_row_eme(r, criterios) if area_key == "emergencia" else calcular_row_ce_hosp(r, criterios)
 
         def campo(keys):
-            for kb in keys:
-                kb_clean = " ".join(str(kb).split()).lower()[:20]
-                for kr, vr in r.items():
-                    kr_clean = " ".join(str(kr).split()).lower()
-                    if kb_clean in kr_clean:
-                        v = str(vr).strip()
-                        if v and str(v).lower() != "nan": return v
+            for k in keys:
+                v = str(r.get(k, "")).strip()
+                if v and str(v).lower() != "nan": return v
             return "—"
             
         results.append({
@@ -526,6 +495,125 @@ def procesar_df(df, area_key, area_label="Área"):
             "oportunidad": oportunidad,
             "diagnostico": campo(["DIAGNÓSTICO DE ALTA","DIAGNÓSTICO","DIAGNOSTICO"]),
             "cie10": campo(["CIE 10 (en mayúsculas, separando diagnósticos con slash, ejemplo: U07.1 / K35.9)"]),
+            "area": area_label,
+            **calc
+        })
+        
+    results.sort(key=lambda x: (x['anio'], x['num_auditoria']))
+    return results
+
+# ==============================================================
+# LÓGICA AISLADA Y EXCLUSIVA SOLO PARA HOSPITALIZACIÓN
+# ==============================================================
+def procesar_df_hosp(df, area_key, area_label="Área"):
+    results = []
+    criterios = CRITERIOS_POR_AREA[area_key]
+    nombres_meses = {1:"01 - Enero", 2:"02 - Febrero", 3:"03 - Marzo", 4:"04 - Abril", 5:"05 - Mayo", 6:"06 - Junio", 7:"07 - Julio", 8:"08 - Agosto", 9:"09 - Septiembre", 10:"10 - Octubre", 11:"11 - Noviembre", 12:"12 - Diciembre"}
+    
+    for _, row in df.iterrows():
+        r = row.to_dict()
+        
+        # Limpieza extrema de las cabeceras (Solo para Hospitalización, no afecta lo demás)
+        # Esto convierte "  NÚMERO DE LA HISTORIA CLÍNICA " en "NÚMERO DE LA HISTORIA CLÍNICA"
+        r_clean = {" ".join(str(k).split()).upper(): v for k, v in r.items()}
+        
+        marca_temporal = str(r_clean.get("MARCA TEMPORAL", "")).strip()
+        
+        try:
+            fe = pd.to_datetime(marca_temporal, dayfirst=True)
+            if fe.year < 2024:
+                continue
+            
+            mes_ingreso = fe.month
+            anio_ingreso = fe.year
+            
+            # Extraer Mes de la columna Auditoria
+            mes_raw = ""
+            for k, v in r_clean.items():
+                if "NÚMERO DE AUDITORÍA" in k or "NUMERO DE AUDITORIA" in k or "MERO DE AUDITOR" in k:
+                    mes_raw = str(v).strip()
+                    break
+            
+            mes_num = int(float(mes_raw)) if mes_raw else 0
+            
+            anio_final = anio_ingreso
+            if mes_num > mes_ingreso:
+                anio_final = anio_ingreso - 1
+            
+            if mes_num == mes_ingreso and anio_final == anio_ingreso:
+                oportunidad = "A TIEMPO"
+            else:
+                oportunidad = "FUERA DE FECHA"
+            
+            anio_automatico = str(anio_final)
+            mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
+            
+        except Exception:
+            continue
+            
+        # Función interna de get_val exclusiva para hospitalización
+        def get_val_hosp(clean_row, campo):
+            campo_clean = " ".join(str(campo).split()).upper()
+            # Búsqueda exacta
+            if campo_clean in clean_row:
+                return str(clean_row[campo_clean]).strip().upper()
+            # Búsqueda parcial (25 caracteres)
+            short_campo = campo_clean[:25]
+            for k, v in clean_row.items():
+                if short_campo in k:
+                    return str(v).strip().upper()
+            return ""
+
+        total=0; na_total=0; secciones={}
+        for sec_key, sec in criterios.items():
+            sub=0; na_sec=0; items=[]
+            for c in sec["items"]:
+                val = get_val_hosp(r_clean, c["campo"])
+                pts=0; estado="sin_dato"
+                if val in ("COMPLETO","C","CONFORME"):   pts=c["completo"]; estado="completo"
+                elif val in ("INCOMPLETO","I"):          pts=c.get("incompleto",0); estado="incompleto"
+                elif val in ("EN EXCESO","E"):           pts=c.get("enExceso",0); estado="en_exceso"
+                elif val in ("NO EXISTE","NE","NO CONFORME"): pts=0; estado="no_existe"
+                elif val in ("NO APLICA","NA"):          pts=0; na_sec+=c["completo"]; estado="na"
+                
+                items.append({"nombre":c["nombre"],"pts":pts,"max":c["completo"],"estado":estado})
+                sub+=pts
+            na_total+=na_sec; total+=sub
+            secciones[sec_key]={"label":sec["label"],"subtotal":sub,"max":sec["max"],"items":items}
+        
+        max_ap=100-na_total
+        pct=round((total/max_ap*100),2) if max_ap>0 else 0
+        calif="SATISFACTORIO" if pct>=90 else ("POR MEJORAR" if pct>=75 else "DEFICIENTE")
+        calc = {"puntaje":round(total,2),"max_aplicable":round(max_ap,2),"porcentaje":pct,"calificacion":calif,"secciones":secciones}
+
+        # Función de búsqueda para campos principales blindada
+        def campo_hosp(keys):
+            for k in keys:
+                k_clean = " ".join(str(k).split()).upper()
+                # Coincidencia exacta
+                if k_clean in r_clean:
+                    v = str(r_clean[k_clean]).strip()
+                    if v and str(v).lower() != "nan": return v
+                # Coincidencia parcial
+                for rk, rv in r_clean.items():
+                    if k_clean[:20] in rk:
+                        v = str(rv).strip()
+                        if v and str(v).lower() != "nan": return v
+            return "—"
+            
+        results.append({
+            "hc": campo_hosp(["NÚMERO DE LA HISTORIA CLÍNICA","NÚMERO DE HISTORIA CLÍNICA"]),
+            "fecha_auditoria": campo_hosp(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
+            "fecha_ingreso_real": marca_temporal,
+            "mes_ingreso": mes_ingreso,
+            "anio_ingreso": anio_ingreso,
+            "servicio": campo_hosp(["SERVICIO AUDITADO"]),
+            "auditor": campo_hosp(["MIEMBROS DEL COMITÉ DE AUDITORIA"]),
+            "anio": anio_automatico,
+            "num_auditoria": mes_automatico,
+            "oportunidad": oportunidad,
+            "diagnostico": campo_hosp(["DIAGNÓSTICO DE ALTA","DIAGNOSTICO DE ALTA"]),
+            "cie10": campo_hosp(["CIE 10"]),
             "area": area_label,
             **calc
         })
@@ -569,12 +657,17 @@ def crear_usuario():
 def get_datos():
     ak=request.args.get('area','consulta_externa').lower().strip()
     
+    # NUEVA LÓGICA PARA CARGAR TODAS LAS ÁREAS (Reportes Generales)
     if ak == 'todas':
         results = []
         for k, cfg in AREAS_CONFIG.items():
             try:
                 df = get_dataframe(cfg["sheet_id"], cfg["worksheet_name"])
-                results.extend(procesar_df(df, k, area_label=cfg["label"]))
+                # Aquí derivamos a la función correcta dependiendo del área
+                if k == 'hospitalizacion':
+                    results.extend(procesar_df_hosp(df, k, area_label=cfg["label"]))
+                else:
+                    results.extend(procesar_df(df, k, area_label=cfg["label"]))
             except Exception as e:
                 print(f"Error procesando área {k}: {e}")
         
@@ -591,7 +684,12 @@ def get_datos():
     cfg=AREAS_CONFIG[ak]
     try:
         df=get_dataframe(cfg["sheet_id"],cfg["worksheet_name"])
-        results = procesar_df(df, ak, area_label=cfg["label"])
+        
+        # Aquí derivamos a la función correcta dependiendo del área elegida
+        if ak == 'hospitalizacion':
+            results = procesar_df_hosp(df, ak, area_label=cfg["label"])
+        else:
+            results = procesar_df(df, ak, area_label=cfg["label"])
             
         return jsonify({"ok":True,"area":ak,"area_label":cfg["label"],"total":len(results),"registros":results,
             "servicios":sorted({r['servicio'] for r in results if r['servicio']!='—'}),
