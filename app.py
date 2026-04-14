@@ -355,9 +355,11 @@ def get_dataframe(sheet_id, worksheet_name):
             return pd.DataFrame()
         headers = all_values[0]
         rows = all_values[1:]
-        rows = [r for r in rows if any(v.strip() for v in r)]
-        if len(rows) > 1500:
-            rows = rows[-1500:]
+        # Filtrar solo filas que tengan al menos un valor no vacío
+        rows = [r for r in rows if any(str(v).strip() for v in r)]
+        # Normalizar longitud de filas para que coincidan con los headers
+        n_cols = len(headers)
+        rows = [r + [''] * (n_cols - len(r)) if len(r) < n_cols else r[:n_cols] for r in rows]
         return pd.DataFrame(rows, columns=headers)
     
     return pd.DataFrame(ws.get_all_records())
@@ -514,42 +516,56 @@ def procesar_df_hosp(df, area_key, area_label="Área"):
         r = row.to_dict()
         
         # Limpieza extrema de las cabeceras (Solo para Hospitalización, no afecta lo demás)
-        # Esto convierte "  NÚMERO DE LA HISTORIA CLÍNICA " en "NÚMERO DE LA HISTORIA CLÍNICA"
         r_clean = {" ".join(str(k).split()).upper(): v for k, v in r.items()}
         
         marca_temporal = str(r_clean.get("MARCA TEMPORAL", "")).strip()
         
+        mes_ingreso = 0
+        anio_ingreso = 0
+        anio_automatico = "Sin Año"
+        mes_automatico = "Sin Mes"
+        oportunidad = "SIN FECHA"
+        
         try:
-            fe = pd.to_datetime(marca_temporal, dayfirst=True)
-            if fe.year < 2024:
-                continue
+            fe = pd.to_datetime(marca_temporal, dayfirst=True, errors='coerce')
+            if fe is pd.NaT or pd.isna(fe):
+                # Intentar formato alternativo
+                fe = pd.to_datetime(marca_temporal, infer_datetime_format=True, errors='coerce')
             
-            mes_ingreso = fe.month
-            anio_ingreso = fe.year
-            
-            # Extraer Mes de la columna Auditoria
-            mes_raw = ""
-            for k, v in r_clean.items():
-                if "NÚMERO DE AUDITORÍA" in k or "NUMERO DE AUDITORIA" in k or "MERO DE AUDITOR" in k:
-                    mes_raw = str(v).strip()
-                    break
-            
-            mes_num = int(float(mes_raw)) if mes_raw else 0
-            
-            anio_final = anio_ingreso
-            if mes_num > mes_ingreso:
-                anio_final = anio_ingreso - 1
-            
-            if mes_num == mes_ingreso and anio_final == anio_ingreso:
-                oportunidad = "A TIEMPO"
-            else:
-                oportunidad = "FUERA DE FECHA"
-            
-            anio_automatico = str(anio_final)
-            mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
-            
+            if fe is not pd.NaT and not pd.isna(fe):
+                if fe.year < 2024:
+                    continue  # Registros anteriores a 2024 sí se descartan
+                
+                mes_ingreso = fe.month
+                anio_ingreso = fe.year
+                
+                # Extraer Mes de la columna Auditoria
+                mes_raw = ""
+                for k, v in r_clean.items():
+                    if "NÚMERO DE AUDITORÍA" in k or "NUMERO DE AUDITORIA" in k or "MERO DE AUDITOR" in k:
+                        mes_raw = str(v).strip()
+                        break
+                
+                try:
+                    mes_num = int(float(mes_raw)) if mes_raw else 0
+                except (ValueError, TypeError):
+                    mes_num = 0
+                
+                anio_final = anio_ingreso
+                if mes_num > mes_ingreso:
+                    anio_final = anio_ingreso - 1
+                
+                if mes_num == mes_ingreso and anio_final == anio_ingreso:
+                    oportunidad = "A TIEMPO"
+                else:
+                    oportunidad = "FUERA DE FECHA"
+                
+                anio_automatico = str(anio_final)
+                mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
+            # Si la fecha no se puede parsear, igual procesamos la fila con valores por defecto
+            # (no hacemos continue, solo dejamos los valores de sin fecha)
         except Exception:
-            continue
+            pass  # No descartar — seguimos con valores por defecto
             
         # Función interna de get_val exclusiva para hospitalización
         def get_val_hosp(clean_row, campo):
@@ -602,7 +618,7 @@ def procesar_df_hosp(df, area_key, area_label="Área"):
             return "—"
             
         results.append({
-            "hc": campo_hosp(["NÚMERO DE LA HISTORIA CLÍNICA","NÚMERO DE HISTORIA CLÍNICA"]),
+            "hc": campo_hosp(["NÚMERO DE LA HISTORIA CLÍNICA","NÚMERO DE HISTORIA CLÍNICA","NUMERO DE LA HISTORIA CLINICA","NUMERO DE HISTORIA CLINICA"]),
             "fecha_auditoria": campo_hosp(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
             "fecha_ingreso_real": marca_temporal,
             "mes_ingreso": mes_ingreso,
