@@ -353,10 +353,30 @@ def get_dataframe(sheet_id, worksheet_name):
         all_values = ws.get_all_values()
         if not all_values:
             return pd.DataFrame()
+            
         headers = all_values[0]
-        rows = all_values[1:]
-        # Solo limpia filas vacías, YA NO recorta el límite a 1500
-        rows = [r for r in rows if any(v.strip() for v in r)]
+        
+        # --- EL SALVAVIDAS DE MEMORIA RAM ---
+        # 1. Encontramos la última columna real para ignorar las columnas invisibles infinitas
+        last_valid_col = 0
+        for i, h in enumerate(headers):
+            if str(h).strip():
+                last_valid_col = i
+                
+        # 2. Recortamos las cabeceras hasta la última columna con texto
+        headers = headers[:last_valid_col + 1]
+        
+        # 3. Recortamos las filas para que no guarden miles de celdas vacías
+        rows = []
+        for r in all_values[1:]:
+            r_recortada = r[:last_valid_col + 1]
+            # Solo guardamos la fila si tiene algún dato
+            if any(str(v).strip() for v in r_recortada):
+                # Igualamos la longitud por seguridad
+                if len(r_recortada) < len(headers):
+                    r_recortada.extend([''] * (len(headers) - len(r_recortada)))
+                rows.append(r_recortada)
+                
         return pd.DataFrame(rows, columns=headers)
     
     return pd.DataFrame(ws.get_all_records())
