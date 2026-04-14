@@ -1,597 +1,300 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Sistema de Auditoría HC — Anexo 5</title>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <style>
-
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap');
-
 *{box-sizing:border-box;margin:0;padding:0}
-
 :root{
-
   --navy:#0d1b3e;--navy2:#162952;--navy3:#1e3a6e;
-
   --gold:#c8922a;--gold2:#e8b84b;--gold3:#f5d080;
-
   --cream:#f5f0e8;--cream2:#ede6d6;--cream3:#e0d8c8;
-
   --green:#166534;--green2:#dcfce7;
-
   --amber:#92400e;--amber2:#fef3c7;
-
   --red:#991b1b;--red2:#fee2e2;
-
   --blue:#1e40af;--blue2:#dbeafe;
-
   --text:#1a1a2e;--muted:#64748b;--border:#d4cbb8;
-
   --white:#fff;--shadow:0 4px 24px rgba(13,27,62,0.10);
-
 }
-
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
 
-
-
 /* ===== LOGIN ===== */
-
 #loginPage{
-
   display:flex;align-items:center;justify-content:center;
-
   min-height:100vh;
-
   background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 60%,#2d5a9e 100%);
-
   position:relative;overflow:hidden;
-
 }
-
 #loginPage::before{
-
   content:'';position:absolute;inset:0;
-
   background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-
 }
-
 .login-card{
-
   background:var(--white);border-radius:24px;padding:48px 44px;
-
   width:100%;max-width:420px;position:relative;z-index:1;
-
   box-shadow:0 32px 80px rgba(0,0,0,0.3);
-
 }
-
 .login-logo{
-
   display:flex;align-items:center;gap:12px;margin-bottom:32px;
-
 }
-
 .login-logo-icon{
-
   width:52px;height:52px;background:var(--navy);border-radius:14px;
-
   display:flex;align-items:center;justify-content:center;font-size:24px;
-
 }
-
 .login-logo h1{font-family:'Playfair Display',serif;font-size:20px;color:var(--navy);line-height:1.2}
-
 .login-logo p{font-size:11px;color:var(--muted);margin-top:2px}
-
 .login-card h2{font-size:26px;font-weight:700;color:var(--navy);margin-bottom:4px}
-
 .login-card .subtitle{font-size:13px;color:var(--muted);margin-bottom:28px}
-
 .form-group{margin-bottom:18px}
-
 .form-group label{display:block;font-size:12px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:7px}
-
 .form-group input{
-
   width:100%;padding:13px 16px;border:2px solid var(--border);border-radius:10px;
-
   font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);
-
   background:var(--cream);transition:border-color 0.2s;outline:none;
-
 }
-
 .form-group input:focus{border-color:var(--navy3);background:#fff}
-
 .btn-login{
-
   width:100%;padding:14px;background:var(--navy);color:#fff;border:none;
-
   border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;
-
   font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;margin-top:4px;
-
 }
-
 .btn-login:hover{background:var(--navy3);transform:translateY(-1px);box-shadow:0 8px 24px rgba(13,27,62,0.3)}
-
 .login-error{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
-
 .login-footer{text-align:center;margin-top:24px;font-size:12px;color:var(--muted)}
 
-
-
 /* ===== APP SHELL ===== */
-
 #appPage{display:none;flex-direction:column;min-height:100vh}
 
-
-
 /* TOPBAR */
-
 .topbar{
-
   background:var(--navy);color:#fff;
-
   display:flex;align-items:center;gap:16px;
-
   padding:0 28px;height:62px;
-
   position:sticky;top:0;z-index:200;
-
   box-shadow:0 2px 20px rgba(0,0,0,0.25);
-
 }
-
 .topbar-logo{display:flex;align-items:center;gap:10px}
-
 .topbar-logo .icon{width:36px;height:36px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-
 .topbar-logo span{font-family:'Playfair Display',serif;font-size:16px}
-
 .topbar-logo small{font-size:10px;color:#94a3c0;display:block}
-
 .topbar-nav{display:flex;gap:4px;margin-left:24px}
-
 .nav-btn{
-
   background:none;border:none;color:#94a3c0;padding:8px 14px;border-radius:8px;
-
   font-size:13px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;
-
   transition:all 0.15s;display:flex;align-items:center;gap:6px;
-
 }
-
 .nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,0.12);color:#fff}
-
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
-
 .user-badge{
-
   display:flex;align-items:center;gap:8px;
-
   background:rgba(255,255,255,0.1);padding:6px 14px 6px 6px;border-radius:20px;
-
 }
-
 .user-avatar{width:28px;height:28px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy)}
-
 .user-name{font-size:13px;color:#e2e8f0}
-
 .btn-update{
-
   background:var(--gold);color:var(--navy);border:none;border-radius:8px;
-
   padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;
-
   font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;
-
   display:flex;align-items:center;gap:6px;
-
 }
-
 .btn-update:hover{background:var(--gold2);transform:translateY(-1px)}
-
 .btn-update.loading{opacity:0.7;cursor:not-allowed}
-
 .btn-logout{background:rgba(255,255,255,0.1);border:none;color:#94a3c0;padding:8px;border-radius:8px;cursor:pointer;font-size:16px;transition:all 0.15s}
-
 .btn-logout:hover{background:rgba(255,255,255,0.2);color:#fff}
 
-
-
 /* CONTENT */
-
 .content{flex:1;padding:28px 32px;max-width:1600px;margin:0 auto;width:100%}
 
-
-
 /* PAGES */
-
 .page{display:none}
-
 .page.active{display:block}
 
-
-
 /* KPI CARDS */
-
 .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:28px}
-
 .kpi{background:#fff;border-radius:16px;padding:20px 22px;border:1px solid var(--border);position:relative;overflow:hidden}
-
 .kpi::after{content:'';position:absolute;top:0;right:0;width:4px;height:100%;border-radius:0 16px 16px 0}
-
 .kpi.total::after{background:var(--navy)}
-
 .kpi.sat::after{background:var(--green)}
-
 .kpi.mej::after{background:#d97706}
-
 .kpi.def::after{background:#dc2626}
-
 .kpi.prom::after{background:var(--gold)}
-
 .kpi .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;font-weight:600}
-
 .kpi .val{font-family:'Playfair Display',serif;font-size:36px;line-height:1}
-
 .kpi.sat .val{color:var(--green)}
-
 .kpi.mej .val{color:#d97706}
-
 .kpi.def .val{color:#dc2626}
-
 .kpi.prom .val{color:var(--gold)}
-
 .kpi .sub{font-size:12px;color:var(--muted);margin-top:6px}
 
-
-
 /* SECTION CARDS */
-
 .section-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:24px}
-
 .section-card{background:#fff;border-radius:16px;border:1px solid var(--border);overflow:hidden}
-
 .section-card.wide{grid-column:1/-1}
-
 .card-head{
-
   padding:16px 22px;border-bottom:1px solid var(--border);
-
   display:flex;align-items:center;justify-content:space-between;
-
 }
-
 .card-head h3{font-size:15px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px}
-
 .card-head .badge{font-size:11px;background:var(--cream2);color:var(--muted);padding:3px 10px;border-radius:12px;font-weight:600}
-
 .card-body{padding:20px 22px}
 
-
-
 /* CHARTS */
-
 .chart-wrap{position:relative;height:240px}
-
 .chart-wrap-sm{position:relative;height:180px}
 
-
-
 /* SECTION DETAIL TABLE */
-
 .detail-table{width:100%;border-collapse:collapse;font-size:13px}
-
 .detail-table th{background:var(--cream2);padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)}
-
 .detail-table td{padding:10px 14px;border-bottom:1px solid #f3ede0;vertical-align:middle}
-
 .detail-table tr:last-child td{border-bottom:none}
-
 .detail-table tr:hover td{background:#fdf8f0}
 
-
-
 /* PROGRESS BAR */
-
 .prog-wrap{display:flex;align-items:center;gap:8px}
-
 .prog{height:7px;background:var(--cream2);border-radius:4px;flex:1;overflow:hidden}
-
 .prog-fill{height:100%;border-radius:4px;transition:width 0.6s ease}
-
 .prog-fill.s{background:#22c55e}
-
 .prog-fill.pm{background:#f59e0b}
-
 .prog-fill.d{background:#ef4444}
-
 .prog-pct{font-size:12px;font-weight:700;min-width:40px;text-align:right}
 
-
-
 /* PILL */
-
 .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.3px}
-
 .pill.s{background:var(--green2);color:var(--green)}
-
 .pill.pm{background:var(--amber2);color:var(--amber)}
-
 .pill.d{background:var(--red2);color:var(--red)}
-
 .pill.b{background:var(--blue2);color:var(--blue)}
 
-
-
 /* STACKED BARS TABLE */
-
 .stack-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-
 .stack-label{width:160px;font-size:12px;color:var(--text);text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
 .stack-bar{flex:1;height:22px;border-radius:6px;overflow:hidden;display:flex}
-
 .stack-seg{height:100%;transition:width 0.5s}
-
 .seg-c{background:#22c55e}
-
 .seg-i{background:#f59e0b}
-
 .seg-ne{background:#ef4444}
-
 .seg-e{background:#8b5cf6}
-
 .seg-na{background:#94a3b8}
-
 .seg-sd{background:#e2e8f0}
-
 .stack-count{font-size:11px;color:var(--muted);min-width:30px}
 
-
-
 /* ===== MULTISELECT TIPO EXCEL PARA SIRONA TECH ===== */
-
 .custom-ms { position: relative; min-width: 180px; }
-
 .ms-btn {
-
   display: flex; justify-content: space-between; align-items: center;
-
   background: var(--cream); border: 1.5px solid var(--border);
-
   border-radius: 8px; padding: 8px 12px; font-size: 13px;
-
   cursor: pointer; height: 38px; color: var(--text); user-select: none;
-
 }
-
 .ms-btn:hover { border-color: var(--navy3); }
-
 .ms-menu {
-
   display: none; position: absolute; top: 100%; left: 0; margin-top: 5px;
-
   background: var(--white); min-width: 100%; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-
   border-radius: 8px; border: 1px solid var(--border); z-index: 1000;
-
   max-height: 250px; overflow-y: auto;
-
 }
-
 .ms-menu.show { display: block; }
-
 .ms-item {
-
   display: flex; align-items: center; padding: 8px 12px;
-
   cursor: pointer; font-size: 13px; transition: background 0.15s;
-
 }
-
 .ms-item:hover { background: #fdf8f0; }
-
 .ms-item input { margin-right: 10px; cursor: pointer; accent-color: var(--navy); }
 
-
-
 /* FILTERS */
-
 .filters-bar{background:#fff;border-radius:14px;border:1px solid var(--border);padding:16px 20px;margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
-
 .fg{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px}
-
 .fg label{font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600}
-
 .fg select,.fg input{border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--text);outline:none}
-
 .fg select:focus,.fg input:focus{border-color:var(--navy3)}
-
-.fbtn{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;border:none;align-self:flex-end;transition:all 0.15s}
-
+.fbtn{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;border:none;align-self:flex-end;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;}
 .fbtn.primary{background:var(--navy);color:#fff}
-
 .fbtn.primary:hover{background:var(--navy3)}
-
 .fbtn.secondary{background:var(--cream2);color:var(--text)}
-
 .fbtn.secondary:hover{background:var(--cream3)}
-
 .fbtn.success{background:#16a34a;color:#fff}
-
 .fbtn.success:hover{background:#15803d}
 
-
-
 /* REGISTROS TABLE */
-
 .tbl-wrap{overflow-x:auto}
-
 table.main-tbl{width:100%;border-collapse:collapse;font-size:13px}
-
 table.main-tbl th{background:var(--cream2);padding:11px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
-
 table.main-tbl td{padding:11px 14px;border-bottom:1px solid #f3ede0;vertical-align:middle}
-
 table.main-tbl tr:hover td{background:#fdf8f0}
-
 .btn-sm{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.15s}
-
 .btn-sm.dark{background:var(--navy);color:#fff}
-
 .btn-sm.dark:hover{background:var(--navy3)}
 
-
-
 /* PAGINATION */
-
 .pag{display:flex;align-items:center;justify-content:center;gap:6px;padding:18px;border-top:1px solid var(--border)}
-
 .pag-btn{background:#fff;border:1.5px solid var(--border);border-radius:7px;padding:7px 13px;font-size:13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.15s;font-weight:500}
-
 .pag-btn:hover,.pag-btn.a{background:var(--navy);color:#fff;border-color:var(--navy)}
-
 .pag-btn:disabled{opacity:0.4;cursor:not-allowed}
 
-
-
 /* MODAL */
-
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(13,27,62,0.55);z-index:500;align-items:center;justify-content:center;padding:20px}
-
 .modal-overlay.open{display:flex}
-
 .modal{background:#fff;border-radius:20px;width:100%;max-width:820px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 72px rgba(0,0,0,0.3)}
-
 .modal-head{background:var(--navy);color:#fff;padding:22px 28px;border-radius:20px 20px 0 0;position:sticky;top:0;z-index:10}
-
 .modal-head h2{font-family:'Playfair Display',serif;font-size:20px;font-weight:400}
-
 .modal-head p{font-size:13px;color:#94a3c0;margin-top:3px}
-
 .modal-close{position:absolute;top:18px;right:22px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s}
-
 .modal-close:hover{background:rgba(255,255,255,0.25)}
-
 .modal-body{padding:24px 28px}
-
 .modal-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
-
 .mi{background:var(--cream);border-radius:10px;padding:12px 16px}
-
 .mi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;font-weight:600}
-
 .mi .val{font-size:14px;font-weight:600}
-
 .score-banner{background:var(--navy);color:#fff;border-radius:14px;padding:20px 24px;margin-bottom:22px;display:flex;align-items:center;gap:24px}
-
 .score-big{font-family:'Playfair Display',serif;font-size:56px;line-height:1;color:var(--gold3)}
-
 .score-info p{font-size:13px;color:#94a3c0;margin-bottom:6px}
-
 .sec-block{margin-bottom:20px}
-
 .sec-block h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-
 .crit-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--cream);border-radius:8px;margin-bottom:4px;font-size:13px}
-
 .crit-score{font-weight:700;min-width:60px;text-align:right}
-
 .crit-score.f{color:var(--green)}.crit-score.p{color:#d97706}.crit-score.z{color:#dc2626}.crit-score.n{color:var(--muted);font-weight:400;font-style:italic}.crit-score.e{color:#8b5cf6}
 
-
-
 /* USUARIOS PAGE */
-
 .user-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
-
 .user-card{background:#fff;border-radius:14px;border:1px solid var(--border);padding:20px;display:flex;align-items:center;gap:14px}
-
 .u-avatar{width:44px;height:44px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--gold3);flex-shrink:0}
-
 .u-name{font-weight:700;font-size:14px}
-
 .u-rol{font-size:12px;color:var(--muted);margin-top:2px}
-
 .form-card{background:#fff;border-radius:16px;border:1px solid var(--border);padding:24px 28px}
-
 .form-card h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:20px}
-
 .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-
 .form-full{grid-column:1/-1}
-
 .form-card .fg input,.form-card .fg select{background:#fff;border:1.5px solid var(--border)}
-
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(13,27,62,0.4);z-index:1000;align-items:center;justify-content:center}
-
 .loading-overlay.show{display:flex}
-
 .loading-box{background:#fff;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:var(--shadow)}
-
 .spinner{width:44px;height:44px;border:4px solid var(--cream2);border-top-color:var(--navy);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
-
 @keyframes spin{to{transform:rotate(360deg)}}
-
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
-
 .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
-
 .leg-dot{width:10px;height:10px;border-radius:2px}
-
 .empty-state{text-align:center;padding:48px;color:var(--muted)}
-
 .empty-state .icon{font-size:40px;margin-bottom:12px}
-
 .empty-state h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
-
 .toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;z-index:2000;display:none;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,0.2)}
-
 .toast.show{display:flex}
-
 .toast.ok{background:#16a34a}
-
 .toast.err{background:#dc2626}
 
-
-
 @media(max-width:1024px){
-
   .kpi-grid{grid-template-columns:repeat(3,1fr)}
-
   .section-grid{grid-template-columns:1fr}
-
   .section-card.wide{grid-column:1}
-
 }
-
 @media(max-width:768px){
-
   .content{padding:16px}
-
   .kpi-grid{grid-template-columns:1fr 1fr}
-
   .topbar-nav{display:none}
-
   .modal-info-grid{grid-template-columns:1fr}
-
 }
 
 /* ================================================================
@@ -599,7 +302,6 @@ table.main-tbl tr:hover td{background:#fdf8f0}
    Solo se activan al imprimir — no afectan la pantalla en absoluto.
    ================================================================ */
 @media print {
-
   /* Ocultar todo lo que NO debe aparecer en el PDF */
   .topbar,
   .filters-bar,
@@ -674,489 +376,229 @@ table.main-tbl tr:hover td{background:#fdf8f0}
     grid-template-columns: 1fr 1fr !important;
   }
 }
-
 </style>
-
 </head>
-
 <body>
 
-
-
-<!-- LOADING -->
-
 <div class="loading-overlay" id="loadingOverlay">
-
   <div class="loading-box">
-
     <div class="spinner"></div>
-
     <p style="font-weight:600;color:var(--navy)" id="loadingMsg">Cargando datos desde Drive...</p>
-
   </div>
-
 </div>
-
-
-
-<!-- TOAST -->
 
 <div class="toast" id="toast"></div>
 
-
-
-<!-- ===== LOGIN ===== -->
-
 <div id="loginPage">
-
   <div class="login-card">
-
     <div class="login-logo">
-
       <div class="login-logo-icon">📋</div>
-
       <div>
-
         <h1>Sistema de Auditoría</h1>
-
         <p>Historias Clínicas — Anexo N° 5</p>
-
       </div>
-
     </div>
-
     <h2>Bienvenido</h2>
-
     <p class="subtitle">Ingresa tus credenciales para continuar</p>
-
     <div class="login-error" id="loginError"></div>
-
     <div class="form-group">
-
       <label>Usuario</label>
-
       <input type="text" id="loginUser" placeholder="Ingresa tu usuario" autocomplete="username">
-
     </div>
-
     <div class="form-group">
-
       <label>Contraseña</label>
-
       <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-
     </div>
-
     <button class="btn-login" onclick="doLogin()">Ingresar al Sistema</button>
-
     <div class="login-footer">Control de Calidad HSR</div>
-
   </div>
-
 </div>
-
-
-
-<!-- ===== APP ===== -->
 
 <div id="appPage" style="display:none;flex-direction:column;min-height:100vh">
 
-
-
-  <!-- TOPBAR -->
-
   <div class="topbar">
-
     <div class="topbar-logo">
-
       <div class="icon">📋</div>
-
       <div>
-
         <span>Auditoría HC</span>
-
         <small id="areaTitleLabel">Anexo N° 5 — Consulta Externa</small>
-
       </div>
-
     </div>
-
     
-
     <div style="margin-left: 20px;">
-
        <select id="areaSelector" onchange="cambiarArea()" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: bold; outline: none; cursor: pointer;">
-
           <option value="consulta_externa" style="color: #000;">Consulta Externa</option>
-
           <option value="emergencia" style="color: #000;">Emergencia</option>
-
           <option value="hospitalizacion" style="color: #000;">Hospitalización</option>
-
        </select>
-
     </div>
-
-
 
     <div class="topbar-nav">
-
       <button class="nav-btn active" onclick="showPage('dashboard')" id="navDash">📊 Dashboard</button>
-
       <button class="nav-btn" onclick="showPage('secciones')" id="navSec">📈 Por Sección</button>
-
       <button class="nav-btn" onclick="showPage('registros')" id="navReg">📋 Registros</button>
-
       <button class="nav-btn" id="navUsers" onclick="showPage('usuarios')" style="display:none">👥 Usuarios</button>
-
     </div>
-
     <div class="topbar-right">
-
-      <!-- MEJORA 3: Botón de impresión a PDF -->
       <button class="btn-update" id="btnPrint" onclick="imprimirReporte()" style="background:var(--navy2);border:1px solid rgba(255,255,255,0.2);">🖨️ Imprimir PDF</button>
-
       <button class="btn-update" onclick="actualizarDatos()" id="btnUpdate">🔄 Actualizar Drive</button>
-
       <div class="user-badge">
-
         <div class="user-avatar" id="userAvatar">A</div>
-
         <span class="user-name" id="userName">Usuario</span>
-
       </div>
-
       <button class="btn-logout" onclick="logout()" title="Cerrar sesión">⏏</button>
-
     </div>
-
   </div>
-
-
-
-  <!-- CONTENT -->
 
   <div class="content">
 
-
-
-    <!-- ===== DASHBOARD PAGE ===== -->
-
     <div class="page active" id="pageDashboard">
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:15px;">
         <div>
-
           <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:400">Panel General</h2>
-
           <p style="font-size:13px;color:var(--muted);margin-top:2px" id="dashSubtitle">Cargando datos...</p>
-
         </div>
-
-        <div style="display:flex;gap:10px;align-items:center">
-
-          <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnio" onchange="aplicarFiltros()">
-
-            <option value="">Todos los años</option>
-
-        </select>
-
-        <div class="custom-ms" id="wrapMesDash">
-
-          <div class="ms-btn" onclick="document.getElementById('menuMesDash').classList.toggle('show')">
-
-            <span id="textMesDash">Todos los meses</span> <span>▼</span>
-
-          </div>
-
-          <div class="ms-menu" id="menuMesDash">
-
-            </div>
-
-        </div>
-
-          <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServDash" onchange="aplicarFiltros()">
-
-            <option value="">Todos los servicios</option>
-
+        
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtOportDash" onchange="aplicarFiltrosGlobal(event)">
+            <option value="">Ingreso: Todos</option>
+            <option value="A TIEMPO">Sólo A Tiempo</option>
+            <option value="FUERA DE FECHA">Sólo Fuera de Fecha</option>
           </select>
-
+          <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnio" onchange="aplicarFiltrosGlobal(event)">
+            <option value="">Todos los años</option>
+          </select>
+          <div class="custom-ms" id="wrapMesDash">
+            <div class="ms-btn" onclick="document.getElementById('menuMesDash').classList.toggle('show')">
+              <span id="textMesDash">Todos los meses</span> <span>▼</span>
+            </div>
+            <div class="ms-menu" id="menuMesDash"></div>
+          </div>
+          <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServDash" onchange="aplicarFiltrosGlobal(event)">
+            <option value="">Todos los servicios</option>
+          </select>
+          <button class="fbtn" onclick="abrirModalExtemporaneos()" style="background:#d97706;color:#fff;border:none;">⚠️ Analizar Fuera de Fecha</button>
         </div>
-
       </div>
-
-
-
-      <!-- KPIs -->
 
       <div class="kpi-grid">
-
         <div class="kpi total"><div class="lbl">Total auditado</div><div class="val" id="kpiTotal">—</div><div class="sub">Historias clínicas</div></div>
-
         <div class="kpi sat"><div class="lbl">Satisfactorio</div><div class="val" id="kpiSat">—</div><div class="sub">≥ 90%</div></div>
-
         <div class="kpi mej"><div class="lbl">Por mejorar</div><div class="val" id="kpiMej">—</div><div class="sub">75% — 89%</div></div>
-
         <div class="kpi def"><div class="lbl">Deficiente</div><div class="val" id="kpiDef">—</div><div class="sub">< 75%</div></div>
-
         <div class="kpi prom"><div class="lbl">Promedio</div><div class="val" id="kpiProm">—</div><div class="sub">% cumplimiento</div></div>
-
       </div>
-
-
 
       <div class="section-grid">
-
         <div class="section-card">
-
           <div class="card-head"><h3>🍩 Distribución de Calificaciones</h3></div>
-
           <div class="card-body"><div class="chart-wrap"><canvas id="chartCalif"></canvas></div></div>
-
         </div>
-
         <div class="section-card">
-
           <div class="card-head"><h3>📊 Cumplimiento por Sección</h3></div>
-
           <div class="card-body"><div class="chart-wrap"><canvas id="chartSecciones"></canvas></div></div>
-
         </div>
-
       </div>
 
-
-
       <div class="section-card wide" style="margin-bottom:20px">
-
-        <div class="card-head"><h3>🕒 Oportunidad de Registro (A tiempo vs Extemporáneo)</h3></div>
-
-        <div class="card-body">
-
-          <div style="position:relative;height:250px">
-
-            <canvas id="chartOportunidad"></canvas>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-
-      <div class="section-card wide" style="margin-bottom:20px">
-
         <div class="card-head"><h3>🏥 Rendimiento por Servicio</h3><span class="badge" id="totalServBadge">0 servicios</span></div>
-
         <div class="card-body"><div style="position:relative;height:300px"><canvas id="chartServicios"></canvas></div></div>
-
       </div>
-
-
-
-      <!-- TENDENCIA -->
 
       <div class="section-card wide">
-
         <div class="card-head"><h3>📈 Tendencia por Mes de Auditoría</h3></div>
-
         <div class="card-body"><div style="position:relative;height:220px"><canvas id="chartTendencia"></canvas></div></div>
-
       </div>
-
     </div>
-
-
-
-    <!-- ===== SECCIONES PAGE ===== -->
 
     <div class="page" id="pageSecciones">
-
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px">
-
         <div>
-
           <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:400">Análisis por Sección</h2>
-
           <p style="font-size:13px;color:var(--muted);margin-top:2px">Detalle de cumplimiento por criterio del Anexo 5</p>
-
         </div>
-
         <div style="display:flex; gap:10px; align-items:center">
-
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtAnioSec" onchange="aplicarFiltrosSec()">
-
             <option value="">Todos los años</option>
-
           </select>
-
           <div class="custom-ms" id="wrapMesSec">
-
             <div class="ms-btn" onclick="document.getElementById('menuMesSec').classList.toggle('show')">
-
               <span id="textMesSec">Todos los meses</span> <span>▼</span>
-
             </div>
-
-            <div class="ms-menu" id="menuMesSec">
-
-              </div>
-
+            <div class="ms-menu" id="menuMesSec"></div>
           </div>
-
           <select style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--cream)" id="filtServSec" onchange="aplicarFiltrosSec()">
-
             <option value="">Todos los servicios</option>
-
           </select>
-
         </div>
-
       </div>
-
       <div id="seccionesContainer"></div>
-
     </div>
-
-
-
-    <!-- ===== REGISTROS PAGE ===== -->
 
     <div class="page" id="pageRegistros">
-
       <div style="margin-bottom:20px">
-
         <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:400">Registros de Auditoría</h2>
-
       </div>
-
       <div class="filters-bar">
-
         <div class="fg"><label>Servicio</label><select id="filtServ"><option value="">Todos</option></select></div>
-
         <div class="fg"><label>Calificación</label>
-
           <select id="filtCalif">
-
             <option value="">Todas</option>
-
             <option value="SATISFACTORIO">Satisfactorio</option>
-
             <option value="POR MEJORAR">Por mejorar</option>
-
             <option value="DEFICIENTE">Deficiente</option>
-
           </select>
-
         </div>
-
         <div class="fg"><label>Auditor</label><select id="filtAud"><option value="">Todos</option></select></div>
-
         <div class="fg"><label>N° Auditoría</label><input type="text" id="filtNum" placeholder="Ej: 7"></div>
-
         <button class="fbtn primary" onclick="filtrarRegistros()">Filtrar</button>
-
         <button class="fbtn secondary" onclick="limpiarFiltros()">Limpiar</button>
-
         <button class="fbtn primary" onclick="abrirModalExportacion()" style="background: var(--navy); margin-left: auto;">📄 Generar Informe Oficial</button>
-
       </div>
-
       <div class="section-card wide">
-
         <div class="card-head">
-
           <h3>📋 Resultados</h3>
-
           <span class="badge" id="regCount">0 registros</span>
-
         </div>
-
         <div class="tbl-wrap">
-
           <table class="main-tbl">
-
             <thead><tr>
-
               <th>#</th><th>N° HC</th><th>Fecha Auditoría</th><th>Servicio</th>
-
               <th>Auditor</th><th>Puntaje</th><th>% Cumplim.</th><th>Oportunidad</th><th>Calificación</th><th>Detalle</th>
-
             </tr></thead>
-
             <tbody id="regBody"></tbody>
-
           </table>
-
         </div>
-
         <div class="pag" id="regPag"></div>
-
       </div>
-
     </div>
-
-
-
-    <!-- ===== USUARIOS PAGE ===== -->
 
     <div class="page" id="pageUsuarios">
-
       <div style="margin-bottom:20px">
-
         <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:400">Gestión de Usuarios</h2>
-
         <p style="font-size:13px;color:var(--muted);margin-top:2px">Administra los accesos al sistema (guardado en Google Drive)</p>
-
       </div>
-
       <div class="user-grid" id="userList"></div>
-
       <div class="form-card">
-
         <h3>➕ Crear nuevo usuario</h3>
-
         <div class="form-2col">
-
           <div class="fg"><label>Usuario</label><input type="text" id="nuUsuario" placeholder="nombre.apellido"></div>
-
           <div class="fg"><label>Contraseña</label><input type="password" id="nuPass" placeholder="Mínimo 6 caracteres"></div>
-
           <div class="fg"><label>Nombre completo</label><input type="text" id="nuNombre" placeholder="Dr. Juan Pérez"></div>
-
           <div class="fg"><label>Rol</label>
-
             <select id="nuRol">
-
               <option value="auditor">Auditor</option>
-
               <option value="admin">Administrador</option>
-
             </select>
-
           </div>
-
         </div>
-
         <div style="margin-top:16px">
-
           <button class="fbtn primary" onclick="crearUsuario()">Crear Usuario</button>
-
         </div>
-
       </div>
-
     </div>
 
-
-
-  </div><!-- /content -->
-</div><!-- /appPage -->
-
-<!-- Detail modal overlay — fuera del appPage para que funcione en cualquier página -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  </div></div><div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
   <div class="modal">
     <div class="modal-head" style="position:relative">
       <h2 id="modalTitle">Detalle de HC</h2>
@@ -1167,508 +609,279 @@ table.main-tbl tr:hover td{background:#fdf8f0}
   </div>
 </div>
 
-<!-- ============================================================
-     MODAL EXPORTACIÓN — GENERADOR DE INFORMES OFICIALES v2.0
-     ============================================================ -->
+<div class="modal-overlay" id="modalExtempOverlay" onclick="if(event.target.id==='modalExtempOverlay') document.getElementById('modalExtempOverlay').classList.remove('open')">
+  <div class="modal" style="max-width:960px">
+    <div class="modal-head" style="background:#d97706;border-radius:20px 20px 0 0;">
+      <h2 style="color:#fff;">Análisis de Registros Fuera de Fecha (Tardíos)</h2>
+      <p style="color:#fef3c7;margin-top:4px;">Historias clínicas ingresadas al sistema en meses posteriores a los de auditoría</p>
+      <button class="modal-close" onclick="document.getElementById('modalExtempOverlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" id="extempContent" style="padding:30px 28px; background:var(--cream);"></div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modalExportOverlay"
-
      onclick="if(event.target.id==='modalExportOverlay') cerrarModalExport()">
-
   <div class="modal exp-modal">
 
-
-
     <div class="modal-head exp-head">
-
       <div>
-
         <h2 class="exp-titulo">Generador de Informes Oficiales</h2>
-
         <p class="exp-sub">Configure los filtros, revise la vista previa y genere el documento.</p>
-
       </div>
-
       <button class="modal-close" onclick="cerrarModalExport()">✕</button>
-
     </div>
-
-
 
     <div class="modal-body exp-body">
 
-
-
       <div class="exp-filtros">
-
-
+        
+        <div class="fg" style="flex:1.5">
+          <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">ÁREA A EXPORTAR</label>
+          <select id="expArea" onchange="cargarDatosExportacion()">
+            <option value="actual">Área Actual (Vista en pantalla)</option>
+            <option value="todas">CONSOLIDADO (Todas las Áreas)</option>
+            <option value="consulta_externa">Consulta Externa</option>
+            <option value="emergencia">Emergencia</option>
+            <option value="hospitalizacion">Hospitalización</option>
+          </select>
+        </div>
 
         <div class="fg">
-
-          <label>AÑO</label>
-
+          <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">AÑO</label>
           <select id="expAnio" onchange="actualizarFiltrosCascada()"></select>
-
         </div>
-
-
 
         <div class="custom-ms" id="wrapMesExp" style="flex:1.2">
-
           <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">MESES</label>
-
           <div class="ms-btn" onclick="toggleMesExp()">
-
             <span id="textMesExp">Todos los meses</span> <span>▼</span>
-
           </div>
-
           <div class="ms-menu" id="menuMesExp"></div>
-
         </div>
-
-
 
         <div class="custom-ms" id="wrapServExp" style="flex:2">
-
           <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">SERVICIOS</label>
-
           <div class="ms-btn" onclick="toggleServExp()">
-
             <span id="textServExp">Todos los servicios</span> <span>▼</span>
-
           </div>
-
           <div class="ms-menu" id="menuServExp" style="min-width:340px;max-height:240px;overflow-y:auto;"></div>
-
         </div>
-
-
 
         <div class="fg" style="align-self:flex-end">
-
           <button class="fbtn primary" style="width:100%;font-size:13px;" onclick="actualizarFiltrosCascada()">
-
             🔄 Actualizar
-
           </button>
-
         </div>
-
       </div>
-
-
 
       <div id="expResumenRapido" class="exp-resumen-bar"></div>
 
-
-
       <div class="exp-grid">
-
-
 
         <div class="exp-col-tablas">
 
-
-
           <div class="section-card">
-
             <div class="card-head"><h3>Tabla N° 2 · Calidad de registro global</h3></div>
-
             <div class="card-body">
-
               <table class="detail-table text-center" id="expTabla2"></table>
-
             </div>
-
           </div>
-
-
 
           <div class="section-card">
-
             <div class="card-head"><h3>Tabla N° 3 · Calidad por Mes</h3></div>
-
             <div class="card-body" style="overflow-x:auto">
-
               <table class="detail-table text-center" id="expTabla3"></table>
-
             </div>
-
           </div>
-
-
 
           <div class="section-card" id="wrapTabla5">
-
             <div class="card-head"><h3>Tabla N° 5 · Calidad por Servicio</h3></div>
-
             <div class="card-body" style="overflow-x:auto">
-
               <table class="detail-table text-center" id="expTabla5"></table>
-
             </div>
-
           </div>
 
-
-
         </div>
-
-
 
         <div class="exp-col-graficos">
 
-
-
           <div class="section-card">
-
             <div class="card-head"><h3>Gráfico N° 2 · Distribución</h3></div>
-
             <div class="card-body" style="background:#fff">
-
               <div style="height:230px"><canvas id="expChart2"></canvas></div>
-
             </div>
-
           </div>
-
-
 
           <div class="section-card">
-
             <div class="card-head"><h3>Gráfico N° 3 · Evolución por Mes</h3></div>
-
             <div class="card-body" style="background:#fff">
-
               <div style="height:230px"><canvas id="expChart3"></canvas></div>
-
             </div>
-
           </div>
-
-
 
           <div class="section-card" id="wrapGraf5">
-
             <div class="card-head"><h3>Gráfico N° 5 · % Satisfactorio por Servicio</h3></div>
-
             <div class="card-body" style="background:#fff">
-
               <div style="height:230px"><canvas id="expChart5"></canvas></div>
-
             </div>
-
           </div>
 
-
-
         </div>
-
       </div><div class="section-card" style="margin-top:18px">
-
         <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
-
           <h3>📝 Texto Narrativo Automático</h3>
-
           <button class="fbtn" style="font-size:12px;padding:4px 12px;background:var(--cream2);color:var(--navy);border:1px solid var(--border)"
-
                   onclick="copiarNarrativo()">📋 Copiar texto</button>
-
         </div>
-
         <div class="card-body">
-
           <div id="expNarrativo" style="font-size:13px;line-height:1.7;color:#333;white-space:pre-line;font-family:'Georgia',serif;"></div>
-
         </div>
-
       </div>
-
-
 
       <div class="exp-botones">
-
         <button class="fbtn" onclick="cerrarModalExport()"
-
                 style="background:var(--cream2);color:var(--navy);border:1px solid var(--border);font-size:14px">
-
           Cancelar
-
         </button>
-
         <button class="fbtn success" onclick="generarReporteFinal('excel')"
-
                 style="background:#107c41;font-size:14px">
-
           📊 Descargar Anexo 1 (Excel)
-
         </button>
-
         <button class="fbtn primary" onclick="generarReporteFinal('word')"
-
                 style="background:#2b579a;font-size:14px">
-
           📄 Descargar Informe Completo (Word)
-
         </button>
-
       </div>
 
-
-
     </div></div></div><style>
-
-/* Modal principal */
-
+/* Modal principal exportación */
 .exp-modal {
-
   max-width: 1100px;
-
   width: 96vw;
-
   max-height: 96vh;
-
   display: flex;
-
   flex-direction: column;
-
   border-radius: 12px;
-
   overflow: hidden;
-
 }
-
 .exp-head {
-
   background: linear-gradient(135deg, #1e3a6e 0%, #2b579a 100%);
-
   display: flex;
-
   justify-content: space-between;
-
   align-items: flex-start;
-
   padding: 18px 24px;
-
 }
-
 .exp-titulo { font-family:'Playfair Display',serif; font-size:20px; margin:0; color:#fff; }
-
 .exp-sub { font-size:13px; color:rgba(255,255,255,.75); margin:4px 0 0; }
-
 .exp-body { background:var(--cream,#f8f5ee); overflow-y:auto; padding:20px 24px 28px; flex:1; }
 
-
-
-/* Filtros */
-
+/* Filtros Exportador */
 .exp-filtros {
-
   display: flex;
-
   gap: 14px;
-
   align-items: flex-end;
-
   flex-wrap: wrap;
-
   background: #fff;
-
   border: 1px solid var(--border,#e0d9cf);
-
   border-radius: 10px;
-
   padding: 16px 18px;
-
   margin-bottom: 16px;
-
 }
 
-
-
-/* Resumen rápido */
-
+/* Resumen rápido Exportador */
 .exp-resumen-bar {
-
   display: flex;
-
   gap: 10px;
-
   flex-wrap: wrap;
-
   margin-bottom: 18px;
-
 }
-
 .exp-badge {
-
   display: flex;
-
   align-items: center;
-
   gap: 8px;
-
   background: #fff;
-
   border: 1px solid var(--border,#e0d9cf);
-
   border-radius: 8px;
-
   padding: 8px 14px;
-
   font-size: 13px;
-
   font-weight: 600;
-
   color: var(--navy,#1e3a6e);
-
   flex: 1;
-
   min-width: 130px;
-
 }
-
 .exp-badge .badge-num { font-size: 22px; font-weight: 800; }
-
 .exp-badge.sat { border-left: 4px solid #82c91e; }
-
 .exp-badge.mej { border-left: 4px solid #facc15; }
-
 .exp-badge.def { border-left: 4px solid #ef4444; }
-
 .exp-badge.tot { border-left: 4px solid var(--navy,#1e3a6e); }
-
 .exp-badge.pct { border-left: 4px solid #3b82f6; }
 
-
-
-/* Grid previsualización */
-
+/* Grid previsualización Exportador */
 .exp-grid {
-
   display: grid;
-
   grid-template-columns: 1fr 1.1fr;
-
   gap: 18px;
-
   align-items: start;
-
 }
-
 .exp-col-tablas, .exp-col-graficos {
-
   display: flex;
-
   flex-direction: column;
-
   gap: 16px;
-
 }
-
 @media (max-width: 820px) {
-
   .exp-grid { grid-template-columns: 1fr; }
-
 }
 
-
-
-/* Botones finales */
-
+/* Botones finales Exportador */
 .exp-botones {
-
   display: flex;
-
   justify-content: flex-end;
-
   gap: 12px;
-
   flex-wrap: wrap;
-
   margin-top: 22px;
-
   padding-top: 18px;
-
   border-top: 1px solid var(--border,#e0d9cf);
-
 }
 
-
-
-/* Multi-select servicios */
-
+/* Multi-select servicios Exportador */
 #menuServExp .ms-item { padding: 7px 14px; font-size: 13px; }
-
 #menuServExp .ms-item:hover { background: var(--cream2,#f0ebe0); }
-
 #menuServExp .ms-item input { margin-right: 8px; }
-
 #menuServExp .ms-actions {
-
   display: flex;
-
   gap: 8px;
-
   padding: 8px 14px;
-
   border-bottom: 1px solid var(--border,#e0d9cf);
-
 }
-
 #menuServExp .ms-actions button {
-
   font-size: 11px;
-
   padding: 3px 8px;
-
   border: 1px solid var(--border,#e0d9cf);
-
   border-radius: 4px;
-
   cursor: pointer;
-
   background: var(--cream,#f8f5ee);
-
   color: var(--navy,#1e3a6e);
-
 }
 
-
-
-/* Tabla centrada */
-
+/* Tabla centrada Exportador */
 .text-center td, .text-center th { text-align: center !important; }
-
 .text-center td:first-child, .text-center th:first-child { text-align: left !important; }
-
 </style>
-
 <script>
-
   const API = '/api';
-
 let session = null;
-
 let allData = [];
-
 let filtData = [];
-
 let stats = null;
-
 let charts = {};
-
 let regPage = 1;
-
 const REG_SIZE = 25;
-
-// ===== NUEVO: CONTROL DE ÁREA =====
+// ===== CONTROL DE ÁREA =====
 let currentArea = 'consulta_externa';
 
-
 // ================================================================
-// MEJORA 1: PERSISTENCIA DE SESIÓN CON localStorage
+// PERSISTENCIA DE SESIÓN CON localStorage
 // ================================================================
 
 const SESSION_KEY = 'hc_auditoria_session';
@@ -1727,84 +940,17 @@ function verificarSesionAlInicio() {
 // Ejecutar verificación de sesión tan pronto como el DOM esté listo
 document.addEventListener('DOMContentLoaded', verificarSesionAlInicio);
 
-// ================================================================
-// FIN MEJORA 1
-// ================================================================
-
-
-function renderChartOportunidad() {
-
-  destroyChart('oportunidad');
-
-  // MEJORA 4: Validación para evitar errores en consola cuando no hay data
-  if (!filtData || !filtData.length) return;
-
-  const aTiempo = filtData.filter(r => r.oportunidad === 'A TIEMPO').length;
-
-  const fueraFecha = filtData.filter(r => r.oportunidad === 'FUERA DE FECHA').length;
-
-  // Si ambos son 0, no renderizar el gráfico vacío
-  if (aTiempo === 0 && fueraFecha === 0) return;
-
-  const ctx = document.getElementById('chartOportunidad');
-  if (!ctx) return; // MEJORA 4: Verificar que el canvas existe
-
-  charts['oportunidad'] = new Chart(ctx.getContext('2d'), {
-
-      type: 'doughnut',
-
-      data: {
-
-          labels: ['A Tiempo', 'Fuera de Fecha'],
-
-          datasets: [{
-
-              data: [aTiempo, fueraFecha],
-
-              backgroundColor: ['#22c55e', '#f59e0b'],
-
-              hoverOffset: 8
-
-          }]
-
-      },
-
-      options: {
-
-          responsive: true,
-
-          maintainAspectRatio: false,
-
-          plugins: { legend: { position: 'bottom' } }
-
-      }
-
-  });
-
-}
-
-
 
 function cambiarArea() {
-
   currentArea = document.getElementById('areaSelector').value;
-
   const titulos = {
-
     'consulta_externa': 'Anexo N° 5 — Consulta Externa',
-
     'emergencia': 'Anexo N° 5 — Emergencia',
-
     'hospitalizacion': 'Anexo N° 5 — Hospitalización'
-
   };
-
   document.getElementById('areaTitleLabel').textContent = titulos[currentArea];
-
   _limpiarPreview();
-
   actualizarDatos();
-
 }
 
 
@@ -1817,3326 +963,1701 @@ document.addEventListener('DOMContentLoaded', () => {
   if (userInput) userInput.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 });
 
-
-
 async function doLogin() {
-
   const u = document.getElementById('loginUser').value.trim();
-
   const p = document.getElementById('loginPass').value;
-
   const err = document.getElementById('loginError');
-
   if(!u||!p){err.textContent='Ingresa usuario y contraseña';err.style.display='block';return;}
-
   err.style.display='none';
-
   showLoading('Verificando credenciales...');
-
   try {
-
     const r = await fetch(`${API}/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:u,password:p})});
-
     const d = await r.json();
-
     if(d.ok){
-
       session = d;
-
-      // MEJORA 1: Guardar sesión al hacer login exitoso
       guardarSesion(d);
-
       document.getElementById('loginPage').style.display='none';
-
       document.getElementById('appPage').style.display='flex';
-
       document.getElementById('userName').textContent = d.nombre;
-
       document.getElementById('userAvatar').textContent = d.nombre[0].toUpperCase();
-
       if(d.rol==='admin') document.getElementById('navUsers').style.display='flex';
-
       hideLoading();
-
       actualizarDatos();
-
     } else {
-
       hideLoading();
-
       err.textContent = d.msg||'Credenciales incorrectas';
-
       err.style.display='block';
-
     }
-
   } catch(e) {
-
     hideLoading();
-
     err.textContent = 'No se puede conectar al servidor. Verifica que app.py esté ejecutándose.';
-
     err.style.display='block';
-
   }
-
 }
-
-
 
 function logout() {
-
-  // MEJORA 1: Eliminar sesión del localStorage al hacer logout
   borrarSesion();
-
   session = null; allData = []; filtData = [];
-
   document.getElementById('appPage').style.display='none';
-
   document.getElementById('loginPage').style.display='flex';
-
   document.getElementById('loginUser').value='';
-
   document.getElementById('loginPass').value='';
-
 }
-
-
 
 // ===== NAVIGATION =====
-
 function showPage(page) {
-
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-
   document.getElementById('page'+page.charAt(0).toUpperCase()+page.slice(1)).classList.add('active');
-
   document.getElementById('nav'+page.charAt(0).toUpperCase()+page.slice(1)).classList.add('active');
-
   if(page==='usuarios') loadUsuarios();
-
   if(page==='secciones' && stats) renderSecciones();
-
 }
-
-
 
 // ===== DATA =====
-
 async function actualizarDatos() {
-
   const btn = document.getElementById('btnUpdate');
-
   btn.classList.add('loading');
-
   btn.textContent = '⏳ Actualizando...';
-
   showLoading('Obteniendo datos desde Google Drive...');
-
   try {
-
     const r = await fetch(`${API}/datos?area=${currentArea}`);
-
     const d = await r.json();
-
     if(d.ok) {
-
       allData = d.registros;
-
       filtData = [...allData];
-
       populateFilters(d.servicios, d.auditores, d.anios, d.meses);
-
       await calcularEstadisticas(allData);
-
       renderDashboard();
-
       renderSecciones();
-
-      renderChartOportunidad();
-
       renderRegistros();
-
       showToast('✅ Datos actualizados: '+allData.length+' registros', 'ok');
-
     } else {
-
       showToast('❌ Error: '+d.error, 'err');
-
     }
-
   } catch(e) {
-
     showToast('❌ Error de conexión: '+e.message, 'err');
-
   }
-
   hideLoading();
-
   btn.classList.remove('loading');
-
   btn.textContent = '🔄 Actualizar Drive';
-
 }
 
-
-
 async function calcularEstadisticas(data) {
-
-  // MEJORA 4: Validación de entrada
   if (!data || !data.length) {
     stats = null;
     return;
   }
-
   try {
-
     const r = await fetch(`${API}/estadisticas`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({registros:data})});
-
     stats = await r.json();
-
   } catch(e) { console.error('Error al calcular estadísticas:', e); }
-
 }
 
-
-
 // =====================================================================
-
-// NUEVO SISTEMA DE FILTROS (DISEÑO TIPO EXCEL)
-
+// FILTROS TIPO EXCEL
 // =====================================================================
-
-
 
 function populateFilters(servicios, auditores, anios, meses) {
-
-  // MEJORA 4: Validaciones de entrada
   if (!servicios) servicios = [];
   if (!auditores) auditores = [];
   if (!anios) anios = [];
   if (!meses) meses = [];
 
   const selAnio = document.getElementById('filtAnio');
-
   if(selAnio) selAnio.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
 
-
-
   const selAnioSec = document.getElementById('filtAnioSec');
-
   if(selAnioSec) selAnioSec.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
 
-
-
   ['filtServDash','filtServ','filtServSec'].forEach(id => {
-
     const s = document.getElementById(id);
-
     if (s) {
-
       s.innerHTML = '<option value="">Todos los servicios</option>' +
-
         servicios.map(sv => `<option value="${sv}">${sv.length > 40 ? sv.substring(0, 40) + '...' : sv}</option>`).join('');
-
     }
-
   });
 
-
-
   const selAud = document.getElementById('filtAud');
-
   if (selAud) {
-
     selAud.innerHTML = '<option value="">Todos</option>' +
-
       auditores.map(a => `<option value="${a}">${a.length > 40 ? a.substring(0, 40) + '...' : a}</option>`).join('');
-
   }
-
-
 
   const menuDash = document.getElementById('menuMesDash');
-
   const menuSec = document.getElementById('menuMesSec');
 
-
-
   const checkboxesHTML = meses.map(m => `
-
     <label class="ms-item">
-
       <input type="checkbox" value="${m}" onchange="aplicarFiltrosGlobal(event)"> ${m}
-
     </label>
-
   `).join('');
 
-
-
   if(menuDash) menuDash.innerHTML = checkboxesHTML;
-
   if(menuSec) menuSec.innerHTML = checkboxesHTML.replace(/aplicarFiltrosGlobal/g, 'aplicarFiltrosGlobalSec');
-
 }
-
-
 
 // Evento para cerrar los menús desplegables si haces clic afuera
-
 document.addEventListener('click', function(e) {
-
   if (!e.target.closest('.custom-ms')) {
-
     document.querySelectorAll('.ms-menu').forEach(m => m.classList.remove('show'));
-
   }
-
 });
 
-
-
-// =====================================================================
-
-// VARIABLES GLOBALES PARA OPTIMIZACIÓN (DEBOUNCE)
-
-// =====================================================================
-
 let timerFiltrosDash;
-
 let timerFiltrosSec;
 
-
-
 // =====================================================================
-
 // LÓGICA DEL DASHBOARD (PANEL GENERAL)
-
 // =====================================================================
-
-
 
 function aplicarFiltrosGlobal(e) {
-
   aplicarFiltros();
-
 }
 
-
-
 function aplicarFiltros() {
-
   const contentDiv = document.querySelector('.content');
-
   if(contentDiv) contentDiv.style.opacity = '0.5';
-
   document.body.style.cursor = 'wait';
-
-
 
   clearTimeout(timerFiltrosDash);
 
-
-
   timerFiltrosDash = setTimeout(() => {
-
     const anioSel = document.getElementById('filtAnio').value;
-
+    const oportSel = document.getElementById('filtOportDash').value;
     const checks = document.querySelectorAll('#menuMesDash input[type="checkbox"]:checked');
-
     const mesesSel = Array.from(checks).map(cb => cb.value);
-
     const textBtn = document.getElementById('textMesDash');
-
     if (textBtn) {
-
       if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
-
       else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
-
       else textBtn.textContent = `${mesesSel.length} seleccionados`;
-
     }
-
-
 
     const selectorServicio = document.getElementById('filtServDash');
-
     const servSel = selectorServicio.value;
 
-
-
     const serviciosDisponibles = [...new Set(allData.filter(r => {
-
       if (anioSel && r.anio !== anioSel) return false;
-
+      if (oportSel && r.oportunidad !== oportSel) return false;
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-
       return true;
-
     }).map(r => r.servicio).filter(s => s !== '—'))].sort();
 
-
-
     selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' +
-
       serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
 
-
-
     if (serviciosDisponibles.includes(servSel)) {
-
       selectorServicio.value = servSel;
-
     }
 
-
-
     filtData = allData.filter(r => {
-
       if (anioSel && r.anio !== anioSel) return false;
-
+      if (oportSel && r.oportunidad !== oportSel) return false;
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-
       if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
-
       return true;
-
     });
-
-
 
     calcularEstadisticas(filtData).then(() => {
-
       renderDashboard();
-
       renderSecciones();
-
       renderRegistros();
-
       if(contentDiv) contentDiv.style.opacity = '1';
-
       document.body.style.cursor = 'default';
-
     });
-
   }, 400);
-
 }
 
-
-
 // =====================================================================
-
 // LÓGICA DE LA PÁGINA "POR SECCIÓN"
-
 // =====================================================================
-
-
 
 function aplicarFiltrosGlobalSec(e) {
-
   aplicarFiltrosSec();
-
 }
 
-
-
 function aplicarFiltrosSec() {
-
   const contentDiv = document.querySelector('.content');
-
   if(contentDiv) contentDiv.style.opacity = '0.5';
-
   document.body.style.cursor = 'wait';
-
-
 
   clearTimeout(timerFiltrosSec);
 
-
-
   timerFiltrosSec = setTimeout(() => {
-
     const anioSel = document.getElementById('filtAnioSec').value;
-
     const checks = document.querySelectorAll('#menuMesSec input[type="checkbox"]:checked');
-
     const mesesSel = Array.from(checks).map(cb => cb.value);
-
     const textBtn = document.getElementById('textMesSec');
-
     if (textBtn) {
-
       if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
-
       else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
-
       else textBtn.textContent = `${mesesSel.length} seleccionados`;
-
     }
-
-
 
     const selectorServicio = document.getElementById('filtServSec');
-
     const servSel = selectorServicio.value;
 
-
-
     const serviciosDisponibles = [...new Set(allData.filter(r => {
-
       if (anioSel && r.anio !== anioSel) return false;
-
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-
       return true;
-
     }).map(r => r.servicio).filter(s => s !== '—'))].sort();
 
-
-
     selectorServicio.innerHTML = '<option value="">Todos los servicios</option>' +
-
       serviciosDisponibles.map(sv => `<option value="${sv}">${sv}</option>`).join('');
 
-
-
     if (serviciosDisponibles.includes(servSel)) {
-
       selectorServicio.value = servSel;
-
     }
 
-
-
     filtData = allData.filter(r => {
-
       if (anioSel && r.anio !== anioSel) return false;
-
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-
       if (selectorServicio.value && r.servicio !== selectorServicio.value) return false;
-
       return true;
-
     });
-
-
 
     calcularEstadisticas(filtData).then(() => {
-
       renderSecciones();
-
       if(contentDiv) contentDiv.style.opacity = '1';
-
       document.body.style.cursor = 'default';
-
     });
-
   }, 400);
-
 }
-
-
 
 // ===== DASHBOARD =====
-
 function renderDashboard() {
-
-  // MEJORA 4: Validación de stats
   if(!stats) return;
-
   document.getElementById('kpiTotal').textContent = stats.total || '—';
-
   document.getElementById('kpiSat').textContent = stats.satisfactorio || '—';
-
   document.getElementById('kpiMej').textContent = stats.por_mejorar || '—';
-
   document.getElementById('kpiDef').textContent = stats.deficiente || '—';
-
   document.getElementById('kpiProm').textContent = (stats.promedio_pct || '—') + '%';
-
   document.getElementById('dashSubtitle').textContent = `${stats.total} historias clínicas evaluadas — Promedio: ${stats.promedio_pct}%`;
 
-
-
   renderChartCalif();
-
   renderChartSecciones();
-
   renderChartServicios();
-
   renderChartTendencia();
-
-  renderChartOportunidad();
-
 }
-
-
 
 function destroyChart(id) { if(charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
-
-
 function renderChartCalif() {
-
   destroyChart('calif');
-
-  // MEJORA 4: Validaciones antes de renderizar
   if (!stats || !stats.total) return;
-
   const ctx = document.getElementById('chartCalif');
   if (!ctx) return;
-
   charts['calif'] = new Chart(ctx.getContext('2d'), {
-
     type:'doughnut',
-
     data:{
-
       labels:['Satisfactorio','Por mejorar','Deficiente'],
-
       datasets:[{data:[stats.satisfactorio,stats.por_mejorar,stats.deficiente],backgroundColor:['#22c55e','#f59e0b','#ef4444'],borderWidth:0,hoverOffset:8}]
-
     },
-
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'Plus Jakarta Sans',size:12},padding:16,usePointStyle:true}},tooltip:{callbacks:{label:function(c){return ` ${c.label}: ${c.raw} (${((c.raw/stats.total)*100).toFixed(1)}%)`}}}}}
-
   });
-
 }
-
-
 
 function renderChartSecciones() {
-
   destroyChart('secs');
-
-  // MEJORA 4: Validaciones
   if (!stats || !stats.secciones) return;
-
   const ctx = document.getElementById('chartSecciones');
   if (!ctx) return;
-
   const labels = Object.values(stats.secciones).map(s=>s.label);
-
   const pcts = Object.values(stats.secciones).map(s=>s.porcentaje);
-
-  // MEJORA 4: Si no hay datos numéricos válidos, salir
   if (!labels.length || !pcts.length) return;
-
   const colors = pcts.map(p => p>=90?'#22c55e':p>=75?'#f59e0b':'#ef4444');
-
   charts['secs'] = new Chart(ctx.getContext('2d'), {
-
     type:'bar',
-
     data:{labels,datasets:[{label:'% Cumplimiento',data:pcts,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},
-
     options:{
-
       responsive:true,maintainAspectRatio:false,indexAxis:'y',
-
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw}%`}}},
-
       scales:{x:{max:100,grid:{color:'#f0ebe3'},ticks:{callback:v=>v+'%',font:{size:11}}},y:{grid:{display:false},ticks:{font:{size:11}}}}
-
     }
-
   });
-
 }
-
-
 
 function renderChartServicios() {
-
   destroyChart('serv');
-
-  // MEJORA 4: Validaciones
   if (!stats || !stats.por_servicio) return;
-
   const ctx = document.getElementById('chartServicios');
   if (!ctx) return;
-
   const servs = Object.entries(stats.por_servicio).sort((a,b)=>b[1].promedio-a[1].promedio).slice(0,15);
-
   if (!servs.length) return;
-
   document.getElementById('totalServBadge').textContent = Object.keys(stats.por_servicio).length+' servicios';
-
   const labels = servs.map(([k])=>k.length>30?k.substring(0,30)+'...':k);
-
   const sat = servs.map(([,v])=>v.sat);
-
   const mej = servs.map(([,v])=>v.mej);
-
   const def = servs.map(([,v])=>v.def);
-
   charts['serv'] = new Chart(ctx.getContext('2d'), {
-
     type:'bar',
-
     data:{labels,datasets:[
-
       {label:'Satisfactorio',data:sat,backgroundColor:'#22c55e',borderRadius:4,stack:'s'},
-
       {label:'Por mejorar',data:mej,backgroundColor:'#f59e0b',borderRadius:0,stack:'s'},
-
       {label:'Deficiente',data:def,backgroundColor:'#ef4444',borderRadius:4,stack:'s'}
-
     ]},
-
     options:{
-
       responsive:true,maintainAspectRatio:false,
-
       plugins:{legend:{position:'bottom',labels:{font:{family:'Plus Jakarta Sans',size:12},usePointStyle:true}}},
-
       scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,grid:{color:'#f0ebe3'},ticks:{stepSize:1,font:{size:11}}}}
-
     }
-
   });
-
 }
-
-
 
 function renderChartTendencia() {
-
   destroyChart('tend');
-
-  // MEJORA 4: Validaciones
   if (!filtData || !filtData.length) return;
-
   const ctx = document.getElementById('chartTendencia');
   if (!ctx) return;
-
   const porMes = {};
-
   filtData.forEach(r => {
-
     const m = r.num_auditoria||'?';
-
     if(!porMes[m]) porMes[m]={sum:0,cnt:0,sat:0,mej:0,def:0};
-
     porMes[m].sum+=r.porcentaje; porMes[m].cnt++;
-
     if(r.calificacion==='SATISFACTORIO') porMes[m].sat++;
-
     else if(r.calificacion==='POR MEJORAR') porMes[m].mej++;
-
     else porMes[m].def++;
-
   });
-
   const meses = Object.keys(porMes).sort((a,b)=>Number(a)-Number(b));
-
   if (!meses.length) return;
-
   const promedios = meses.map(m=>+(porMes[m].sum/porMes[m].cnt).toFixed(2));
-
   charts['tend'] = new Chart(ctx.getContext('2d'), {
-
     type:'line',
-
     data:{labels:meses.map(m=>'Mes '+m),datasets:[{label:'% Promedio',data:promedios,borderColor:'#0d1b3e',backgroundColor:'rgba(13,27,62,0.07)',tension:0.4,pointRadius:5,pointBackgroundColor:'#c8922a',fill:true}]},
-
     options:{
-
       responsive:true,maintainAspectRatio:false,
-
       plugins:{legend:{display:false}},
-
       scales:{y:{min:0,max:100,grid:{color:'#f0ebe3'},ticks:{callback:v=>v+'%',font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11}}}}
-
     }
-
   });
-
 }
-
-
 
 // ===== SECCIONES =====
-
 function renderSecciones() {
-
-  // MEJORA 4: Validaciones
   if(!stats||!stats.secciones) return;
-
   const cont = document.getElementById('seccionesContainer');
-
   if (!cont) return;
-
   cont.innerHTML = '';
 
-
-
   for(const [key, sec] of Object.entries(stats.secciones)) {
-
     const cls = sec.porcentaje>=90?'s':sec.porcentaje>=75?'pm':'d';
-
     const clsColor = cls==='s'?'#22c55e':cls==='pm'?'#f59e0b':'#ef4444';
-
     const pillText = sec.porcentaje>=90?'SATISFACTORIO':sec.porcentaje>=75?'POR MEJORAR':'DEFICIENTE';
-
     const pillCls = cls==='s'?'s':cls==='pm'?'pm':'d';
 
-
-
     const card = document.createElement('div');
-
     card.style.cssText = 'background:#fff;border-radius:16px;border:1px solid var(--border);margin-bottom:20px;overflow:hidden';
 
-
-
     card.innerHTML = `<div style="padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-
       <h3 style="font-size:16px;font-weight:700;color:var(--navy)">${sec.label}</h3>
-
       <div style="display:flex;align-items:center;gap:12px">
-
         <div style="text-align:right">
-
           <div style="font-size:22px;font-weight:700;color:${clsColor}">${sec.porcentaje}%</div>
-
           <div style="font-size:11px;color:var(--muted)">Prom: ${sec.promedio} / ${sec.max} pts</div>
-
         </div>
-
         <span class="pill ${pillCls}">${pillText}</span>
-
       </div>
-
     </div>`;
-
-
 
     const body = document.createElement('div');
-
     body.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:0';
 
-
-
     const leftDiv = document.createElement('div');
-
     leftDiv.style.cssText = 'padding:20px 22px;border-right:1px solid var(--border)';
-
     leftDiv.innerHTML = `<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:14px">Cumplimiento por criterio</div>`;
 
-
-
     const chartId = 'chart_'+key;
-
     const chartDiv = document.createElement('div');
-
     chartDiv.style.cssText = 'position:relative;height:200px';
-
     const canvas = document.createElement('canvas');
-
     canvas.id = chartId;
-
     chartDiv.appendChild(canvas);
-
     leftDiv.appendChild(chartDiv);
 
-
-
     const rightDiv = document.createElement('div');
-
     rightDiv.style.cssText = 'padding:20px 22px';
-
     rightDiv.innerHTML = `<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:14px">Distribución por criterio</div>`;
 
-
-
     const items = sec.items;
-
     const stackDiv = document.createElement('div');
-
     for(const [nombre, cnts] of Object.entries(items)) {
-
       const c = cnts.completo||0, i2 = cnts.incompleto||0, ne = cnts.no_existe||0, e2 = cnts.en_exceso||0, na = cnts.na||0, sd = cnts.sin_dato||0;
-
       const tot = c+i2+ne+e2+na+sd||1;
-
       const rowEl = document.createElement('div');
-
       rowEl.className = 'stack-row';
-
       rowEl.innerHTML = `
-
         <div class="stack-label" title="${nombre}">${nombre.length>22?nombre.substring(0,22)+'...':nombre}</div>
-
         <div class="stack-bar">
-
           <div class="stack-seg seg-c" style="width:${(c/tot*100).toFixed(1)}%" title="Completo: ${c}"></div>
-
           <div class="stack-seg seg-i" style="width:${(i2/tot*100).toFixed(1)}%" title="Incompleto: ${i2}"></div>
-
           <div class="stack-seg seg-ne" style="width:${(ne/tot*100).toFixed(1)}%" title="No existe: ${ne}"></div>
-
           <div class="stack-seg seg-e" style="width:${(e2/tot*100).toFixed(1)}%" title="En exceso: ${e2}"></div>
-
           <div class="stack-seg seg-na" style="width:${(na/tot*100).toFixed(1)}%" title="NA: ${na}"></div>
-
           <div class="stack-seg seg-sd" style="width:${(sd/tot*100).toFixed(1)}%" title="Sin dato: ${sd}"></div>
-
         </div>
-
         <div class="stack-count">${c}</div>`;
-
       stackDiv.appendChild(rowEl);
-
     }
-
-
 
     stackDiv.innerHTML += `<div class="legend">
-
       <div class="leg-item"><div class="leg-dot" style="background:#22c55e"></div>Completo</div>
-
       <div class="leg-item"><div class="leg-dot" style="background:#f59e0b"></div>Incompleto</div>
-
       <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>No existe</div>
-
       <div class="leg-item"><div class="leg-dot" style="background:#8b5cf6"></div>En exceso</div>
-
       <div class="leg-item"><div class="leg-dot" style="background:#94a3b8"></div>N/A</div>
-
     </div>`;
-
     rightDiv.appendChild(stackDiv);
 
-
-
     body.appendChild(leftDiv);
-
     body.appendChild(rightDiv);
-
     card.appendChild(body);
-
     cont.appendChild(card);
 
-
-
     setTimeout(() => {
-
       destroyChart(chartId);
-
-      // MEJORA 4: Verificar que el canvas sigue en el DOM
       if (!document.getElementById(chartId)) return;
-
       const itemNames = Object.keys(items).map(n=>n.length>18?n.substring(0,18)+'...':n);
-
       const completoPcts = Object.values(items).map(cnts=>{
-
         const tot = Object.values(cnts).reduce((a,b)=>a+b,0)||1;
-
         return +((cnts.completo||0)/tot*100).toFixed(1);
-
       });
-
-      // MEJORA 4: No renderizar si no hay datos
       if (!itemNames.length) return;
-
       const colors2 = completoPcts.map(p=>p>=90?'#22c55e':p>=75?'#f59e0b':'#ef4444');
-
       const ctx2 = canvas.getContext('2d');
-
       charts[chartId] = new Chart(ctx2, {
-
         type:'bar',
-
         data:{labels:itemNames,datasets:[{label:'% Completo',data:completoPcts,backgroundColor:colors2,borderRadius:5,borderSkipped:false}]},
-
         options:{
-
           responsive:true,maintainAspectRatio:false,
-
           plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw}% completo`}}},
-
           scales:{
-
             y:{max:100,grid:{color:'#f0ebe3'},ticks:{callback:v=>v+'%',font:{size:10}}},
-
             x:{grid:{display:false},ticks:{font:{size:9},maxRotation:45}}
-
           }
-
         }
-
       });
-
     }, 100);
-
   }
-
 }
-
-
 
 // ===== REGISTROS =====
-
 function filtrarRegistros() {
-
   const serv = document.getElementById('filtServ').value;
-
   const calif = document.getElementById('filtCalif').value;
-
   const aud = document.getElementById('filtAud').value;
-
   const num = document.getElementById('filtNum').value.trim();
-
   filtData = allData.filter(r => {
-
     if(serv && r.servicio !== serv) return false;
-
     if(calif && r.calificacion !== calif) return false;
-
     if(aud && r.auditor !== aud) return false;
-
     if(num && String(r.num_auditoria) !== num) return false;
-
     return true;
-
   });
-
   regPage = 1;
-
   renderRegistros();
-
 }
-
-
 
 function limpiarFiltros() {
-
   ['filtServ','filtCalif','filtAud'].forEach(id=>document.getElementById(id).value='');
-
   document.getElementById('filtNum').value='';
-
   filtData = [...allData];
-
   regPage = 1;
-
   renderRegistros();
-
 }
-
-
 
 function renderRegistros() {
-
-  // MEJORA 4: Validación
   if (!filtData) return;
-
   const start = (regPage-1)*REG_SIZE;
-
   const page = filtData.slice(start, start+REG_SIZE);
-
   document.getElementById('regCount').textContent = filtData.length+' registros';
-
   const tbody = document.getElementById('regBody');
-
   if(!tbody) return;
-
   if(!filtData.length){
-
     tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="icon">🔍</div><h3>Sin resultados</h3><p>Ajusta los filtros</p></div></td></tr>`;
-
     document.getElementById('regPag').innerHTML = '';
-
     return;
-
   }
-
   tbody.innerHTML = page.map((r,i) => {
-
     const pct = r.porcentaje.toFixed(1);
-
     const cls = r.calificacion==='SATISFACTORIO'?'s':r.calificacion==='POR MEJORAR'?'pm':'d';
-
     const opCls = r.oportunidad === 'A TIEMPO' ? 'pill s' : 'pill pm';
-
     const srvShort = String(r.servicio).length>28?String(r.servicio).substring(0,28)+'...':r.servicio;
-
     const audShort = String(r.auditor).length>28?String(r.auditor).substring(0,28)+'...':r.auditor;
 
-
-
     return `<tr>
-
       <td style="color:var(--muted);font-size:12px">${start+i+1}</td>
-
       <td><strong>${r.hc}</strong></td>
-
-      <td style="white-space:nowrap;font-size:12px">${String(r.fecha).substring(0,10)}</td>
-
+      <td style="white-space:nowrap;font-size:12px">${String(r.fecha_ingreso_real||'').substring(0,10)}</td>
       <td title="${r.servicio}" style="font-size:12px">${srvShort}</td>
-
       <td title="${r.auditor}" style="font-size:12px">${audShort}</td>
-
       <td><strong>${r.puntaje}</strong><span style="color:var(--muted);font-size:11px">/${r.max_aplicable}</span></td>
-
       <td>
-
         <div class="prog-wrap">
-
           <div class="prog"><div class="prog-fill ${cls}" style="width:${pct}%"></div></div>
-
           <span class="prog-pct" style="color:${cls==='s'?'#16a34a':cls==='pm'?'#d97706':'#dc2626'}">${pct}%</span>
-
         </div>
-
       </td>
-
       <td><span class="${opCls}" style="font-size:10px; min-width:80px; text-align:center;">${r.oportunidad}</span></td>
-
       <td><span class="pill ${cls}">${r.calificacion}</span></td>
-
       <td><button class="btn-sm dark" onclick="showDetail(${start+i})">Ver</button></td>
-
     </tr>`;
-
 }).join('');
-
   renderPag();
-
 }
-
-
 
 function renderPag() {
-
   const total = Math.ceil(filtData.length/REG_SIZE);
-
   const pag = document.getElementById('regPag');
-
   if(!pag) return;
-
   if(total<=1){pag.innerHTML='';return;}
-
   let h = `<button class="pag-btn" onclick="goReg(${regPage-1})" ${regPage===1?'disabled':''}>‹ Ant</button>`;
-
   for(let p=Math.max(1,regPage-2);p<=Math.min(total,regPage+2);p++)
-
     h+=`<button class="pag-btn ${p===regPage?'a':''}" onclick="goReg(${p})">${p}</button>`;
-
   h+=`<button class="pag-btn" onclick="goReg(${regPage+1})" ${regPage===total?'disabled':''}>Sig ›</button>`;
-
   pag.innerHTML = h;
-
 }
-
 function goReg(p){regPage=p;renderRegistros();document.querySelector('.section-card.wide').scrollIntoView({behavior:'smooth'});}
 
-
-
 // ===== DETAIL MODAL =====
-
 function showDetail(idx) {
-
-  // MEJORA 4: Validación de índice
   if (!filtData || idx < 0 || idx >= filtData.length) return;
-
   const d = filtData[idx];
-
   document.getElementById('modalTitle').textContent = `HC N° ${d.hc}`;
-
-  document.getElementById('modalSub').textContent = `${d.servicio} — ${String(d.fecha).substring(0,10)}`;
-
+  document.getElementById('modalSub').textContent = `${d.servicio} — Ingreso Real: ${String(d.fecha_ingreso_real||'').substring(0,10)}`;
   const pillCls = d.calificacion==='SATISFACTORIO'?'s':d.calificacion==='POR MEJORAR'?'pm':'d';
 
-
-
   let html = `
-
     <div class="modal-info-grid">
-
       <div class="mi"><div class="lbl">Auditor</div><div class="val">${d.auditor}</div></div>
-
-      <div class="mi"><div class="lbl">N° Auditoría</div><div class="val">${d.num_auditoria}</div></div>
-
+      <div class="mi"><div class="lbl">N° Auditoría</div><div class="val">${d.num_auditoria} (${d.anio})</div></div>
       <div class="mi"><div class="lbl">Diagnóstico</div><div class="val">${d.diagnostico}</div></div>
-
       <div class="mi"><div class="lbl">CIE 10</div><div class="val">${d.cie10}</div></div>
-
     </div>
-
     <div class="score-banner">
-
       <div class="score-big">${d.puntaje}</div>
-
       <div class="score-info">
-
         <p>Sobre ${d.max_aplicable} puntos aplicables</p>
-
         <p style="font-size:22px;font-weight:700;color:var(--gold3)">${d.porcentaje}%</p>
-
         <span class="pill ${pillCls}">${d.calificacion}</span>
-
       </div>
-
     </div>`;
-
-
 
   const ORDEN_SECCIONES = [
-
-      "FILIACION",
-
-      "ANAMNESIS",
-
-      "EXAMEN_CLINICO",
-
-      "DIAGNOSTICOS",
-
-      "PLAN_TRABAJO",
-
-      "TRATAMIENTO",
-
-      "ATRIBUTOS",
-
-      "SEGUIMIENTO"
-
+      "FILIACION","ANAMNESIS","EXAMEN_CLINICO","DIAGNOSTICOS","PLAN_TRABAJO","TRATAMIENTO","ATRIBUTOS","SEGUIMIENTO", "NOTAS_EVOLUCION", "REGISTROS_ENF", "ALTA", "FORMATOS_ESP"
   ];
 
-
-
   for(const key of ORDEN_SECCIONES) {
-
     const sec = d.secciones ? d.secciones[key] : null;
-
     if (!sec) continue;
 
-
-
     const maxSec = sec.items.reduce((s,i)=>s+i.max,0);
-
     html += `<div class="sec-block">
-
       <h4>${sec.label} — ${sec.subtotal.toFixed(2)} / ${maxSec.toFixed(0)} pts</h4>
-
       ${sec.items.map(item=>{
-
         let cls='z',score=item.pts.toFixed(2);
-
         if(item.estado==='na'){cls='n';score='N/A';}
-
         else if(item.estado==='en_exceso' || item.estado==='enExceso'){cls='e';}
-
         else if(item.pts>=item.max&&item.max>0) cls='f';
-
         else if(item.pts>0) cls='p';
-
         return `<div class="crit-row">
-
           <span style="flex:1;font-size:13px">${item.nombre}</span>
-
           <span class="crit-score ${cls}">${score} / ${item.max}</span>
-
         </div>`;
-
       }).join('')}
-
     </div>`;
-
   }
 
-
-
   html += `
-
     <div class="legend" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); justify-content: center; background: var(--cream); border-radius: 8px; padding-bottom: 16px; flex-wrap: wrap;">
-
       <div class="leg-item"><div class="leg-dot" style="background:#166534"></div>Completo</div>
-
       <div class="leg-item"><div class="leg-dot" style="background:#d97706"></div>Incompleto</div>
-
       <div class="leg-item"><div class="leg-dot" style="background:#8b5cf6"></div>En Exceso</div>
-
       <div class="leg-item"><div class="leg-dot" style="background:#dc2626"></div>Cero / No existe</div>
-
       <div class="leg-item"><div class="leg-dot" style="background:#64748b"></div>No Aplica (N/A)</div>
-
     </div>
-
   `;
 
-
-
   document.getElementById('modalBody').innerHTML = html;
-
   document.getElementById('modalOverlay').classList.add('open');
-
 }
-
 function closeModal(e){if(e.target.id==='modalOverlay')closeModalBtn();}
-
 function closeModalBtn(){document.getElementById('modalOverlay').classList.remove('open');}
 
+// ===== MODAL FUERA DE FECHA =====
+function abrirModalExtemporaneos() {
+  const ext = allData.filter(r => r.oportunidad === 'FUERA DE FECHA');
+  const t = allData.length; const c = ext.length; const p = t>0?((c/t)*100).toFixed(1):0;
+  
+  let au={}; ext.forEach(r=>{au[r.auditor]=(au[r.auditor]||0)+1});
+  let ms={}; ext.forEach(r=>{
+    const mk = `Auditoría: ${r.num_auditoria} | Drive: Mes ${r.mes_ingreso} (${r.anio_ingreso})`;
+    ms[mk] = (ms[mk]||0)+1;
+  });
+  let sv={}; ext.forEach(r=>{sv[r.servicio]=(sv[r.servicio]||0)+1});
 
+  let html = `
+    <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="flex:1;background:#fff;padding:20px;border-radius:10px;border:1px solid #e0d8c8;box-shadow:0 4px 6px rgba(0,0,0,0.05)">
+        <h3 style="color:#d97706;font-size:28px;font-family:'Playfair Display',serif;">${c} <span style="font-size:14px;color:#555;font-family:'Plus Jakarta Sans',sans-serif">registros tardíos</span></h3>
+        <p style="font-size:13px;color:#666">Representan el <b>${p}%</b> del total de ${t} registros auditados en esta vista.</p>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div style="background:#fff;padding:15px;border-radius:10px;border:1px solid #e0d8c8;max-height:400px;overflow:auto">
+        <h3 style="font-size:14px;margin-bottom:10px;color:#1e3a6e;text-transform:uppercase;letter-spacing:0.5px">Detalle de Meses (Desfase)</h3>
+        <table class="detail-table"><tbody>${Object.entries(ms).sort((a,b)=>b[1]-a[1]).map(e=>`<tr><td style="font-size:11px">${e[0]}</td><td style="font-weight:bold;text-align:right">${e[1]}</td></tr>`).join('')}</tbody></table>
+      </div>
+      <div style="background:#fff;padding:15px;border-radius:10px;border:1px solid #e0d8c8;max-height:400px;overflow:auto">
+        <h3 style="font-size:14px;margin-bottom:10px;color:#1e3a6e;text-transform:uppercase;letter-spacing:0.5px">Auditores con tardanzas</h3>
+        <table class="detail-table"><tbody>${Object.entries(au).sort((a,b)=>b[1]-a[1]).map(e=>`<tr><td style="font-size:11px">${e[0]}</td><td style="font-weight:bold;text-align:right">${e[1]}</td></tr>`).join('')}</tbody></table>
+      </div>
+      <div style="background:#fff;padding:15px;border-radius:10px;border:1px solid #e0d8c8;grid-column:1/-1;max-height:300px;overflow:auto">
+        <h3 style="font-size:14px;margin-bottom:10px;color:#1e3a6e;text-transform:uppercase;letter-spacing:0.5px">Servicios afectados</h3>
+        <table class="detail-table"><tbody>${Object.entries(sv).sort((a,b)=>b[1]-a[1]).map(e=>`<tr><td style="font-size:11px">${e[0]}</td><td style="font-weight:bold;text-align:right">${e[1]}</td></tr>`).join('')}</tbody></table>
+      </div>
+    </div>
+  `;
+  document.getElementById('extempContent').innerHTML = html;
+  document.getElementById('modalExtempOverlay').classList.add('open');
+}
 
 // ===== USUARIOS =====
-
 async function loadUsuarios() {
-
   try {
-
     const r = await fetch(`${API}/usuarios`);
-
     const users = await r.json();
-
-    // MEJORA 4: Validar que users es un array
     if (!Array.isArray(users)) return;
-
     const grid = document.getElementById('userList');
-
     if (!grid) return;
-
     grid.innerHTML = users.map(u=>`
-
       <div class="user-card">
-
         <div class="u-avatar">${u.nombre[0].toUpperCase()}</div>
-
         <div>
-
           <div class="u-name">${u.nombre}</div>
-
           <div class="u-rol">${u.usuario} · <span class="pill ${u.rol==='admin'?'b':'s'}">${u.rol}</span></div>
-
         </div>
-
       </div>`).join('');
-
   } catch(e) { showToast('Error cargando usuarios','err'); }
-
 }
-
-
 
 async function crearUsuario() {
-
   const data = {
-
     usuario: document.getElementById('nuUsuario').value.trim(),
-
     password: document.getElementById('nuPass').value,
-
     nombre: document.getElementById('nuNombre').value.trim(),
-
     rol: document.getElementById('nuRol').value
-
   };
-
   if(!data.usuario||!data.password||!data.nombre){showToast('Completa todos los campos','err');return;}
-
   if(data.password.length<6){showToast('La contraseña debe tener mínimo 6 caracteres','err');return;}
-
   showLoading('Guardando usuario en Drive...');
-
   try {
-
     const r = await fetch(`${API}/usuarios`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-
     const d = await r.json();
-
     hideLoading();
-
     if(d.ok){
-
       showToast('✅ Usuario creado correctamente','ok');
-
       ['nuUsuario','nuPass','nuNombre'].forEach(id=>document.getElementById(id).value='');
-
       loadUsuarios();
-
     }
-
   } catch(e){hideLoading();showToast('Error: '+e.message,'err');}
-
 }
 
-
 // ================================================================
-// MEJORA 3: FUNCIÓN DE IMPRESIÓN A PDF
+// IMPRESIÓN A PDF
 // ================================================================
-
-/**
- * Activa la impresión del navegador enfocada en el Dashboard.
- * El CSS @media print se encarga de limpiar la vista antes de imprimir.
- */
 function imprimirReporte() {
-  // Asegurarse de que el Dashboard esté activo antes de imprimir
   const dashPage = document.getElementById('pageDashboard');
   if (dashPage && !dashPage.classList.contains('active')) {
     showPage('dashboard');
-    // Pequeño delay para que los gráficos se rendericen antes de imprimir
-    setTimeout(() => {
-      window.print();
-    }, 500);
-  } else {
-    window.print();
-  }
+    setTimeout(() => { window.print(); }, 500);
+  } else { window.print(); }
 }
-
-// ================================================================
-// FIN MEJORA 3
-// ================================================================
-
-
-// ===== EXPORT =====
-
-function exportarExcel() {
-
-  // MEJORA 4: Validación
-  if (!filtData || !filtData.length) { showToast('No hay datos para exportar', 'err'); return; }
-
-  const rows = filtData.map(r=>({
-
-    'N° HC':r.hc,'Fecha':String(r.fecha).substring(0,10),'Servicio':r.servicio,
-
-    'Auditor':r.auditor,'N° Auditoría':r.num_auditoria,'Diagnóstico':r.diagnostico,
-
-    'Puntaje':r.puntaje,'Máximo':r.max_aplicable,'% Cumplimiento':r.porcentaje+'%','Calificación':r.calificacion
-
-  }));
-
-  const ws = [];
-
-  ws.push(Object.keys(rows[0]).join(','));
-
-  rows.forEach(r=>ws.push(Object.values(r).map(v=>`"${v}"`).join(',')));
-
-  const blob = new Blob([ws.join('\n')],{type:'text/csv;charset=utf-8;'});
-
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-
-  a.href=url;a.download='resultados_auditoria.csv';a.click();
-
-  URL.revokeObjectURL(url);
-
-}
-
-
 
 // ===== UTILS =====
-
 function showLoading(msg){document.getElementById('loadingMsg').textContent=msg||'Cargando...';document.getElementById('loadingOverlay').classList.add('show');}
-
 function hideLoading(){document.getElementById('loadingOverlay').classList.remove('show');}
-
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(type||'');setTimeout(()=>t.className='toast',3500);}
 
-
-
 // =====================================================================
-
-// MINI SISTEMA DE GENERACIÓN DE INFORMES OFICIALES
-
+// MINI SISTEMA DE GENERACIÓN DE INFORMES OFICIALES v2.0 (CONSOLIDADO)
 // =====================================================================
-
 let _ch2 = null, _ch3 = null, _ch5 = null;
-
+let _expDataRaw = []; 
 let _expData = [];
-
 let _serviciosSelExp = new Set();
-
 let _isFirstLoadExp = true;
 
-
+async function cargarDatosExportacion() {
+  const a = document.getElementById('expArea').value;
+  if (a === 'actual') {
+    _expDataRaw = [...allData];
+    _initExportFilters();
+  } else {
+    showLoading('Obteniendo datos '+(a==='todas'?'CONSOLIDADOS':'del área')+'...');
+    try {
+      const r = await fetch(API+'/datos?area='+a);
+      const d = await r.json();
+      if(d.ok) {
+        _expDataRaw = d.registros;
+        _initExportFilters();
+      } else {
+        showToast('Error: ' + d.error, 'err');
+      }
+    } catch(e) { showToast('Error cargando datos', 'err'); }
+    hideLoading();
+  }
+}
 
 function abrirModalExportacion() {
+  document.getElementById('expArea').value = 'actual';
+  _expDataRaw = [...allData];
+  _initExportFilters();
+  document.getElementById('modalExportOverlay').classList.add('open');
+}
 
+function _initExportFilters() {
   _isFirstLoadExp = true;
-
   _serviciosSelExp.clear();
 
+  const anios = [...new Set(_expDataRaw.map(r=>r.anio).filter(a=>a&&a!='Sin Año'))].sort();
+  document.getElementById('expAnio').innerHTML = '<option value="">Todos los años</option>' + anios.map(a=>`<option value="${a}">${a}</option>`).join('');
 
-
-  const selAnio = document.getElementById('expAnio');
-
-  selAnio.innerHTML = document.getElementById('filtAnio').innerHTML;
-
-
-
-  const menuMes = document.getElementById('menuMesExp');
-
-  menuMes.innerHTML = document.getElementById('menuMesDash').innerHTML
-
-    .replace(/aplicarFiltrosGlobal/g, 'cambioFiltroPrincipal');
-
-
-
-  document.getElementById('modalExportOverlay').classList.add('open');
-
-  cambioFiltroPrincipal();
-
-}
-
-
-
-function cerrarModalExport() {
-
-  document.getElementById('modalExportOverlay').classList.remove('open');
-
-}
-
-
-
-function cambioFiltroPrincipal() {
-
-  const anioSel = document.getElementById('expAnio').value;
-
-  const mesesSel = _getMesesSelExp();
-
-
-
-  const serviciosDisponibles = [...new Set(
-
-    allData.filter(r => {
-
-      if (anioSel && r.anio !== anioSel) return false;
-
-      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-
-      return true;
-
-    }).map(r => r.servicio).filter(s => s && s !== '—')
-
-  )].sort();
-
-
-
-  const newSet = new Set();
-
-  if (_isFirstLoadExp) {
-
-    serviciosDisponibles.forEach(s => newSet.add(s));
-
-    _isFirstLoadExp = false;
-
-  } else {
-
-    serviciosDisponibles.forEach(s => { if (_serviciosSelExp.has(s)) newSet.add(s); });
-
-  }
-
-  _serviciosSelExp = newSet;
-
-
-
-  const menu = document.getElementById('menuServExp');
-
-  menu.innerHTML = `
-
-    <div class="ms-actions" style="position:sticky;top:0;background:#fff;z-index:10;padding:10px;border-bottom:1px solid #ccc;display:flex;gap:10px;">
-
-      <button onclick="seleccionarTodosServ(true)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:var(--navy);">✅ Todos</button>
-
-      <button onclick="seleccionarTodosServ(false)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:#dc2626;">❌ Ninguno</button>
-
-    </div>
-
-  ` + serviciosDisponibles.map(s => `
-
-    <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
-
-      <input type="checkbox" value="${_esc(s)}"
-
-             ${_serviciosSelExp.has(s) ? 'checked' : ''}
-
-             onchange="_onServExpChange(this)">
-
-      <span style="margin-left:8px;font-size:12px">${s}</span>
-
+  const meses = [...new Set(_expDataRaw.map(r=>r.num_auditoria).filter(a=>a&&a!='Sin Fecha'))].sort();
+  document.getElementById('menuMesExp').innerHTML = meses.map(m => `
+    <label class="ms-item">
+      <input type="checkbox" value="${m}" onchange="cambioFiltroPrincipal()"> ${m}
     </label>
-
   `).join('');
 
-
-
-  _actualizarTextoServExp();
-
-  actualizarPreviewExport();
-
+  cambioFiltroPrincipal();
 }
 
+function cerrarModalExport() {
+  document.getElementById('modalExportOverlay').classList.remove('open');
+}
 
+function cambioFiltroPrincipal() {
+  const anioSel = document.getElementById('expAnio').value;
+  const mesesSel = _getMesesSelExp();
+
+  const serviciosDisponibles = [...new Set(
+    _expDataRaw.filter(r => {
+      if (anioSel && r.anio !== anioSel) return false;
+      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+      return true;
+    }).map(r => r.servicio).filter(s => s && s !== '—')
+  )].sort();
+
+  const newSet = new Set();
+  if (_isFirstLoadExp) {
+    serviciosDisponibles.forEach(s => newSet.add(s));
+    _isFirstLoadExp = false;
+  } else {
+    serviciosDisponibles.forEach(s => { if (_serviciosSelExp.has(s)) newSet.add(s); });
+  }
+  _serviciosSelExp = newSet;
+
+  const menu = document.getElementById('menuServExp');
+  menu.innerHTML = `
+    <div class="ms-actions" style="position:sticky;top:0;background:#fff;z-index:10;padding:10px;border-bottom:1px solid #ccc;display:flex;gap:10px;">
+      <button onclick="seleccionarTodosServ(true)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:var(--navy);">✅ Todos</button>
+      <button onclick="seleccionarTodosServ(false)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:#dc2626;">❌ Ninguno</button>
+    </div>
+  ` + serviciosDisponibles.map(s => `
+    <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
+      <input type="checkbox" value="${_esc(s)}"
+             ${_serviciosSelExp.has(s) ? 'checked' : ''}
+             onchange="_onServExpChange(this)">
+      <span style="margin-left:8px;font-size:12px">${s}</span>
+    </label>
+  `).join('');
+
+  _actualizarTextoServExp();
+  actualizarPreviewExport();
+}
 
 function _onServExpChange(cb) {
-
   if (cb.checked) _serviciosSelExp.add(cb.value);
-
   else _serviciosSelExp.delete(cb.value);
-
   _actualizarTextoServExp();
-
   actualizarPreviewExport();
-
 }
-
-
 
 function seleccionarTodosServ(sel) {
-
   document.querySelectorAll('#menuServExp input[type=checkbox]')
-
     .forEach(cb => {
-
       cb.checked = sel;
-
       if (sel) _serviciosSelExp.add(cb.value);
-
       else _serviciosSelExp.delete(cb.value);
-
     });
-
   _actualizarTextoServExp();
-
   actualizarPreviewExport();
-
 }
-
-
 
 function _actualizarTextoServExp() {
-
   const total = document.querySelectorAll('#menuServExp input[type=checkbox]').length;
-
   const checked = document.querySelectorAll('#menuServExp input[type=checkbox]:checked').length;
-
   const txt = document.getElementById('textServExp');
-
   if (!txt) return;
-
   if (checked === 0) txt.textContent = 'Ningún servicio';
-
   else if (checked === total) txt.textContent = 'Todos los servicios';
-
   else if (checked === 1) {
-
     const v = document.querySelector('#menuServExp input[type=checkbox]:checked')?.value || '';
-
     txt.textContent = v.length > 35 ? v.substring(0, 35) + '…' : v;
-
   } else txt.textContent = `${checked} servicios`;
-
 }
 
-
-
 function toggleServExp() { document.getElementById('menuServExp').classList.toggle('show'); }
-
 function toggleMesExp()  { document.getElementById('menuMesExp').classList.toggle('show'); }
-
-
 
 function actualizarFiltrosCascada() { cambioFiltroPrincipal(); }
 
-
-
 function actualizarPreviewExport() {
-
   const anioSel  = document.getElementById('expAnio').value;
-
   const mesesSel = _getMesesSelExp();
-
   const servsSel = _getServsSelExp();
 
-
-
   const textMes = document.getElementById('textMesExp');
-
   if (textMes) {
-
     if (mesesSel.length === 0) textMes.textContent = 'Todos los meses';
-
     else if (mesesSel.length === 1) textMes.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
-
     else textMes.textContent = `${mesesSel.length} seleccionados`;
-
   }
-
-
 
   if (servsSel.length === 0) { _expData = []; _limpiarPreview(); return; }
 
-
-
-  _expData = allData.filter(r => {
-
+  _expData = _expDataRaw.filter(r => {
     if (anioSel && r.anio !== anioSel) return false;
-
     if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-
     if (!servsSel.includes(r.servicio)) return false;
-
     return true;
-
   });
-
-
 
   if (_expData.length === 0) { _limpiarPreview(); return; }
 
-
-
   _renderResumen();
-
   _renderTabla2();
-
   _renderTabla3();
-
   _renderTabla5();
-
   _renderGraf2();
-
   _renderGraf3();
-
   _renderGraf5();
-
   _renderNarrativo();
-
 }
-
-
 
 function _renderResumen() {
-
   const { sat, mej, def, total, prom } = _calcGlobal(_expData);
-
   document.getElementById('expResumenRapido').innerHTML = `
-
     <div class="exp-badge tot"><div><div class="badge-num">${total}</div><div>Total HCs</div></div></div>
-
     <div class="exp-badge sat"><div><div class="badge-num">${sat}</div><div>Satisfactorio (${_pct(sat,total)}%)</div></div></div>
-
     <div class="exp-badge mej"><div><div class="badge-num">${mej}</div><div>Por Mejorar (${_pct(mej,total)}%)</div></div></div>
-
     <div class="exp-badge def"><div><div class="badge-num">${def}</div><div>Deficiente (${_pct(def,total)}%)</div></div></div>
-
     <div class="exp-badge pct"><div><div class="badge-num">${prom}%</div><div>Promedio cumplimiento</div></div></div>
-
   `;
-
 }
-
-
 
 function _renderTabla2() {
-
   const { sat, mej, def, total } = _calcGlobal(_expData);
-
   document.getElementById('expTabla2').innerHTML = `
-
     <thead><tr><th style="text-align:left">CALIFICACIÓN</th><th>N°</th><th>%</th></tr></thead>
-
     <tbody>
-
       <tr><td style="text-align:left">Satisfactorio</td><td>${sat}</td><td>${_pct(sat,total)}%</td></tr>
-
       <tr><td style="text-align:left">Por Mejorar</td><td>${mej}</td><td>${_pct(mej,total)}%</td></tr>
-
       <tr><td style="text-align:left">Deficiente</td><td>${def}</td><td>${_pct(def,total)}%</td></tr>
-
       <tr style="font-weight:700;background:var(--cream2)">
-
         <td style="text-align:left">TOTAL</td><td>${total}</td><td>100%</td>
-
       </tr>
-
     </tbody>`;
-
 }
-
-
 
 function _renderTabla3() {
-
   const porMes = _calcPorMes(_expData);
-
   const meses  = Object.keys(porMes).sort();
-
   const { sat: tSat, mej: tMej, def: tDef, total } = _calcGlobal(_expData);
 
-
-
   let ths  = meses.map(m => `<th>${_mesCorto(m)}</th>`).join('') + '<th>TOTAL</th><th>%SAT</th>';
-
   let fSat = meses.map(m => `<td>${porMes[m].sat}</td>`).join('') + `<td>${tSat}</td><td>${_pct(tSat,total)}%</td>`;
-
   let fMej = meses.map(m => `<td>${porMes[m].mej}</td>`).join('') + `<td>${tMej}</td><td>${_pct(tMej,total)}%</td>`;
-
   let fDef = meses.map(m => `<td>${porMes[m].def}</td>`).join('') + `<td>${tDef}</td><td>${_pct(tDef,total)}%</td>`;
-
   let fTot = meses.map(m => `<td>${porMes[m].total}</td>`).join('') + `<td>${total}</td><td>100%</td>`;
-
   let fPct = meses.map(m => {
-
     const t = porMes[m].total, s = porMes[m].sat;
-
     const p = t ? Math.round(s / t * 100) : 0;
-
     return `<td style="color:${p>=90?'#166534':p>=75?'#d97706':'#dc2626'};font-weight:700">${p}%</td>`;
-
   }).join('') + `<td colspan="2"></td>`;
 
-
-
   document.getElementById('expTabla3').innerHTML = `
-
     <thead><tr><th style="text-align:left">CALIFICACIÓN</th>${ths}</tr></thead>
-
     <tbody>
-
       <tr><td style="text-align:left">Satisfactorio</td>${fSat}</tr>
-
       <tr><td style="text-align:left">Por Mejorar</td>${fMej}</tr>
-
       <tr><td style="text-align:left">Deficiente</td>${fDef}</tr>
-
       <tr style="font-weight:700;background:var(--cream2)"><td style="text-align:left">TOTAL</td>${fTot}</tr>
-
       <tr style="background:#f0f9ff"><td style="text-align:left;font-style:italic">% Satisfactorio</td>${fPct}</tr>
-
     </tbody>`;
-
 }
-
-
 
 function _renderTabla5() {
-
   const porServ = _calcPorServicio(_expData);
-
   const servicios = Object.keys(porServ).sort((a,b) =>
-
     (_pct(porServ[b].sat, porServ[b].total)) - (_pct(porServ[a].sat, porServ[a].total))
-
   );
-
   const mostrar = servicios.length > 1;
-
   document.getElementById('wrapTabla5').style.display = mostrar ? '' : 'none';
-
   document.getElementById('wrapGraf5').style.display  = mostrar ? '' : 'none';
-
   if (!mostrar) return;
 
-
-
   const filas = servicios.map(s => {
-
     const d = porServ[s];
-
     const pct = _pct(d.sat, d.total);
-
     const color = pct >= 90 ? '#dcfce7' : pct >= 75 ? '#fef3c7' : '#fee2e2';
-
     const cTxt  = pct >= 90 ? '#166534' : pct >= 75 ? '#d97706' : '#dc2626';
-
     const nombre = s.length > 40 ? s.substring(0,40)+'…' : s;
-
     return `<tr>
-
       <td style="text-align:left;font-size:12px">${nombre}</td>
-
       <td>${d.sat}</td>
-
       <td style="background:${color};color:${cTxt};font-weight:700">${pct}%</td>
-
       <td>${d.mej}</td>
-
       <td>${d.def}</td>
-
       <td style="font-weight:700">${d.total}</td>
-
     </tr>`;
-
   }).join('');
 
-
-
   const { sat: tS, mej: tM, def: tD, total: tT } = _calcGlobal(_expData);
-
   document.getElementById('expTabla5').innerHTML = `
-
     <thead>
-
       <tr>
-
         <th style="text-align:left">SERVICIO</th>
-
         <th>SAT.</th><th>%SAT.</th><th>POR MEJ.</th><th>DEFIC.</th><th>TOTAL</th>
-
       </tr>
-
     </thead>
-
     <tbody>
-
       ${filas}
-
       <tr style="font-weight:700;background:var(--cream2)">
-
         <td style="text-align:left">TOTAL</td>
-
         <td>${tS}</td><td>${_pct(tS,tT)}%</td><td>${tM}</td><td>${tD}</td><td>${tT}</td>
-
       </tr>
-
     </tbody>`;
-
 }
-
-
 
 const COLORS = { sat:'#82c91e', mej:'#facc15', def:'#ef4444' };
 
-
-
 function _renderGraf2() {
-
-  // MEJORA 4: Validación
   if (!_expData || !_expData.length) return;
-
   const { sat, mej, def, total } = _calcGlobal(_expData);
-
   if (_ch2) _ch2.destroy();
-
   const ctx = document.getElementById('expChart2');
   if (!ctx) return;
-
   _ch2 = new Chart(ctx.getContext('2d'), {
-
     type: 'pie',
-
     data: {
-
       labels: [
-
         `Satisfactorio: ${sat} (${_pct(sat,total)}%)`,
-
         `Por Mejorar: ${mej} (${_pct(mej,total)}%)`,
-
         `Deficiente: ${def} (${_pct(def,total)}%)`
-
       ],
-
       datasets: [{ data:[sat,mej,def], backgroundColor:[COLORS.sat,COLORS.mej,COLORS.def], borderWidth:2 }]
-
     },
-
     options: {
-
       animation:false, responsive:true, maintainAspectRatio:false,
-
       plugins:{ legend:{ position:'right', labels:{ font:{size:11}, boxWidth:14 } } }
-
     }
-
   });
-
 }
-
-
 
 function _renderGraf3() {
-
-  // MEJORA 4: Validación
   if (!_expData || !_expData.length) return;
-
   const porMes = _calcPorMes(_expData);
-
   const meses  = Object.keys(porMes).sort();
-
   if (!meses.length) return;
-
   if (_ch3) _ch3.destroy();
-
   const ctx = document.getElementById('expChart3');
   if (!ctx) return;
-
   _ch3 = new Chart(ctx.getContext('2d'), {
-
     type: 'bar',
-
     data: {
-
       labels: meses.map(_mesCorto),
-
       datasets: [
-
         { label:'Satisfactorio', data:meses.map(m=>porMes[m].sat), backgroundColor:COLORS.sat },
-
         { label:'Por Mejorar',   data:meses.map(m=>porMes[m].mej), backgroundColor:COLORS.mej },
-
         { label:'Deficiente',    data:meses.map(m=>porMes[m].def), backgroundColor:COLORS.def }
-
       ]
-
     },
-
     options: {
-
       animation:false, responsive:true, maintainAspectRatio:false,
-
       plugins:{ legend:{ position:'top', labels:{ font:{size:11}, boxWidth:12 } } },
-
       scales:{ x:{stacked:false}, y:{beginAtZero:true, ticks:{stepSize:1}} }
-
     }
-
   });
-
 }
-
-
 
 function _renderGraf5() {
-
-  // MEJORA 4: Validación
   if (!_expData || !_expData.length) return;
-
   const porServ = _calcPorServicio(_expData);
-
   if (Object.keys(porServ).length <= 1) return;
-
   const servicios = Object.keys(porServ).sort((a,b) =>
-
     (_pct(porServ[b].sat,porServ[b].total)) - (_pct(porServ[a].sat,porServ[a].total))
-
   );
-
   const pcts = servicios.map(s => _pct(porServ[s].sat, porServ[s].total));
-
   const bgs  = pcts.map(p => p >= 90 ? COLORS.sat : p >= 75 ? COLORS.mej : COLORS.def);
-
   const labels = servicios.map(s => s.replace('SERV. DE ','').replace('DPTO. DE ','').substring(0,22));
 
-
-
   if (_ch5) _ch5.destroy();
-
   const ctx = document.getElementById('expChart5');
   if (!ctx) return;
-
   _ch5 = new Chart(ctx.getContext('2d'), {
-
     type: 'bar',
-
     data: {
-
       labels,
-
       datasets:[{ label:'% Satisfactorio', data:pcts, backgroundColor:bgs, borderRadius:4 }]
-
     },
-
     options: {
-
       animation:false, responsive:true, maintainAspectRatio:false, indexAxis:'y',
-
       plugins: {
-
         legend:{ display:false },
-
         tooltip:{
-
           callbacks:{ label: ctx => {
-
             const s = servicios[ctx.dataIndex];
-
             const d = porServ[s];
-
             return ` ${ctx.parsed.x}%  (${d.sat}/${d.total} HCs)`;
-
           }}
-
         }
-
       },
-
       scales:{
-
         x:{ beginAtZero:true, max:100, ticks:{ callback: v => v+'%' } },
-
         y:{ ticks:{ font:{size:11} } }
-
       }
-
     }
-
   });
-
 }
 
-
-
 function _renderNarrativo() {
-
-  // MEJORA 4: Validación
   if (!_expData || !_expData.length) return;
-
   const { sat, mej, def, total, prom } = _calcGlobal(_expData);
-
   const porMes  = _calcPorMes(_expData);
-
   const meses   = Object.keys(porMes).sort();
-
   const anio    = document.getElementById('expAnio').value || 'el período seleccionado';
 
-
-
   let mejorMes = '', mejorPct = -1, peorMes = '', peorPct = 101;
-
   meses.forEach(m => {
-
     const p = _pct(porMes[m].sat, porMes[m].total);
-
     if (p > mejorPct) { mejorPct = p; mejorMes = _mesCorto(m); }
-
     if (p < peorPct)  { peorPct  = p; peorMes  = _mesCorto(m); }
-
   });
 
-
-
   const clasif  = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
-
   const porServ = _calcPorServicio(_expData);
-
   const servs   = Object.keys(porServ);
 
-
-
   const textoMeses = meses.map(m => {
-
     const d = porMes[m];
-
     return `${d.total} (${_pct(d.total,total)}%) en el mes de ${_mesCorto(m)}`;
-
   }).join('; ');
-
-
 
   let texto = '';
 
-
-
   if (meses.length > 0) {
-
     texto += `En el período seleccionado (${anio}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
-
     texto += `La distribución mensual fue la siguiente: ${textoMeses}; tal como se muestra en la Tabla N° 1 y en el Gráfico N° 1.\n\n`;
-
   }
-
-
 
   texto += `De las ${total} Historias Clínicas auditadas, ${sat} HCs (${_pct(sat,total)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${_pct(mej,total)}%) resultado "Por Mejorar" y ${def} HCs (${_pct(def,total)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla N° 2 y el Gráfico N° 2.\n\n`;
 
-
-
   if (meses.length > 0) {
-
     texto += `En la Tabla N° 3 y en el Gráfico N° 3 se presentan los resultados obtenidos por mes.`;
-
     if (mejorMes) texto += ` Los mejores resultados se reportaron en ${mejorMes} con ${mejorPct}% de calificación "Satisfactorio"`;
-
     if (peorMes && peorMes !== mejorMes) texto += `; mientras que ${peorMes} registró el menor porcentaje con ${peorPct}%`;
-
     texto += '.\n\n';
-
   }
-
-
 
   if (servs.length > 1) {
-
     const top = [...servs].sort((a,b) => _pct(porServ[b].sat,porServ[b].total) - _pct(porServ[a].sat,porServ[a].total));
-
     const topNombre = top[0].replace('SERV. DE ','Servicio de ').replace('DPTO. DE ','Departamento de ');
-
     const topPct    = _pct(porServ[top[0]].sat, porServ[top[0]].total);
-
     const botNombre = top[top.length-1].replace('SERV. DE ','Servicio de ').replace('DPTO. DE ','Departamento de ');
-
     const botPct    = _pct(porServ[top[top.length-1]].sat, porServ[top[top.length-1]].total);
-
     texto += `En la Tabla N° 5 y en el Gráfico N° 5 se presentan los resultados por Departamento/Servicio. Los mejores resultados en la calidad de registro fueron reportados por el ${topNombre} con ${topPct}% de calificación "Satisfactorio". `;
-
     if (top.length > 1) texto += `Por otro lado, se reportó un mayor porcentaje de resultados deficientes en el ${botNombre} con ${botPct}% de calificación "Satisfactorio".\n\n`;
-
     else texto += '\n\n';
-
   }
-
-
 
   texto += `El Promedio de Cumplimiento del correcto registro en las HCs auditadas fue de ${prom}%, correspondiendo a la calificación "${clasif}" según los criterios de la NTS N° 029-MINSA/DIGEPRES-V.02, tal como se presenta en el Gráfico N° 6.`;
 
-
-
   document.getElementById('expNarrativo').textContent = texto;
-
 }
-
-
 
 function copiarNarrativo() {
-
   const t = document.getElementById('expNarrativo').textContent;
-
   if (!t) { showToast('No hay texto para copiar', 'err'); return; }
-
   navigator.clipboard.writeText(t).then(() => showToast('Texto copiado al portapapeles ✓', 'ok'));
-
 }
-
-
 
 function generarReporteFinal(formato) {
-
   if (!_expData || _expData.length === 0) { showToast('No hay datos para exportar.', 'err'); return; }
-
   showLoading(`Generando archivo ${formato.toUpperCase()}…`);
 
-
-
   const imgPastel   = _canvasToImg('expChart2');
-
   const imgBarras   = _canvasToImg('expChart3');
-
   const imgServ     = _canvasToImg('expChart5');
 
-
-
   const fechaHoy = new Date().toLocaleDateString('es-PE');
-
   const { sat, mej, def, total, prom } = _calcGlobal(_expData);
-
   const porMes  = _calcPorMes(_expData);
-
   const porServ = _calcPorServicio(_expData);
-
   const meses   = Object.keys(porMes).sort();
-
   const anio    = document.getElementById('expAnio').value || '';
-
   const narrativo = document.getElementById('expNarrativo').textContent;
 
-
-
   _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, mej, def, (imgMes, imgServ4, imgCumpl) => {
-
     setTimeout(() => {
-
       try {
-
         if (formato === 'excel') {
-
           _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ);
-
         } else {
-
           _generarWord(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ,
-
                        imgPastel, imgBarras, imgServ, narrativo, anio,
-
                        imgMes, imgServ4, imgCumpl);
-
         }
-
       } catch(e) {
-
         console.error(e);
-
         showToast('Error al generar el archivo.', 'err');
-
       }
-
       hideLoading();
-
       cerrarModalExport();
-
     }, 600);
-
   });
-
 }
-
-
 
 function _generarGraficosAdicionales(porMes, meses, porServ, total, prom, sat, mej, def, callback) {
-
   const wrap = document.createElement('div');
-
   wrap.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:700px;height:350px;';
-
   document.body.appendChild(wrap);
 
-
-
   let pendientes = 3;
-
   let imgMes = '', imgServ4 = '', imgCumpl = '';
-
   function check() { pendientes--; if (pendientes <= 0) { document.body.removeChild(wrap); callback(imgMes, imgServ4, imgCumpl); } }
 
-
-
   const c1 = document.createElement('canvas'); c1.width=700; c1.height=340; wrap.appendChild(c1);
-
   const ch1 = new Chart(c1.getContext('2d'), {
-
     type: 'bar',
-
     data: {
-
       labels: meses.map(_mesCorto),
-
       datasets: [{
-
         label: 'N° HCs auditadas',
-
         data: meses.map(m => porMes[m].total),
-
         backgroundColor: '#2b579a',
-
         borderRadius: 4
-
       }]
-
     },
-
     options: {
-
       animation: { duration:0 },
-
       responsive: false,
-
       plugins: { legend: { display: false } },
-
       scales: {
-
         x: { grid:{display:false} },
-
         y: { beginAtZero:true, ticks:{ stepSize:10 } }
-
       }
-
     }
-
   });
-
   setTimeout(() => { imgMes = c1.toDataURL('image/png',1.0); ch1.destroy(); check(); }, 300);
 
-
-
   const c4 = document.createElement('canvas'); c4.width=700; c4.height=340; wrap.appendChild(c4);
-
   const servList4 = Object.keys(porServ).sort((a,b) => porServ[b].total - porServ[a].total);
-
   const ch4 = new Chart(c4.getContext('2d'), {
-
     type: 'bar',
-
     data: {
-
       labels: servList4.map(s => s.replace('SERV. DE ','').replace('DPTO. DE ','').substring(0,24)),
-
       datasets: [{
-
         label: 'N° HCs auditadas',
-
         data: servList4.map(s => porServ[s].total),
-
         backgroundColor: '#2b579a',
-
         borderRadius: 3
-
       }]
-
     },
-
     options: {
-
       animation: { duration:0 },
-
       responsive: false,
-
       plugins: { legend: { display:false } },
-
       scales: {
-
         x: { grid:{display:false}, ticks:{ font:{size:9}, maxRotation:45, minRotation:30 } },
-
         y: { beginAtZero:true }
-
       }
-
     }
-
   });
-
   setTimeout(() => { imgServ4 = c4.toDataURL('image/png',1.0); ch4.destroy(); check(); }, 350);
 
-
-
   const c6 = document.createElement('canvas'); c6.width=500; c6.height=340; wrap.appendChild(c6);
-
   const noCumpl = parseFloat((100 - prom).toFixed(2));
-
   const ch6 = new Chart(c6.getContext('2d'), {
-
     type: 'doughnut',
-
     data: {
-
       labels: [`% Cumplimiento: ${prom}%`, `No Cumplimiento: ${noCumpl}%`],
-
       datasets: [{
-
         data: [prom, noCumpl],
-
         backgroundColor: ['#2b579a', '#ef4444'],
-
         borderWidth: 2
-
       }]
-
     },
-
     options: {
-
       animation: { duration:0 },
-
       responsive: false,
-
       cutout: '60%',
-
       plugins: {
-
         legend: { position:'right', labels:{ font:{size:12}, boxWidth:14 } }
-
       }
-
     }
-
   });
-
   setTimeout(() => { imgCumpl = c6.toDataURL('image/png',1.0); ch6.destroy(); check(); }, 400);
-
 }
-
-
 
 function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ) {
-
   const wb = XLSX.utils.book_new();
 
-
-
   const resData = [
-
     ['INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO — HOSPITAL SANTA ROSA'],
-
     ['Fecha de emisión:', fechaHoy],
-
     [''],
-
     ['⚠ NOTA: Este archivo fue generado automáticamente en base a la data del archivo Excel del Drive.',
-
      'Algunos datos narrativos y secciones del informe oficial deben ser completados manualmente.'],
-
     [''],
-
     ['Tabla N° 1. Historias Clínicas auditadas por mes'],
-
     ['MES', 'N° HCs', '%'],
-
     ...meses.map(m => [_mesCorto(m), porMes[m].total, _pct(porMes[m].total,total)+'%']),
-
     ['TOTAL', total, '100%'],
-
     [''],
-
     ['Tabla N° 2. Calidad de registro de las HCs auditadas'],
-
     ['CALIFICACIÓN', 'N°', '%'],
-
     ['Satisfactorio', sat, _pct(sat,total)+'%'],
-
     ['Por Mejorar',   mej, _pct(mej,total)+'%'],
-
     ['Deficiente',    def, _pct(def,total)+'%'],
-
     ['TOTAL',         total, '100%'],
-
     [''],
-
     ['Promedio de Cumplimiento Global:', prom+'%'],
-
     [''],
-
     ['Tabla N° 3. Calidad de Registro por Mes'],
-
     ['CALIFICACIÓN', ...meses.map(_mesCorto), 'TOTAL', '% SAT'],
-
     ['Satisfactorio', ...meses.map(m=>porMes[m].sat), sat, _pct(sat,total)+'%'],
-
     ['Por Mejorar',   ...meses.map(m=>porMes[m].mej), mej, _pct(mej,total)+'%'],
-
     ['Deficiente',    ...meses.map(m=>porMes[m].def), def, _pct(def,total)+'%'],
-
     ['TOTAL',         ...meses.map(m=>porMes[m].total), total, '100%'],
-
     ['% Satisfactorio', ...meses.map(m=>_pct(porMes[m].sat,porMes[m].total)+'%'), '', ''],
-
   ];
-
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resData), 'Resumen');
 
-
-
   if (Object.keys(porServ).length > 1) {
-
     const servData = [
-
       ['Tabla N° 4. Distribución de HCs por Departamento/Servicio'],
-
       ['SERVICIO', 'N° HCs', '%'],
-
       ...Object.keys(porServ)
-
         .sort((a,b) => porServ[b].total - porServ[a].total)
-
         .map(s => [s, porServ[s].total, _pct(porServ[s].total,total)+'%']),
-
       ['TOTAL', total, '100%'],
-
       [''],
-
       ['Tabla N° 5. Calidad de Registro por Departamento/Servicio'],
-
       ['SERVICIO', 'SATISFACTORIO', '% SAT.', 'POR MEJORAR', 'DEFICIENTE', 'TOTAL'],
-
       ...Object.keys(porServ)
-
         .sort((a,b) => _pct(porServ[b].sat,porServ[b].total)-_pct(porServ[a].sat,porServ[a].total))
-
         .map(s => [s, porServ[s].sat, _pct(porServ[s].sat,porServ[s].total)+'%', porServ[s].mej, porServ[s].def, porServ[s].total])
-
     ];
-
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(servData), 'Por Servicio');
-
   }
-
-
 
   const anexoData = _expData.map((r, i) => ({
-
     'N°': i+1,
-
     'MES': r.num_auditoria,
-
     'N° HC': r.hc,
-
     'DPTO/SERVICIO AUDITADO': r.servicio,
-
     'ÁREA': r.area || 'CONSULTA EXTERNA',
-
     'PUNTAJE': r.puntaje,
-
     'CALIFICACIÓN': r.calificacion
-
   }));
-
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(anexoData), 'Anexo 1 - Detalle');
 
-
-
   XLSX.writeFile(wb, `Informe_Auditoria_${fechaHoy.replace(/\//g,'-')}.xlsx`);
-
 }
 
-
-
 function _generarWord(fechaHoy, sat, mej, def, total, prom,
-
                       porMes, meses, porServ,
-
                       imgPastel, imgBarras, imgServ,
-
                       narrativo, anio,
-
                       imgMes, imgServ4, imgCumpl) {
 
-
-
   const noCumpl = parseFloat((100 - prom).toFixed(2));
-
   const clasif  = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
 
-
-
   const filasT1 = meses.map(m => `
-
     <tr>
-
       <td style="border:1px solid #000;padding:6px;">${_mesCorto(m)}</td>
-
       <td style="border:1px solid #000;padding:6px;">${porMes[m].total}</td>
-
       <td style="border:1px solid #000;padding:6px;">${_pct(porMes[m].total,total)}%</td>
-
     </tr>`).join('');
-
-
 
   const t1 = `<table align="center" style="width:60%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
-
     <tr>
-
       <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">Mes</th>
-
       <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">N°</th>
-
       <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%</th>
-
     </tr>
-
     ${filasT1}
-
     <tr>
-
       <td style="border:1px solid #000;padding:6px;"><strong>Total</strong></td>
-
       <td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td>
-
       <td style="border:1px solid #000;padding:6px;"><strong>100%</strong></td>
-
     </tr>
-
   </table>`;
-
-
 
   const t2 = `<table align="center" style="width:70%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
-
     <tr><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">CALIFICACIÓN</th><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">N°</th><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%</th></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;">Satisfactorio</td><td style="border:1px solid #000;padding:6px;">${sat}</td><td style="border:1px solid #000;padding:6px;">${_pct(sat,total)}%</td></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;">Por Mejorar</td><td style="border:1px solid #000;padding:6px;">${mej}</td><td style="border:1px solid #000;padding:6px;">${_pct(mej,total)}%</td></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;">Deficiente</td><td style="border:1px solid #000;padding:6px;">${def}</td><td style="border:1px solid #000;padding:6px;">${_pct(def,total)}%</td></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;"><strong>TOTAL</strong></td><td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td><td style="border:1px solid #000;padding:6px;"><strong>100%</strong></td></tr>
-
   </table>`;
-
-
 
   const hMeses = meses.map(m=>`<th style="border:1px solid #000;background:#e2e8f0;padding:6px;">${_mesCorto(m)}</th>`).join('');
-
   const fSat3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${porMes[m].sat}</td>`).join('');
-
   const fMej3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${porMes[m].mej}</td>`).join('');
-
   const fDef3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${porMes[m].def}</td>`).join('');
-
   const fTot3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${porMes[m].total}</td>`).join('');
-
   const fPct3  = meses.map(m=>`<td style="border:1px solid #000;padding:6px;">${_pct(porMes[m].sat,porMes[m].total)}%</td>`).join('');
 
-
-
   const t3 = `<table align="center" style="width:90%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
-
     <tr><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">CALIFICACIÓN</th>${hMeses}<th style="border:1px solid #000;background:#e2e8f0;padding:6px;">TOTAL</th></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;">Satisfactorio</td>${fSat3}<td style="border:1px solid #000;padding:6px;">${sat}</td></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;">Por Mejorar</td>${fMej3}<td style="border:1px solid #000;padding:6px;">${mej}</td></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;">Deficiente</td>${fDef3}<td style="border:1px solid #000;padding:6px;">${def}</td></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;"><strong>TOTAL</strong></td>${fTot3}<td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td></tr>
-
     <tr><td style="border:1px solid #000;padding:6px;"><em>% Satisfactorio</em></td>${fPct3}<td style="border:1px solid #000;padding:6px;"></td></tr>
-
   </table>`;
 
-
-
   const servList4 = Object.keys(porServ).sort((a,b) => porServ[b].total - porServ[a].total);
-
   const filas4 = servList4.map(s => `
-
     <tr>
-
       <td style="border:1px solid #000;padding:6px;text-align:left;">${s}</td>
-
       <td style="border:1px solid #000;padding:6px;">${porServ[s].total}</td>
-
       <td style="border:1px solid #000;padding:6px;">${_pct(porServ[s].total,total)}%</td>
-
     </tr>`).join('');
 
-
-
   const t4Html = servList4.length > 1 ? `
-
     <h3 align="center" style="color:#1e3a6e;text-align:center;">Tabla N° 4. Distribución de HCs auditadas por Departamento / Servicio</h3>
-
     <table align="center" style="width:80%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
-
       <tr>
-
         <th style="border:1px solid #000;background:#e2e8f0;padding:6px;text-align:left;">SERVICIO AUDITADO</th>
-
         <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">N° de HCs</th>
-
         <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%</th>
-
       </tr>
-
       ${filas4}
-
       <tr>
-
         <td style="border:1px solid #000;padding:6px;text-align:left;"><strong>TOTAL</strong></td>
-
         <td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td>
-
         <td style="border:1px solid #000;padding:6px;"><strong>100%</strong></td>
-
       </tr>
-
     </table>
-
     ${imgServ4 ? `<p align="center" style="text-align:center;"><strong>Gráfico N° 4. Historias Clínicas auditadas por Departamento / Servicio</strong></p>
-
     <p align="center" style="text-align:center;"><img src="${imgServ4}" width="520"/></p>
-
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>` : ''}
-
     <br>` : '';
 
-
-
   let t5Html = '';
-
   const servsList5 = Object.keys(porServ);
-
   if (servsList5.length > 1) {
-
     const filas5 = servsList5
-
       .sort((a,b) => _pct(porServ[b].sat,porServ[b].total)-_pct(porServ[a].sat,porServ[a].total))
-
       .map(s => {
-
         const d = porServ[s];
-
         const p = _pct(d.sat, d.total);
-
         const bg = p>=90?'#dcfce7':p>=75?'#fef3c7':'#fee2e2';
-
         const co = p>=90?'#166534':p>=75?'#d97706':'#dc2626';
-
         return `<tr>
-
           <td style="border:1px solid #000;padding:6px;text-align:left;">${s}</td>
-
           <td style="border:1px solid #000;padding:6px;">${d.sat}</td>
-
           <td style="border:1px solid #000;padding:6px;background:${bg};color:${co};font-weight:bold;">${p}%</td>
-
           <td style="border:1px solid #000;padding:6px;">${d.mej}</td>
-
           <td style="border:1px solid #000;padding:6px;">${d.def}</td>
-
           <td style="border:1px solid #000;padding:6px;"><strong>${d.total}</strong></td>
-
         </tr>`;
-
       }).join('');
-
     t5Html = `
-
       <h3 align="center" style="color:#1e3a6e;text-align:center;">Tabla N° 5. Calidad de Registro por Departamento / Servicio</h3>
-
       <table align="center" style="width:95%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
-
         <tr>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;text-align:left;">SERVICIO</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">SAT.</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%SAT.</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">POR MEJ.</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">DEFIC.</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">TOTAL</th>
-
         </tr>
-
         ${filas5}
-
         <tr>
-
           <td style="border:1px solid #000;padding:6px;text-align:left;"><strong>TOTAL</strong></td>
-
           <td style="border:1px solid #000;padding:6px;">${sat}</td>
-
           <td style="border:1px solid #000;padding:6px;">${_pct(sat,total)}%</td>
-
           <td style="border:1px solid #000;padding:6px;">${mej}</td>
-
           <td style="border:1px solid #000;padding:6px;">${def}</td>
-
           <td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td>
-
         </tr>
-
       </table>
-
       ${imgServ ? `<p align="center" style="text-align:center;"><strong>Gráfico N° 5. Porcentaje de Calificación "Satisfactorio" por Departamento / Servicio</strong></p>
-
       <p align="center" style="text-align:center;"><img src="${imgServ}" width="520"/></p>
-
       <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>` : ''}
-
       <br>`;
-
   }
-
-
 
   const porArea = _calcPorArea(_expData);
-
   const areas = Object.keys(porArea);
-
   let t6aHtml = '';
-
   if (areas.length > 0) {
-
     const filas6a = areas.map(a => {
-
       const d = porArea[a];
-
       const promA = d.prom !== undefined ? d.prom : 0;
-
       return `<tr>
-
         <td style="border:1px solid #000;padding:6px;">${a}</td>
-
         <td style="border:1px solid #000;padding:6px;">${promA}%</td>
-
       </tr>`;
-
     }).join('');
-
     t6aHtml = `
-
       <h4 style="color:#1e3a6e;">Tabla N° 6a. Promedio de Cumplimiento por Área de Atención</h4>
-
       <table align="center" style="width:60%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
-
         <tr>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">ÁREA DE ATENCIÓN</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">% Promedio de Cumplimiento</th>
-
         </tr>
-
         ${filas6a}
-
         <tr>
-
-          <td style="border:1px solid #000;padding:6px;"><strong>PROMEDIO</strong></td>
-
+          <td style="border:1px solid #000;padding:6px;"><strong>PROMEDIO GLOBAL</strong></td>
           <td style="border:1px solid #000;padding:6px;"><strong>${prom}%</strong></td>
-
         </tr>
-
       </table>`;
-
   }
 
-
-
   const filasAnexo = _expData.map((r,i) => {
-
     const bg = r.calificacion==='SATISFACTORIO'?'#dcfce7':r.calificacion==='POR MEJORAR'?'#fef3c7':'#fee2e2';
-
     const co = r.calificacion==='SATISFACTORIO'?'#166534':r.calificacion==='POR MEJORAR'?'#d97706':'#dc2626';
-
     return `<tr>
-
       <td style="border:1px solid #000;padding:6px;">${i+1}</td>
-
       <td style="border:1px solid #000;padding:6px;">${r.num_auditoria||''}</td>
-
       <td style="border:1px solid #000;padding:6px;">${r.hc||''}</td>
-
       <td style="border:1px solid #000;padding:6px;text-align:left;">${r.servicio||''}</td>
-
       <td style="border:1px solid #000;padding:6px;">${r.area||'CONSULTA EXTERNA'}</td>
-
       <td style="border:1px solid #000;padding:6px;"><strong>${r.puntaje||''}</strong></td>
-
       <td style="border:1px solid #000;padding:6px;background:${bg};color:${co};font-weight:bold;">${r.calificacion||''}</td>
-
     </tr>`;
-
   }).join('');
-
-
 
   const parrafos = narrativo.split('\n\n');
 
-
-
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
-
     xmlns:w='urn:schemas-microsoft-com:office:word'
-
     xmlns='http://www.w3.org/TR/REC-html40'>
-
   <head><meta charset='utf-8'><title>Informe Auditoría</title>
-
   <style>
-
     body { font-family:Arial,sans-serif; font-size:11pt; }
-
     .page-break { page-break-before:always; }
-
     .fuente { font-size:9pt; color:#555; margin-top:4px; text-align:center; }
-
     .aviso { background:#fff3cd; border:2px solid #ffc107; border-radius:6px; padding:14px 18px; margin-bottom:24px; font-size:10pt; }
-
     .aviso strong { color:#856404; }
-
   </style>
-
   </head>
-
   <body>
-
     <div class="aviso">
-
       <strong>⚠ NOTA IMPORTANTE PARA EL EDITOR DE ESTE INFORME:</strong><br>
-
       Este archivo fue generado automáticamente en base a la <strong>data registrada en el archivo Excel del Drive</strong>
-
       (Formularios Google — Oficina de Gestión de la Calidad). Los resultados estadísticos, tablas y gráficos
-
       reflejan únicamente los datos ingresados hasta la fecha de generación (<strong>${fechaHoy}</strong>).<br>
-
       <em>Para completar el Informe Oficial deberá adicionar manualmente: portada institucional, sección de
-
       Antecedentes, Base Legal, sección de No Conformidades detallada, firma y sello del responsable, y
-
       cualquier otra sección que corresponda según el trimestre auditado.</em>
-
     </div>
-
     <h2 align="center" style="color:#1e3a6e;text-align:center;">
-
       INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA
-
     </h2>
-
     <p align="center" style="text-align:center;">
-
       <strong>Fecha de Emisión:</strong> ${fechaHoy}
-
       &nbsp;&nbsp;&nbsp;&nbsp;
-
       <strong>Período:</strong> ${anio}
-
       &nbsp;&nbsp;&nbsp;&nbsp;
-
       <strong>Total de HCs evaluadas:</strong> ${total}
-
     </p>
-
     <h3 style="color:#1e3a6e;">3.3. RESULTADOS</h3>
-
     <h4 style="color:#1e3a6e;">3.3.1. Número de Historias Clínicas auditadas</h4>
-
     <p style="text-align:justify;">${parrafos[0] || ''}</p>
-
     <p align="center" style="text-align:center;"><strong>Tabla N° 1. Historias Clínicas auditadas por mes — Hospital Santa Rosa</strong></p>
-
     ${t1}
-
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-
     ${imgMes ? `
-
     <p align="center" style="text-align:center;"><strong>Gráfico N° 1. Historias Clínicas auditadas por mes</strong></p>
-
     <p align="center" style="text-align:center;"><img src="${imgMes}" width="480"/></p>
-
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
-
     <h4 style="color:#1e3a6e;">3.3.2. Evaluación de la Calidad de Registro</h4>
-
     <p style="text-align:justify;">${parrafos[1] || ''}</p>
-
     <p align="center" style="text-align:center;"><strong>Tabla N° 2. Calidad de registro de las HCs auditadas — Hospital Santa Rosa</strong></p>
-
     ${t2}
-
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-
     ${imgPastel ? `
-
     <p align="center" style="text-align:center;"><strong>Gráfico N° 2. Distribución de Calificaciones</strong></p>
-
     <p align="center" style="text-align:center;"><img src="${imgPastel}" width="400"/></p>
-
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
-
     <p style="text-align:justify;">${parrafos[2] || ''}</p>
-
     <p align="center" style="text-align:center;"><strong>Tabla N° 3. Calidad de Registro por Mes — Hospital Santa Rosa</strong></p>
-
     ${t3}
-
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-
     ${imgBarras ? `
-
     <p align="center" style="text-align:center;"><strong>Gráfico N° 3. Evolución de Calidad de Registro por Mes</strong></p>
-
     <p align="center" style="text-align:center;"><img src="${imgBarras}" width="480"/></p>
-
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
-
     ${t4Html}
-
     ${parrafos[3] ? `<p style="text-align:justify;">${parrafos[3]}</p>` : ''}
-
     ${t5Html}
-
     <h4 style="color:#1e3a6e;">3.3.3. Promedio de Cumplimiento del correcto registro</h4>
-
     <p style="text-align:justify;">${parrafos[4] || ''}</p>
-
     ${imgCumpl ? `
-
     <p align="center" style="text-align:center;"><strong>Gráfico N° 6. Promedio de Cumplimiento Global del correcto registro</strong></p>
-
     <p align="center" style="text-align:center;"><img src="${imgCumpl}" width="400"/></p>
-
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
-
     ${t6aHtml}
-
     <h4 style="color:#1e3a6e;">3.3.4. No Conformidades</h4>
-
     <p style="text-align:justify;color:#888;font-style:italic;">
-
       [Completar manualmente con las No Conformidades reportadas según área de atención.]
-
     </p>
-
     <br clear="all" style="page-break-before:always"/>
-
     <div class="page-break"></div>
-
     <h2 align="center" style="color:#1e3a6e;text-align:center;margin-top:20px;">ANEXO N° 1</h2>
-
     <h3 align="center" style="color:#1e3a6e;text-align:center;">
-
       Listado de HCs auditadas en los Departamentos y Servicios Asistenciales del Hospital Santa Rosa
-
     </h3>
-
     <table align="center" style="width:100%;border-collapse:collapse;margin:10px auto;font-size:9pt;">
-
       <thead>
-
         <tr>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">N°</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">MES</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">N° HC</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">DEPARTAMENTO/SERVICIO AUDITADO</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">ÁREA</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">PUNTAJE</th>
-
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">CALIFICACIÓN</th>
-
         </tr>
-
       </thead>
-
       <tbody>${filasAnexo}</tbody>
-
     </table>
-
   </body></html>`;
 
-
-
   const blob = new Blob(['\ufeff', html], { type:'application/msword' });
-
   const a = document.createElement('a');
-
   a.href = URL.createObjectURL(blob);
-
   a.download = `Informe_Oficial_${fechaHoy.replace(/\//g,'-')}.doc`;
-
   a.click();
-
 }
-
-
 
 // ===== HELPERS =====
-
 function _calcGlobal(data) {
-
   if (!data || !data.length) return { sat:0, mej:0, def:0, total:0, prom:0 };
-
   let sat=0, mej=0, def=0, sumPct=0;
-
   data.forEach(r => {
-
     if (r.calificacion==='SATISFACTORIO') sat++;
-
     else if (r.calificacion==='POR MEJORAR') mej++;
-
     else def++;
-
     sumPct += (r.porcentaje || 0);
-
   });
-
   const total = data.length;
-
   const prom  = total ? parseFloat((sumPct/total).toFixed(2)) : 0;
-
   return { sat, mej, def, total, prom };
-
 }
-
-
 
 function _calcPorMes(data) {
-
   if (!data) return {};
-
   const pm = {};
-
   data.forEach(r => {
-
     const m = r.num_auditoria || 'Sin Mes';
-
     if (!pm[m]) pm[m] = { sat:0, mej:0, def:0, total:0 };
-
     if (r.calificacion==='SATISFACTORIO') pm[m].sat++;
-
     else if (r.calificacion==='POR MEJORAR') pm[m].mej++;
-
     else pm[m].def++;
-
     pm[m].total++;
-
   });
-
   return pm;
-
 }
-
-
 
 function _calcPorServicio(data) {
-
   if (!data) return {};
-
   const ps = {};
-
   data.forEach(r => {
-
     const s = r.servicio || '—';
-
     if (!ps[s]) ps[s] = { sat:0, mej:0, def:0, total:0 };
-
     if (r.calificacion==='SATISFACTORIO') ps[s].sat++;
-
     else if (r.calificacion==='POR MEJORAR') ps[s].mej++;
-
     else ps[s].def++;
-
     ps[s].total++;
-
   });
-
   return ps;
-
 }
-
-
 
 function _calcPorArea(data) {
-
   if (!data) return {};
-
   const pa = {};
-
   data.forEach(r => {
-
     const a = r.area || 'SIN ÁREA';
-
     if (!pa[a]) pa[a] = { suma:0, count:0 };
-
     pa[a].suma  += (r.porcentaje || 0);
-
     pa[a].count++;
-
   });
-
   const result = {};
-
   Object.keys(pa).forEach(a => {
-
     result[a] = { prom: pa[a].count ? parseFloat((pa[a].suma/pa[a].count).toFixed(2)) : 0 };
-
   });
-
   return result;
-
 }
-
-
 
 function _getMesesSelExp() {
-
   return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
-
     .map(cb => cb.value);
-
 }
-
-
 
 function _getServsSelExp() {
-
   if (_serviciosSelExp.size === 0) return [];
-
   return [..._serviciosSelExp];
-
 }
-
-
 
 function _pct(n, total) {
-
   if (!total) return 0;
-
   return parseFloat((n/total*100).toFixed(1));
-
 }
-
-
 
 function _mesCorto(mes) {
-
-  return mes.includes(' - ') ? mes.split(' - ')[1] : mes;
-
+  return String(mes).includes(' - ') ? String(mes).split(' - ')[1] : mes;
 }
-
-
 
 function _canvasToImg(id) {
-
   const c = document.getElementById(id);
-
   return c ? c.toDataURL('image/png', 1.0) : '';
-
 }
-
-
 
 function _limpiarPreview() {
-
   ['expTabla2','expTabla3','expTabla5'].forEach(id => {
-
     const el = document.getElementById(id); if(el) el.innerHTML='';
-
   });
-
   ['expResumenRapido','expNarrativo'].forEach(id => {
-
     const el = document.getElementById(id); if(el) el.innerHTML='';
-
   });
-
   if (_ch2) { _ch2.destroy(); _ch2=null; }
-
   if (_ch3) { _ch3.destroy(); _ch3=null; }
-
   if (_ch5) { _ch5.destroy(); _ch5=null; }
-
 }
-
-
 
 function _esc(s) {
-
-  return s.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-
+  return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-
-
 // Cerrar dropdowns al hacer click fuera
-
 document.addEventListener('click', e => {
-
   if (!e.target.closest('#wrapServExp'))
-
     document.getElementById('menuServExp')?.classList.remove('show');
-
   if (!e.target.closest('#wrapMesExp'))
-
     document.getElementById('menuMesExp')?.classList.remove('show');
-
 });
 
-
-
 </script>
-
 </body>
-
 </html>

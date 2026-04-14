@@ -31,7 +31,7 @@ else:
     CREDENCIALES_PATH = "credenciales.json"
 
 # ============================================================
-# CONFIGURACIÓN DE LOS 3 EXCEL EN DRIVE (ACTUALIZADO CON TUS IDs)
+# CONFIGURACIÓN DE LOS 3 EXCEL EN DRIVE 
 # ============================================================
 AREAS_CONFIG = {
     "consulta_externa": {
@@ -46,12 +46,11 @@ AREAS_CONFIG = {
     },
     "hospitalizacion": {
         "label": "Hospitalización",
-        "sheet_id": "1BSMXbCf0zInOwxZ-IXGAKmeguNenTlQBZ0JgUtgehYA", # ID EXACTO Y CORREGIDO
+        "sheet_id": "1BSMXbCf0zInOwxZ-IXGAKmeguNenTlQBZ0JgUtgehYA",
         "worksheet_name": "H"
     }
 }
 
-# El sistema de usuarios se valida contra el archivo de Consulta Externa
 USERS_SHEET_ID = AREAS_CONFIG["consulta_externa"]["sheet_id"]
 USERS_SHEET_TAB  = "USUARIOS_SISTEMA"
 
@@ -331,7 +330,7 @@ CRITERIOS_POR_AREA = {
 }
 
 # ============================================================
-# GOOGLE SHEETS CORE (AHORA CON LÓGICA DE IDs Y MANEJO DE ERRORES)
+# GOOGLE SHEETS CORE 
 # ============================================================
 def get_client():
     creds = Credentials.from_service_account_file(CREDENCIALES_PATH, scopes=SCOPES)
@@ -350,20 +349,17 @@ def get_dataframe(sheet_id, worksheet_name):
         disponibles = ", ".join([w.title for w in hoja.worksheets()])
         raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Las pestañas que existen en este archivo son: {disponibles}")
     
-    # Para Hospitalización (hojas grandes) usar get_all_values para evitar memory overflow
     if worksheet_name == "H":
         all_values = ws.get_all_values()
         if not all_values:
             return pd.DataFrame()
         headers = all_values[0]
         rows = all_values[1:]
-        # Solo últimas 1500 filas con datos reales (no vacías)
         rows = [r for r in rows if any(v.strip() for v in r)]
         if len(rows) > 1500:
             rows = rows[-1500:]
         return pd.DataFrame(rows, columns=headers)
     
-    # Para CE y Emergencia usar el método original que funciona bien
     return pd.DataFrame(ws.get_all_records())
 
 def get_users_sheet():
@@ -371,7 +367,7 @@ def get_users_sheet():
     try:
         hoja = client.open_by_key(USERS_SHEET_ID)
     except Exception as e:
-        raise Exception(f"Error al abrir Excel de usuarios (Asegurate de haber configurado el ID de consulta externa).")
+        raise Exception(f"Error al abrir Excel de usuarios.")
     try:
         ws = hoja.worksheet(USERS_SHEET_TAB)
     except Exception:
@@ -431,7 +427,7 @@ def calcular_row_eme(row, criterios):
     return {"puntaje":round(total,2),"max_aplicable":round(max_ap,2),"porcentaje":pct,"calificacion":calif,"secciones":secciones}
 
 # ==============================================================
-# PROCESAR DATOS CON AÑO Y MES SEPARADOS
+# PROCESAR DATOS CON AÑO Y MES SEPARADOS + LÓGICA EXTEMPORÁNEOS
 # ==============================================================
 def procesar_df(df, area_key, area_label="Área"):
     results = []
@@ -459,15 +455,20 @@ def procesar_df(df, area_key, area_label="Área"):
             
             mes_num = int(float(mes_raw)) if mes_raw else 0
             
-            # --- LÓGICA DE OPORTUNIDAD Y AÑO INTELIGENTE ---
-            oportunidad = "A TIEMPO" if mes_num == mes_ingreso else "FUERA DE FECHA"
+            # --- LÓGICA DE OPORTUNIDAD Y AÑO INTELIGENTE MEJORADA ---
+            anio_final = anio_ingreso
+            # Si el mes que ingreso (ej: 12) es mayor al mes de la marca temporal (ej: 4 abril),
+            # significa que es del año pasado.
+            if mes_num > mes_ingreso:
+                anio_final = anio_ingreso - 1
             
-            # Si se ingresa en 2026 un mes futuro (ej. 12), es del 2025
-            anio_final = str(anio_ingreso)
-            if anio_ingreso == 2026 and mes_num > mes_ingreso:
-                anio_final = "2025"
+            # Es a tiempo SOLO si el mes coincide y el año calculado es el de ingreso.
+            if mes_num == mes_ingreso and anio_final == anio_ingreso:
+                oportunidad = "A TIEMPO"
+            else:
+                oportunidad = "FUERA DE FECHA"
             
-            anio_automatico = anio_final
+            anio_automatico = str(anio_final)
             mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
             
         except Exception:
@@ -483,12 +484,15 @@ def procesar_df(df, area_key, area_label="Área"):
             
         results.append({
             "hc": campo(["NÚMERO DE HISTORIA CLÍNICA","NÚMERO DE LA HISTORIA CLÍNICA","NUMERO DE HISTORIA CLINICA"]),
-            "fecha": campo(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
+            "fecha_auditoria": campo(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
+            "fecha_ingreso_real": marca_temporal,
+            "mes_ingreso": mes_ingreso,
+            "anio_ingreso": anio_ingreso,
             "servicio": campo(["SERVICIO AUDITADO:","SERVICIO AUDITADO"]),
             "auditor": campo(["MIEMBROS DEL COMITÉ DE AUDITORIA (que realizan la auditoría)","MIEMBROS DEL COMITÉ DE AUDITORIA","Miembros del Comité de Auditoria que realizan la auditoría"]),
             "anio": anio_automatico,
             "num_auditoria": mes_automatico,
-            "oportunidad": oportunidad, # Nuevo campo
+            "oportunidad": oportunidad,
             "diagnostico": campo(["DIAGNÓSTICO DE ALTA","DIAGNÓSTICO","DIAGNOSTICO"]),
             "cie10": campo(["CIE 10 (en mayúsculas, separando diagnósticos con slash, ejemplo: U07.1 / K35.9)"]),
             "area": area_label,
@@ -533,6 +537,26 @@ def crear_usuario():
 @app.route('/api/datos',methods=['GET'])
 def get_datos():
     ak=request.args.get('area','consulta_externa').lower().strip()
+    
+    # NUEVA LÓGICA PARA CARGAR TODAS LAS ÁREAS (Reportes Generales)
+    if ak == 'todas':
+        results = []
+        for k, cfg in AREAS_CONFIG.items():
+            try:
+                df = get_dataframe(cfg["sheet_id"], cfg["worksheet_name"])
+                results.extend(procesar_df(df, k, area_label=cfg["label"]))
+            except Exception as e:
+                print(f"Error procesando área {k}: {e}")
+        
+        if not results:
+            return jsonify({"ok":False,"error":"No se pudo cargar datos de las áreas."}),500
+            
+        return jsonify({"ok":True,"area":"todas","area_label":"Todas las Áreas","total":len(results),"registros":results,
+            "servicios":sorted({r['servicio'] for r in results if r['servicio']!='—'}),
+            "auditores":sorted({r['auditor'] for r in results if r['auditor']!='—'}),
+            "anios":sorted({r['anio'] for r in results if r['anio']!='Sin Año'}),
+            "meses":sorted({r['num_auditoria'] for r in results if r['num_auditoria']!='Sin Fecha'})})
+    
     if ak not in AREAS_CONFIG: return jsonify({"ok":False,"error":f"Área '{ak}' no válida"}),400
     cfg=AREAS_CONFIG[ak]
     try:
