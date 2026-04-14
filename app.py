@@ -440,7 +440,7 @@ def procesar_df(df, area_key, area_label="Área"):
         
         try:
             fe = pd.to_datetime(marca_temporal, dayfirst=True)
-            if fe.year < 2022:
+            if fe.year < 2024:
                 continue
             
             mes_ingreso = fe.month
