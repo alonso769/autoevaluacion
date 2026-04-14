@@ -330,7 +330,7 @@ CRITERIOS_POR_AREA = {
 }
 
 # ============================================================
-# GOOGLE SHEETS CORE - EL SALVAVIDAS ANTI-OOM
+# GOOGLE SHEETS CORE 
 # ============================================================
 def get_client():
     creds = Credentials.from_service_account_file(CREDENCIALES_PATH, scopes=SCOPES)
@@ -341,59 +341,39 @@ def get_dataframe(sheet_id, worksheet_name):
     try:
         hoja = client.open_by_key(sheet_id)
     except Exception as e:
-        raise Exception(f"No se pudo acceder al archivo. Verifica que el ID sea correcto.")
+        raise Exception(f"No se pudo acceder al archivo. Verifica que el ID del archivo sea correcto y que hayas compartido el archivo con el correo del bot.")
     
     try:
         ws = hoja.worksheet(worksheet_name)
     except Exception as e:
         disponibles = ", ".join([w.title for w in hoja.worksheets()])
-        raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Disponibles: {disponibles}")
+        raise Exception(f"No se encontró la pestaña '{worksheet_name}'. Las pestañas que existen en este archivo son: {disponibles}")
     
-    # Leemos la sábana entera de manera liviana
-    all_values = ws.get_all_values()
-    if not all_values:
-        return pd.DataFrame()
+    if worksheet_name == "H":
+        all_values = ws.get_all_values()
+        if not all_values:
+            return pd.DataFrame()
         
-    headers_raw = all_values[0]
-    
-    # === LA MAGIA: EVITAR EL COLAPSO DE MEMORIA (OOM) ===
-    # Filtramos SOLO las columnas que tienen un título escrito (ignoramos miles de columnas invisibles Z, AA...)
-    valid_indices = []
-    clean_headers = []
-    seen_headers = {}
-    
-    for i, h in enumerate(headers_raw):
-        h_str = str(h).strip()
-        if h_str:
-            valid_indices.append(i)
-            # Prevenir nombres duplicados (evita errores internos en Python)
-            if h_str in seen_headers:
-                seen_headers[h_str] += 1
-                h_str = f"{h_str}_{seen_headers[h_str]}"
-            else:
-                seen_headers[h_str] = 0
-            clean_headers.append(h_str)
-            
-    if not valid_indices:
-        return pd.DataFrame()
+        # === SALVAVIDAS ANTI OUT OF MEMORY (Abre hasta 10,000 filas sin problema) ===
+        # Cortamos el excel en la columna 85. Esto desecha miles de columnas infinitas vacías hacia la derecha (Z, AA, ZZZ)
+        # que provocaban que Python consumiera los 512MB de RAM de Render y se apagara.
+        headers = all_values[0][:85]
+        rows = all_values[1:]
         
-    # Construimos las filas extrayendo ÚNICAMENTE las celdas de las columnas válidas
-    rows = []
-    for r_raw in all_values[1:]:
-        r_filtered = []
-        has_data = False
-        for i in valid_indices:
-            val = r_raw[i] if i < len(r_raw) else ""
-            val_str = str(val).strip()
-            if val_str:
-                has_data = True
-            r_filtered.append(val_str)
-            
-        # Solo agregamos la fila si tiene al menos un dato escrito
-        if has_data:
-            rows.append(r_filtered)
-            
-    return pd.DataFrame(rows, columns=clean_headers)
+        rows_limpias = []
+        for r in rows:
+            r_corta = r[:85]
+            # Si hay al menos una celda con datos en la fila recortada, la guardamos
+            if any(str(v).strip() for v in r_corta):
+                # Rellenar con vacíos si la fila recortada es menor que las cabeceras para emparejar
+                if len(r_corta) < len(headers):
+                    r_corta.extend([''] * (len(headers) - len(r_corta)))
+                rows_limpias.append(r_corta)
+                
+        # Ya eliminamos la restricción de [-1500:], así que cargarán las 2080 historias.
+        return pd.DataFrame(rows_limpias, columns=headers)
+    
+    return pd.DataFrame(ws.get_all_records())
 
 def get_users_sheet():
     client = get_client()
@@ -412,14 +392,21 @@ def get_users_sheet():
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
-# === LÓGICA INTACTA DE CONSULTA EXTERNA Y EMERGENCIA ===
 def get_val(row, campo):
+    # Buscador blindado contra espacios dobles y letras mayúsculas/minúsculas mezcladas
+    c_clean = " ".join(str(campo).split()).lower()
+    short_c = c_clean[:25]
+    
     for k, v in row.items():
-        if str(k).strip() == campo.strip():
+        k_clean = " ".join(str(k).split()).lower()
+        if k_clean == c_clean:
             return str(v).strip().upper()
+            
     for k, v in row.items():
-        if campo[:30].lower() in str(k).lower():
+        k_clean = " ".join(str(k).split()).lower()
+        if short_c in k_clean:
             return str(v).strip().upper()
+            
     return ""
 
 def calcular_row_ce_hosp(row, criterios):
@@ -461,7 +448,7 @@ def calcular_row_eme(row, criterios):
     return {"puntaje":round(total,2),"max_aplicable":round(max_ap,2),"porcentaje":pct,"calificacion":calif,"secciones":secciones}
 
 # ==============================================================
-# PROCESAR DATOS CON AÑO Y MES SEPARADOS (CE y EME - INTACTO)
+# PROCESAR DATOS CON AÑO Y MES SEPARADOS + LÓGICA EXTEMPORÁNEOS
 # ==============================================================
 def procesar_df(df, area_key, area_label="Área"):
     results = []
@@ -470,7 +457,13 @@ def procesar_df(df, area_key, area_label="Área"):
     
     for _, row in df.iterrows():
         r = row.to_dict()
-        marca_temporal = str(r.get("Marca temporal", "")).strip()
+        
+        # Búsqueda de marca temporal blindada
+        marca_temporal = ""
+        for k, v in r.items():
+            if "marca temporal" in " ".join(str(k).split()).lower():
+                marca_temporal = str(v).strip()
+                break
         
         try:
             fe = pd.to_datetime(marca_temporal, dayfirst=True)
@@ -480,18 +473,23 @@ def procesar_df(df, area_key, area_label="Área"):
             mes_ingreso = fe.month
             anio_ingreso = fe.year
             
+            # Extraer Mes de la columna Auditoria blindada
             mes_raw = ""
             for k, v in r.items():
-                if "MERO DE AUDITOR" in str(k).upper():
+                if "mero de auditor" in " ".join(str(k).split()).lower():
                     mes_raw = str(v).strip()
                     break
             
             mes_num = int(float(mes_raw)) if mes_raw else 0
             
+            # --- LÓGICA DE OPORTUNIDAD Y AÑO INTELIGENTE MEJORADA ---
             anio_final = anio_ingreso
+            # Si el mes que ingreso (ej: 12) es mayor al mes de la marca temporal (ej: 4 abril),
+            # significa que es del año pasado.
             if mes_num > mes_ingreso:
                 anio_final = anio_ingreso - 1
             
+            # Es a tiempo SOLO si el mes coincide y el año calculado es el de ingreso.
             if mes_num == mes_ingreso and anio_final == anio_ingreso:
                 oportunidad = "A TIEMPO"
             else:
@@ -506,9 +504,13 @@ def procesar_df(df, area_key, area_label="Área"):
         calc = calcular_row_eme(r, criterios) if area_key == "emergencia" else calcular_row_ce_hosp(r, criterios)
 
         def campo(keys):
-            for k in keys:
-                v = str(r.get(k, "")).strip()
-                if v and str(v).lower() != "nan": return v
+            for kb in keys:
+                kb_clean = " ".join(str(kb).split()).lower()[:20]
+                for kr, vr in r.items():
+                    kr_clean = " ".join(str(kr).split()).lower()
+                    if kb_clean in kr_clean:
+                        v = str(vr).strip()
+                        if v and str(v).lower() != "nan": return v
             return "—"
             
         results.append({
@@ -524,130 +526,6 @@ def procesar_df(df, area_key, area_label="Área"):
             "oportunidad": oportunidad,
             "diagnostico": campo(["DIAGNÓSTICO DE ALTA","DIAGNÓSTICO","DIAGNOSTICO"]),
             "cie10": campo(["CIE 10 (en mayúsculas, separando diagnósticos con slash, ejemplo: U07.1 / K35.9)"]),
-            "area": area_label,
-            **calc
-        })
-        
-    results.sort(key=lambda x: (x['anio'], x['num_auditoria']))
-    return results
-
-# ==============================================================
-# LÓGICA AISLADA Y EXCLUSIVA SOLO PARA HOSPITALIZACIÓN
-# ==============================================================
-def procesar_df_hosp(df, area_key, area_label="Área"):
-    results = []
-    criterios = CRITERIOS_POR_AREA[area_key]
-    nombres_meses = {1:"01 - Enero", 2:"02 - Febrero", 3:"03 - Marzo", 4:"04 - Abril", 5:"05 - Mayo", 6:"06 - Junio", 7:"07 - Julio", 8:"08 - Agosto", 9:"09 - Septiembre", 10:"10 - Octubre", 11:"11 - Noviembre", 12:"12 - Diciembre"}
-    
-    for _, row in df.iterrows():
-        r = row.to_dict()
-        
-        # Limpieza extrema de las cabeceras (Solo para Hospitalización, no afecta lo demás)
-        # Esto convierte "  NÚMERO DE LA HISTORIA CLÍNICA " en "NÚMERO DE LA HISTORIA CLÍNICA"
-        r_clean = {" ".join(str(k).split()).upper(): v for k, v in r.items()}
-        
-        marca_temporal = ""
-        for k, v in r_clean.items():
-            if "MARCA TEMPORAL" in k:
-                marca_temporal = str(v).strip()
-                break
-        
-        try:
-            fe = pd.to_datetime(marca_temporal, dayfirst=True)
-            if fe.year < 2024:
-                continue
-            
-            mes_ingreso = fe.month
-            anio_ingreso = fe.year
-            
-            mes_raw = ""
-            for k, v in r_clean.items():
-                if "NÚMERO DE AUDITORÍA" in k or "NUMERO DE AUDITORIA" in k or "MERO DE AUDITOR" in k:
-                    mes_raw = str(v).strip()
-                    break
-            
-            mes_num = int(float(mes_raw)) if mes_raw else 0
-            
-            anio_final = anio_ingreso
-            if mes_num > mes_ingreso:
-                anio_final = anio_ingreso - 1
-            
-            if mes_num == mes_ingreso and anio_final == anio_ingreso:
-                oportunidad = "A TIEMPO"
-            else:
-                oportunidad = "FUERA DE FECHA"
-            
-            anio_automatico = str(anio_final)
-            mes_automatico = nombres_meses.get(mes_num, "Sin Mes")
-            
-        except Exception:
-            continue
-            
-        # Función interna de get_val exclusiva para hospitalización
-        def get_val_hosp(clean_row, campo):
-            campo_clean = " ".join(str(campo).split()).upper()
-            if campo_clean in clean_row:
-                return str(clean_row[campo_clean]).strip().upper()
-            # Búsqueda parcial más segura (15 caracteres)
-            short_campo = campo_clean[:15]
-            for k, v in clean_row.items():
-                if short_campo in k:
-                    return str(v).strip().upper()
-            return ""
-
-        total=0; na_total=0; secciones={}
-        for sec_key, sec in criterios.items():
-            sub=0; na_sec=0; items=[]
-            for c in sec["items"]:
-                val = get_val_hosp(r_clean, c["campo"])
-                pts=0; estado="sin_dato"
-                if val in ("COMPLETO","C","CONFORME"):   pts=c["completo"]; estado="completo"
-                elif val in ("INCOMPLETO","I"):          pts=c.get("incompleto",0); estado="incompleto"
-                elif val in ("EN EXCESO","E"):           pts=c.get("enExceso",0); estado="en_exceso"
-                elif val in ("NO EXISTE","NE","NO CONFORME"): pts=0; estado="no_existe"
-                elif val in ("NO APLICA","NA"):          pts=0; na_sec+=c["completo"]; estado="na"
-                
-                items.append({"nombre":c["nombre"],"pts":pts,"max":c["completo"],"estado":estado})
-                sub+=pts
-            na_total+=na_sec; total+=sub
-            secciones[sec_key]={"label":sec["label"],"subtotal":sub,"max":sec["max"],"items":items}
-        
-        max_ap=100-na_total
-        pct=round((total/max_ap*100),2) if max_ap>0 else 0
-        calif="SATISFACTORIO" if pct>=90 else ("POR MEJORAR" if pct>=75 else "DEFICIENTE")
-        calc = {"puntaje":round(total,2),"max_aplicable":round(max_ap,2),"porcentaje":pct,"calificacion":calif,"secciones":secciones}
-
-        def campo_hosp(keys):
-            # Intento exacto
-            for k in keys:
-                k_clean = " ".join(str(k).split()).upper()
-                if k_clean in r_clean:
-                    v = str(r_clean[k_clean]).strip()
-                    if v and str(v).lower() != "nan": return v
-            # Intento parcial
-            for k in keys:
-                k_clean = " ".join(str(k).split()).upper()
-                if len(k_clean) > 4:
-                    short_k = k_clean[:15]
-                    for rk, rv in r_clean.items():
-                        if short_k in rk:
-                            v = str(rv).strip()
-                            if v and str(v).lower() != "nan": return v
-            return "—"
-            
-        results.append({
-            "hc": campo_hosp(["NÚMERO DE LA HISTORIA CLÍNICA","NÚMERO DE HISTORIA CLÍNICA"]),
-            "fecha_auditoria": campo_hosp(["FECHA DE AUDITORÍA","FECHA DE AUDITORIA"]),
-            "fecha_ingreso_real": marca_temporal,
-            "mes_ingreso": mes_ingreso,
-            "anio_ingreso": anio_ingreso,
-            "servicio": campo_hosp(["SERVICIO AUDITADO"]),
-            "auditor": campo_hosp(["MIEMBROS DEL COMITÉ DE AUDITORIA"]),
-            "anio": anio_automatico,
-            "num_auditoria": mes_automatico,
-            "oportunidad": oportunidad,
-            "diagnostico": campo_hosp(["DIAGNÓSTICO DE ALTA","DIAGNOSTICO DE ALTA"]),
-            "cie10": campo_hosp(["CIE 10"]),
             "area": area_label,
             **calc
         })
@@ -691,16 +569,12 @@ def crear_usuario():
 def get_datos():
     ak=request.args.get('area','consulta_externa').lower().strip()
     
-    # NUEVA LÓGICA PARA CARGAR TODAS LAS ÁREAS
     if ak == 'todas':
         results = []
         for k, cfg in AREAS_CONFIG.items():
             try:
                 df = get_dataframe(cfg["sheet_id"], cfg["worksheet_name"])
-                if k == 'hospitalizacion':
-                    results.extend(procesar_df_hosp(df, k, area_label=cfg["label"]))
-                else:
-                    results.extend(procesar_df(df, k, area_label=cfg["label"]))
+                results.extend(procesar_df(df, k, area_label=cfg["label"]))
             except Exception as e:
                 print(f"Error procesando área {k}: {e}")
         
@@ -717,11 +591,7 @@ def get_datos():
     cfg=AREAS_CONFIG[ak]
     try:
         df=get_dataframe(cfg["sheet_id"],cfg["worksheet_name"])
-        
-        if ak == 'hospitalizacion':
-            results = procesar_df_hosp(df, ak, area_label=cfg["label"])
-        else:
-            results = procesar_df(df, ak, area_label=cfg["label"])
+        results = procesar_df(df, ak, area_label=cfg["label"])
             
         return jsonify({"ok":True,"area":ak,"area_label":cfg["label"],"total":len(results),"registros":results,
             "servicios":sorted({r['servicio'] for r in results if r['servicio']!='—'}),
