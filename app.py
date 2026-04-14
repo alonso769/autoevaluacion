@@ -5,6 +5,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import os, ssl, hashlib, tempfile
 import urllib3, requests
+import os, ssl, hashlib, tempfile, re
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 old_merge = requests.Session.merge_environment_settings
@@ -379,12 +380,21 @@ def get_users_sheet():
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
+def normalize_str(s):
+    # Elimina espacios dobles/extras, saltos de línea y convierte a minúsculas
+    return re.sub(r'\s+', ' ', str(s)).strip().lower()
+
 def get_val(row, campo):
+    norm_campo = normalize_str(campo)
+    # 1. Intento de coincidencia exacta pero normalizada (sin espacios extra)
     for k, v in row.items():
-        if str(k).strip() == campo.strip():
+        if normalize_str(k) == norm_campo:
             return str(v).strip().upper()
+    
+    # 2. Si no coincide exactamente, buscar por los primeros 30 caracteres
+    short_campo = norm_campo[:30]
     for k, v in row.items():
-        if campo[:30].lower() in str(k).lower():
+        if short_campo in normalize_str(k):
             return str(v).strip().upper()
     return ""
 
@@ -436,7 +446,13 @@ def procesar_df(df, area_key, area_label="Área"):
     
     for _, row in df.iterrows():
         r = row.to_dict()
-        marca_temporal = str(r.get("Marca temporal", "")).strip()
+        
+        # 1. Extraer Marca Temporal blindado contra espacios
+        marca_temporal = ""
+        for k, v in r.items():
+            if "marca temporal" in normalize_str(k):
+                marca_temporal = str(v).strip()
+                break
         
         try:
             fe = pd.to_datetime(marca_temporal, dayfirst=True)
@@ -446,10 +462,10 @@ def procesar_df(df, area_key, area_label="Área"):
             mes_ingreso = fe.month
             anio_ingreso = fe.year
             
-            # Extraer Mes de la columna Auditoria
+            # 2. Extraer Mes de Auditoría blindado contra espacios
             mes_raw = ""
             for k, v in r.items():
-                if "MERO DE AUDITOR" in str(k).upper():
+                if "mero de auditor" in normalize_str(k):
                     mes_raw = str(v).strip()
                     break
             
@@ -476,10 +492,14 @@ def procesar_df(df, area_key, area_label="Área"):
             
         calc = calcular_row_eme(r, criterios) if area_key == "emergencia" else calcular_row_ce_hosp(r, criterios)
 
+        # 3. Buscador de campos de cabecera blindado contra espacios
         def campo(keys):
             for k in keys:
-                v = str(r.get(k, "")).strip()
-                if v and str(v).lower() != "nan": return v
+                norm_k = normalize_str(k)
+                for r_k, r_v in r.items():
+                    if normalize_str(r_k) == norm_k:
+                        v = str(r_v).strip()
+                        if v and str(v).lower() != "nan": return v
             return "—"
             
         results.append({
