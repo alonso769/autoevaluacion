@@ -2256,7 +2256,7 @@ function _renderGraf5() {
 }
 
 // =====================================================================
-// NARRATIVO MULTI-ÁREA (lógica inteligente según áreas presentes)
+// NARRATIVO MULTI-ÁREA
 // =====================================================================
 function _renderNarrativo() {
   if (!_expData || !_expData.length) return;
@@ -2287,13 +2287,16 @@ function _renderNarrativo() {
 
   let texto = '';
 
+  // Párrafo 1
   if (meses.length > 0) {
     texto += `En el período seleccionado (${anio}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
     texto += `La distribución mensual fue la siguiente: ${textoMeses}; tal como se muestra en la Tabla N° 1 y en el Gráfico N° 1.\n\n`;
   }
 
+  // Párrafo 2
   texto += `De las ${total} Historias Clínicas auditadas, ${sat} HCs (${_pct(sat,total)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${_pct(mej,total)}%) resultado "Por Mejorar" y ${def} HCs (${_pct(def,total)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla N° 2 y el Gráfico N° 2.\n\n`;
 
+  // Párrafo 3 - Por área
   if (tieneMultiArea) {
     texto += `A continuación, se presentan los resultados de la Evaluación de la Calidad de registro, según Área auditada:\n`;
     areasPresentes.forEach(area => {
@@ -2302,7 +2305,8 @@ function _renderNarrativo() {
       const pctSat = _pct(d.sat, d.total);
       const pctMej = _pct(d.mej, d.total);
       const pctDef = _pct(d.def, d.total);
-      texto += `En ${_nombreAreaTexto(area)}, de ${d.total} Historias Clínicas auditadas, ${d.sat} (${pctSat}%) obtuvieron resultado "Satisfactorio", ${d.mej} (${pctMej}%) obtuvieron resultado "Por Mejorar" y ${d.def} (${pctDef}%) obtuvieron resultado "Deficiente". `;
+      // Cada área en línea separada con prefijo de viñeta para el preview
+      texto += `• En ${_nombreAreaTexto(area)}, de ${d.total} Historias Clínicas auditadas, ${d.sat} (${pctSat}%) obtuvieron resultado "Satisfactorio", ${d.mej} (${pctMej}%) obtuvieron resultado "Por Mejorar" y ${d.def} (${pctDef}%) obtuvieron resultado "Deficiente".\n`;
     });
     texto += `Los resultados se presentan en la Tabla N° 3 y en el Gráfico N° 3.\n\n`;
   } else {
@@ -2314,6 +2318,7 @@ function _renderNarrativo() {
     }
   }
 
+  // Párrafo 4
   if (servs.length > 1) {
     const top = [...servs].sort((a, b) => _pct(porServ[b].sat, porServ[b].total) - _pct(porServ[a].sat, porServ[a].total));
     const topNombre = top[0].replace('SERV. DE ', 'Servicio de ').replace('DPTO. DE ', 'Departamento de ');
@@ -2327,6 +2332,7 @@ function _renderNarrativo() {
     else texto += '\n\n';
   }
 
+  // Párrafo 5
   texto += `El Promedio de Cumplimiento del correcto registro en las HCs auditadas fue de ${prom}%, correspondiendo a la calificación "${clasif}" según los criterios de la NTS N° 029-MINSA/DIGEPRES-V.02, tal como se presenta en el Gráfico N° 6.`;
 
   if (tieneMultiArea) {
@@ -2401,7 +2407,7 @@ function generarReporteFinal(formato) {
 }
 
 // =====================================================================
-// GENERACIÓN DE GRÁFICOS ADICIONALES (incluye multi-área)
+// GENERACIÓN DE GRÁFICOS ADICIONALES
 // =====================================================================
 function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, prom, sat, mej, def, callback) {
   const wrap = document.createElement('div');
@@ -2494,8 +2500,8 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
         labels: areaLabels.map(_nombreAreaTexto),
         datasets: [
           { label: 'Satisfactorio', data: areaLabels.map(a => porArea[a]?.sat || 0), backgroundColor: COLORS.sat },
-          { label: 'Por Mejorar', data: areaLabels.map(a => porArea[a]?.mej || 0), backgroundColor: COLORS.mej },
-          { label: 'Deficiente', data: areaLabels.map(a => porArea[a]?.def || 0), backgroundColor: COLORS.def }
+          { label: 'Por Mejorar',   data: areaLabels.map(a => porArea[a]?.mej || 0), backgroundColor: COLORS.mej },
+          { label: 'Deficiente',    data: areaLabels.map(a => porArea[a]?.def || 0), backgroundColor: COLORS.def }
         ]
       },
       options: {
@@ -2531,10 +2537,8 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
     });
     setTimeout(() => { imgAreaPie = c6a.toDataURL('image/png', 1.0); ch6a.destroy(); check(); }, 500);
   } else {
-    imgAreaBars = '';
-    check();
-    imgAreaPie = '';
-    check();
+    imgAreaBars = ''; check();
+    imgAreaPie = '';  check();
   }
 }
 
@@ -2549,8 +2553,6 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
   const resData = [
     ['INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO — HOSPITAL SANTA ROSA'],
     ['Fecha de emisión:', fechaHoy],
-    [''],
-    ['⚠ NOTA: Este archivo fue generado automáticamente en base a la data del archivo Excel del Drive.'],
     [''],
     ['Tabla N° 1. Historias Clínicas auditadas por mes'],
     ['MES', 'N° HCs', '%'],
@@ -2639,7 +2641,7 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
 }
 
 // =====================================================================
-// WORD – Lógica completa multi-área
+// WORD – SIN NOTA DE AVISO, CON VIÑETAS POR ÁREA
 // =====================================================================
 function _generarWord(fechaHoy, sat, mej, def, total, prom,
   porMes, meses, porServ, porArea,
@@ -2651,9 +2653,39 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
   const clasif = prom >= 90 ? 'Satisfactorio' : prom >= 75 ? 'Por Mejorar' : 'Deficiente';
   const areasPresentes = Object.keys(porArea);
   const tieneMultiArea = areasPresentes.length > 1;
+
+  // Reconstruir párrafos desde el narrativo
+  // párrafo 0 = HCs por mes, párrafo 1 = global, párrafo 2 = por área/mes,
+  // párrafo 3 = por servicio, párrafo 4 = cumplimiento
   const parrafos = narrativo.split('\n\n');
 
-  // ── Tabla 1: HCs por Mes ──
+  // ── Párrafo 3 (por área) convertido a lista HTML para el Word ──
+  // El narrativo guarda cada área con prefijo "• "; lo convertimos a <ul><li>
+  function _parrafo3AHtml(texto) {
+    if (!tieneMultiArea) return `<p style="text-align:justify;">${texto}</p>`;
+    // Separar la intro, las viñetas y el cierre
+    const lineas = texto.split('\n').filter(l => l.trim());
+    const intro   = lineas.find(l => !l.startsWith('•') && !l.startsWith('Los resultados')) || '';
+    const viñetas = lineas.filter(l => l.startsWith('•'));
+    const cierre  = lineas.find(l => l.startsWith('Los resultados')) || '';
+    const items   = viñetas.map(v => {
+      const contenido = v.replace(/^•\s*/, '');
+      // Detectar el nombre del área para negrita
+      const match = contenido.match(/^(En [^,]+),(.+)$/);
+      if (match) {
+        return `<li style="margin-bottom:6px;text-align:justify;"><strong>${match[1]}</strong>,${match[2]}</li>`;
+      }
+      return `<li style="margin-bottom:6px;text-align:justify;">${contenido}</li>`;
+    }).join('');
+    return `
+      <p style="text-align:justify;">${intro}</p>
+      <ul style="margin:8px 0 8px 24px;padding:0;">
+        ${items}
+      </ul>
+      <p style="text-align:justify;">${cierre}</p>`;
+  }
+
+  // ── Tabla 1 ──
   const filasT1 = meses.map(m => `
     <tr>
       <td style="border:1px solid #000;padding:6px;">${_mesCorto(m)}</td>
@@ -2731,6 +2763,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p align="center" style="text-align:center;"><strong>Gráfico N° 3. Calidad de registro por Área de atención</strong></p>
     <p align="center" style="text-align:center;"><img src="${imgAreaBars}" width="520"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}`;
+
   } else {
     const hMeses = meses.map(m => `<th style="border:1px solid #000;background:#e2e8f0;padding:6px;">${_mesCorto(m)}</th>`).join('');
     const fSat3 = meses.map(m => `<td style="border:1px solid #000;padding:6px;">${porMes[m].sat}</td>`).join('');
@@ -2880,91 +2913,26 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     </tr>`;
   }).join('');
 
-  // ══════════════════════════════════════════════════════════════════
-  // ── HTML FINAL DEL WORD  ← ÚNICO BLOQUE MODIFICADO ──
-  // ══════════════════════════════════════════════════════════════════
+  // ── HTML final del Word (SIN div.aviso) ──
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
     xmlns:w='urn:schemas-microsoft-com:office:word'
     xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset='utf-8'><title>Informe Auditoría</title>
   <style>
-    body { font-family:Arial,sans-serif; font-size:11pt; margin:2cm; }
+    body { font-family:Arial,sans-serif; font-size:11pt; }
     .page-break { page-break-before:always; }
     .fuente { font-size:9pt; color:#555; margin-top:4px; text-align:center; }
-    .aviso {
-      background:#fff8e1;
-      border-left:5px solid #f59e0b;
-      border-top:1px solid #fbbf24;
-      border-right:1px solid #fbbf24;
-      border-bottom:1px solid #fbbf24;
-      border-radius:4px;
-      padding:14px 18px;
-      margin-bottom:36px;
-      font-size:9.5pt;
-      color:#4b3a00;
-    }
-    .aviso .aviso-titulo {
-      font-weight:bold;
-      font-size:10pt;
-      color:#78350f;
-      display:block;
-      margin-bottom:8px;
-      letter-spacing:0.02em;
-    }
-    .aviso .aviso-cuerpo {
-      margin:0;
-      line-height:1.6;
-    }
-    .aviso .aviso-pie {
-      margin-top:10px;
-      font-style:italic;
-      color:#6b4c00;
-      line-height:1.5;
-    }
-    .titulo-informe {
-      margin-top:28px;
-      margin-bottom:6px;
-      color:#1e3a6e;
-      text-align:center;
-      font-size:16pt;
-      font-weight:bold;
-      letter-spacing:0.01em;
-    }
-    .subtitulo-informe {
-      text-align:center;
-      font-size:10pt;
-      margin-bottom:24px;
-      color:#333;
-    }
   </style>
   </head>
   <body>
-
-    <!-- ▸ NOTA SEPARADA DEL TÍTULO -->
-    <div class="aviso">
-      <span class="aviso-titulo">⚠ NOTA IMPORTANTE PARA EL EDITOR DE ESTE INFORME</span>
-      <p class="aviso-cuerpo">
-        Este archivo fue generado automáticamente en base a la <strong>data registrada en el archivo Excel
-        del Drive</strong> (Formularios Google — Oficina de Gestión de la Calidad). Los resultados
-        estadísticos, tablas y gráficos reflejan únicamente los datos ingresados hasta la fecha de
-        generación: <strong>${fechaHoy}</strong>.
-      </p>
-      <p class="aviso-pie">
-        Para completar el Informe Oficial deberá adicionar manualmente: portada institucional, sección de
-        Antecedentes, Base Legal, sección de No Conformidades detallada, firma y sello del responsable, y
-        cualquier otra sección que corresponda según el trimestre auditado.
-      </p>
-    </div>
-
-    <!-- ▸ TÍTULO DEL INFORME -->
-    <h2 class="titulo-informe">
+    <h2 align="center" style="color:#1e3a6e;text-align:center;">
       INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA
     </h2>
-    <p class="subtitulo-informe">
+    <p align="center" style="text-align:center;">
       <strong>Fecha de Emisión:</strong> ${fechaHoy}
-      &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      &nbsp;&nbsp;&nbsp;&nbsp;
       <strong>Período:</strong> ${anio}
-      &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      &nbsp;&nbsp;&nbsp;&nbsp;
       <strong>Total de HCs evaluadas:</strong> ${total}
     </p>
 
@@ -2992,9 +2960,9 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     ${tieneMultiArea ? `
     <h4 style="color:#1e3a6e;">3.3.3. Evaluación de la Calidad de registro por Área de atención</h4>
-    <p style="text-align:justify;">${parrafos[2] || ''}</p>
+    ${_parrafo3AHtml(parrafos[2] || '')}
     ${t3Html}` : `
-    <p style="text-align:justify;">${parrafos[2] || ''}</p>
+    ${_parrafo3AHtml(parrafos[2] || '')}
     ${t3Html}`}
 
     <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.4' : '3.3.3'}. Distribución de Historias Clínicas auditadas por Departamento/Servicio</h4>
@@ -3015,11 +2983,11 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.7' : '3.3.6'}. No Conformidades</h4>
     ${tieneMultiArea ? `
-    <p style="color:#888;font-style:italic;text-align:justify;"><strong>a. Consulta Externa</strong></p>
+    <p style="text-align:justify;"><strong>a. Consulta Externa</strong></p>
     <p style="color:#888;font-style:italic;">[Completar manualmente con las No Conformidades reportadas en Consulta Externa.]</p>
-    <p style="color:#888;font-style:italic;text-align:justify;"><strong>b. Emergencia</strong></p>
+    <p style="text-align:justify;"><strong>b. Emergencia</strong></p>
     <p style="color:#888;font-style:italic;">[Completar manualmente con las No Conformidades reportadas en Emergencia.]</p>
-    <p style="color:#888;font-style:italic;text-align:justify;"><strong>c. Hospitalización</strong></p>
+    <p style="text-align:justify;"><strong>c. Hospitalización</strong></p>
     <p style="color:#888;font-style:italic;">[Completar manualmente con las No Conformidades reportadas en Hospitalización.]</p>
     ` : `
     <p style="text-align:justify;color:#888;font-style:italic;">[Completar manualmente con las No Conformidades reportadas según área de atención.]</p>
