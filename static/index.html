@@ -1947,7 +1947,6 @@ const MESES_NOMBRE_A_NUM = {
   'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
   'SEPTIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12
 };
-
 const MESES_NUM_A_NOMBRE = {
   1:'ENERO', 2:'FEBRERO', 3:'MARZO', 4:'ABRIL',
   5:'MAYO', 6:'JUNIO', 7:'JULIO', 8:'AGOSTO',
@@ -1956,8 +1955,7 @@ const MESES_NUM_A_NOMBRE = {
 
 /**
  * Dado el valor de num_auditoria (ej: "01 - ENERO" o "ENERO"),
- * extrae el número de mes (1-12).
- * Devuelve null si no reconoce.
+ * extrae el número de mes (1-12). Devuelve null si no reconoce.
  */
 function _extraerNumMes(numAuditoria) {
   if (!numAuditoria) return null;
@@ -1976,19 +1974,19 @@ function _extraerNumMes(numAuditoria) {
  * Filtra _expDataRaw según el tipo de informe y año seleccionado.
  * - ANUAL: todo lo que tenga el año seleccionado (o todos si no hay año).
  * - TRIMESTRAL: toma los meses seleccionados, detecta el último mes,
- * y acepta registros cuya fecha de auditoría sea <= día 15 del mes siguiente
- * al último mes seleccionado, siempre dentro del mismo año.
+ *   y acepta registros cuya fecha de auditoría sea <= día 15 del mes siguiente
+ *   al último mes seleccionado, siempre dentro del mismo año.
  *
  * "Fecha de corte trimestral":
- * Si los meses seleccionados son Enero(1), Febrero(2), Marzo(3)
- * → el último mes es Marzo(3) → fecha de corte = 15 de Abril(4).
- * Se acepta un registro del mes de Abril solo si su fecha_auditoria <= 15/04.
- * Si no tiene fecha_auditoria exacta, se rechaza el mes extra
- * (se acepta el mes únicamente si está dentro de los meses seleccionados).
+ *   Si los meses seleccionados son Enero(1), Febrero(2), Marzo(3)
+ *   → el último mes es Marzo(3) → fecha de corte = 15 de Abril(4).
+ *   Se acepta un registro del mes de Abril solo si su fecha_auditoria <= 15/04.
+ *   Si no tiene fecha_auditoria exacta, se rechaza el mes extra
+ *   (se acepta el mes únicamente si está dentro de los meses seleccionados).
  *
  * IMPORTANTE: si el mes extra (mes siguiente al último seleccionado) cae en
- * otro año (ej: último mes = Diciembre → mes extra = Enero siguiente),
- * ese mes extra NO se incluye (sería del año siguiente).
+ *   otro año (ej: último mes = Diciembre → mes extra = Enero siguiente),
+ *   ese mes extra NO se incluye (sería del año siguiente).
  */
 function _filtrarPorTipoInforme(data, anioSel, tipoInforme, mesesSel) {
   if (!data || !data.length) return [];
@@ -2052,7 +2050,6 @@ function _filtrarPorTipoInforme(data, anioSel, tipoInforme, mesesSel) {
 
       // Fecha de corte: día 15 del mes siguiente
       const fechaCorte = new Date(parseInt(anioSel || r.anio || new Date().getFullYear()), mesCorteNum - 1, 15);
-
       return fechaReg <= fechaCorte;
     }
 
@@ -2086,18 +2083,13 @@ function _parsearFecha(str) {
  */
 function _calcularFechaCorteTexto(anioSel, mesesSel) {
   if (!mesesSel || mesesSel.length === 0) return '';
-
   const numsMesesSel = mesesSel.map(m => _extraerNumMes(m)).filter(n => n !== null);
   if (numsMesesSel.length === 0) return '';
-
   const ultimoMesNum = Math.max(...numsMesesSel);
   const mesCorteNum  = ultimoMesNum + 1;
-
   if (mesCorteNum > 12) return ''; // Diciembre → no hay mes de corte en el mismo año
-
   const nombreMesCorte = MESES_NUM_A_NOMBRE[mesCorteNum] || '';
   const anioCorte = anioSel || new Date().getFullYear();
-
   return `15 de ${_capitalizar(nombreMesCorte)} de ${anioCorte}`;
 }
 
@@ -2112,22 +2104,17 @@ function _capitalizar(str) {
 
 async function cargarDatosExportacion() {
   const a = document.getElementById('expArea').value;
-
   if (a === 'actual') {
     _expDataRaw = [...allData];
     _initExportFilters();
   } else {
     showLoading('Obteniendo datos ' + (a === 'todas' ? 'CONSOLIDADOS' : 'del área') + '...');
-
     try {
       let areasToFetch = a === 'todas' ? ['consulta_externa', 'emergencia', 'hospitalizacion'] : [a];
-
       let combined = [];
       let error = false;
-
       for (let area of areasToFetch) {
         const d = await fetchArea(area);
-
         if (d.ok) {
           d.registros.forEach(r => {
             if (!r.area) {
@@ -2142,7 +2129,6 @@ async function cargarDatosExportacion() {
           showToast('Error: ' + d.error, 'err');
         }
       }
-
       if (!error || combined.length > 0) {
         _expDataRaw = combined;
         aplicarLogicaFechas(_expDataRaw);
@@ -2165,12 +2151,10 @@ function _initExportFilters() {
   _serviciosSelExp.clear();
 
   const anios = [...new Set(_expDataRaw.map(r => r.anio).filter(a => a && a != 'Sin Año'))].sort();
-
   document.getElementById('expAnio').innerHTML = '<option value="">Todos los años</option>' +
     anios.map(a => `<option value="${a}">${a}</option>`).join('');
 
   const meses = [...new Set(_expDataRaw.map(r => r.num_auditoria).filter(a => a && a != 'Sin Fecha'))].sort();
-
   document.getElementById('menuMesExp').innerHTML = meses.map(m => `
     <label class="ms-item">
       <input type="checkbox" value="${m}" onchange="cambioFiltroPrincipal()"> ${m}
@@ -2205,7 +2189,6 @@ function _actualizarUITipoInforme() {
     const anioSel = document.getElementById('expAnio')?.value || '';
     const mesesSel = _getMesesSelExp();
     const fechaCorte = _calcularFechaCorteTexto(anioSel, mesesSel);
-
     if (fechaCorte) {
       infoCorte.textContent = `📅 Fecha de corte trimestral: hasta el ${fechaCorte}.`;
       infoCorte.style.color = '#b45309';
@@ -2290,7 +2273,6 @@ function _actualizarTextoServExp() {
   const total = document.querySelectorAll('#menuServExp input[type=checkbox]').length;
   const checked = document.querySelectorAll('#menuServExp input[type=checkbox]:checked').length;
   const txt = document.getElementById('textServExp');
-
   if (!txt) return;
   if (checked === 0) txt.textContent = 'Ningún servicio';
   else if (checked === total) txt.textContent = 'Todos los servicios';
@@ -3015,7 +2997,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
   // ── Tabla 3 ──
   let t3Html = '';
-
   if (tieneMultiArea) {
     const filasArea = areasPresentes.map(a => {
       const d = porArea[a];
@@ -3057,21 +3038,17 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       </tr>
     </table>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-    ${imgAreaBars ?
-    `
+    ${imgAreaBars ? `
     <p align="center" style="text-align:center;"><strong>Gráfico N° 3. Calidad de registro por Área de atención</strong></p>
     <p align="center" style="text-align:center;"><img src="${imgAreaBars}" width="520"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}`;
 
   } else {
     const hMeses = meses.map(m => `<th style="border:1px solid #000;background:#e2e8f0;padding:6px;">${_mesCorto(m)}</th>`).join('');
-
     const fSat3 = meses.map(m => `<td style="border:1px solid #000;padding:6px;">${porMes[m].sat}</td>`).join('');
     const fMej3 = meses.map(m => `<td style="border:1px solid #000;padding:6px;">${porMes[m].mej}</td>`).join('');
-
     const fDef3 = meses.map(m => `<td style="border:1px solid #000;padding:6px;">${porMes[m].def}</td>`).join('');
     const fTot3 = meses.map(m => `<td style="border:1px solid #000;padding:6px;">${porMes[m].total}</td>`).join('');
-
     const fPct3 = meses.map(m => `<td style="border:1px solid #000;padding:6px;">${_pct(porMes[m].sat,porMes[m].total)}%</td>`).join('');
 
     t3Html = `
@@ -3082,21 +3059,17 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       <tr><td style="border:1px solid #000;padding:6px;">Por Mejorar</td>${fMej3}<td style="border:1px solid #000;padding:6px;">${mej}</td></tr>
       <tr><td style="border:1px solid #000;padding:6px;">Deficiente</td>${fDef3}<td style="border:1px solid #000;padding:6px;">${def}</td></tr>
       <tr><td style="border:1px solid #000;padding:6px;"><strong>TOTAL</strong></td>${fTot3}<td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td></tr>
-  
       <tr><td style="border:1px solid #000;padding:6px;"><em>% Satisfactorio</em></td>${fPct3}<td style="border:1px solid #000;padding:6px;"></td></tr>
     </table>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-    ${imgBarras ?
-    `
+    ${imgBarras ? `
     <p align="center" style="text-align:center;"><strong>Gráfico N° 3. Evolución de Calidad de Registro por Mes</strong></p>
     <p align="center" style="text-align:center;"><img src="${imgBarras}" width="480"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}`;
-
   }
 
   // ── Tabla 4 ──
   const servList4 = Object.keys(porServ).sort((a, b) => porServ[b].total - porServ[a].total);
-
   const filas4 = servList4.map(s => `
     <tr>
       <td style="border:1px solid #000;padding:6px;text-align:left;">${s}</td>
@@ -3114,15 +3087,13 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       </tr>
       ${filas4}
       <tr>
-        
         <td style="border:1px solid #000;padding:6px;text-align:left;"><strong>TOTAL</strong></td>
         <td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td>
         <td style="border:1px solid #000;padding:6px;"><strong>100%</strong></td>
       </tr>
     </table>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-    ${imgServ4 ?
-    `<p align="center" style="text-align:center;"><strong>Gráfico N° 4. Historias Clínicas auditadas por Departamento / Servicio</strong></p>
+    ${imgServ4 ? `<p align="center" style="text-align:center;"><strong>Gráfico N° 4. Historias Clínicas auditadas por Departamento / Servicio</strong></p>
     <p align="center" style="text-align:center;"><img src="${imgServ4}" width="520"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>` : ''}
     <br>` : '';
@@ -3130,7 +3101,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
   // ── Tabla 5 ──
   let t5Html = '';
   const servsList5 = Object.keys(porServ);
-
   if (servsList5.length > 1) {
     const filas5 = servsList5
       .sort((a, b) => _pct(porServ[b].sat, porServ[b].total) - _pct(porServ[a].sat, porServ[a].total))
@@ -3138,8 +3108,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
         const d = porServ[s];
         const p = _pct(d.sat, d.total);
         const bg = p >= 90 ? '#dcfce7' : p >= 75 ? '#fef3c7' : '#fee2e2';
-        const co = p >= 90 ? '#166534' : p >= 75 ? '#d97706' 
-        : '#dc2626';
+        const co = p >= 90 ? '#166534' : p >= 75 ? '#d97706' : '#dc2626';
         return `<tr>
           <td style="border:1px solid #000;padding:6px;text-align:left;">${s}</td>
           <td style="border:1px solid #000;padding:6px;">${d.sat}</td>
@@ -3148,7 +3117,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
           <td style="border:1px solid #000;padding:6px;">${d.def}</td>
           <td style="border:1px solid #000;padding:6px;"><strong>${d.total}</strong></td>
         </tr>`;
-    
       }).join('');
     t5Html = `
       <h3 align="center" style="color:#1e3a6e;text-align:center;">Tabla N° 5. Calidad de Registro por Departamento / Servicio</h3>
@@ -3158,7 +3126,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">SAT.</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%SAT.</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">POR MEJ.</th>
-      
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">DEFIC.</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">TOTAL</th>
         </tr>
@@ -3168,23 +3135,19 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
           <td style="border:1px solid #000;padding:6px;">${sat}</td>
           <td style="border:1px solid #000;padding:6px;">${_pct(sat,total)}%</td>
           <td style="border:1px solid #000;padding:6px;">${mej}</td>
-    
           <td style="border:1px solid #000;padding:6px;">${def}</td>
           <td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td>
         </tr>
       </table>
       <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-      ${imgServ ?
-      `<p align="center" style="text-align:center;"><strong>Gráfico N° 5. Porcentaje de Calificación "Satisfactorio" por Departamento / Servicio</strong></p>
+      ${imgServ ? `<p align="center" style="text-align:center;"><strong>Gráfico N° 5. Porcentaje de Calificación "Satisfactorio" por Departamento / Servicio</strong></p>
       <p align="center" style="text-align:center;"><img src="${imgServ}" width="520"/></p>
       <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>` : ''}
       <br>`;
-
   }
 
   // ── Tabla 6a ──
   let t6aHtml = '';
-
   if (tieneMultiArea) {
     const filas6a = areasPresentes.map(a => {
       const d = porArea[a];
@@ -3193,10 +3156,8 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
         <td style="border:1px solid #000;padding:6px;">${d.prom}%</td>
       </tr>`;
     }).join('');
-
     t6aHtml = `
-      <h3 style="color:#1e3a6e;">Tabla N° 6a.
-      Promedio de Cumplimiento del correcto registro de las HCs por Área de atención</h3>
+      <h3 style="color:#1e3a6e;">Tabla N° 6a. Promedio de Cumplimiento del correcto registro de las HCs por Área de atención</h3>
       <table align="center" style="width:60%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
         <tr>
           <th style="border:1px solid #000;background:#e2e8f0;padding:6px;">ÁREA DE ATENCIÓN</th>
@@ -3205,17 +3166,14 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
         ${filas6a}
         <tr>
           <td style="border:1px solid #000;padding:6px;"><strong>PROMEDIO</strong></td>
- 
           <td style="border:1px solid #000;padding:6px;"><strong>${prom}%</strong></td>
         </tr>
       </table>
       <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-      ${imgAreaPie ?
-      `<p align="center" style="text-align:center;"><strong>Gráfico N° 6a. Promedio de Cumplimiento del correcto registro de las HCs por Área de atención</strong></p>
+      ${imgAreaPie ? `<p align="center" style="text-align:center;"><strong>Gráfico N° 6a. Promedio de Cumplimiento del correcto registro de las HCs por Área de atención</strong></p>
       <p align="center" style="text-align:center;"><img src="${imgAreaPie}" width="480"/></p>
       <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>` : ''}
       <br>`;
-
   }
 
   // ── Anexo 1 ──
@@ -3227,13 +3185,11 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       <td style="border:1px solid #000;padding:6px;">${r.num_auditoria||''}</td>
       <td style="border:1px solid #000;padding:6px;">${r.hc||''}</td>
       <td style="border:1px solid #000;padding:6px;text-align:left;">${r.servicio||''}</td>
-   
       <td style="border:1px solid #000;padding:6px;">${r.area||'CONSULTA EXTERNA'}</td>
       <td style="border:1px solid #000;padding:6px;">${r.oportunidad||'A TIEMPO'}</td>
       <td style="border:1px solid #000;padding:6px;"><strong>${r.puntaje||''}</strong></td>
       <td style="border:1px solid #000;padding:6px;background:${bg};color:${co};font-weight:bold;">${r.calificacion||''}</td>
     </tr>`;
-
   }).join('');
 
   // ── HTML final del Word ──
@@ -3242,11 +3198,9 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset='utf-8'><title>Informe Auditoría</title>
   <style>
-    body { font-family:Arial,sans-serif;
-    font-size:11pt; }
+    body { font-family:Arial,sans-serif; font-size:11pt; }
     .page-break { page-break-before:always; }
-    .fuente { font-size:9pt; color:#555; margin-top:4px; text-align:center;
-    }
+    .fuente { font-size:9pt; color:#555; margin-top:4px; text-align:center; }
   </style>
   </head>
   <body>
@@ -3261,56 +3215,44 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       <strong>Total de HCs evaluadas:</strong> ${total}
     </p>
 
-    <h3 style="color:#1e3a6e;">3.3.
-    RESULTADOS</h3>
+    <h3 style="color:#1e3a6e;">3.3. RESULTADOS</h3>
 
     <h4 style="color:#1e3a6e;">3.3.1. Número de Historias Clínicas auditadas</h4>
-    <p style="text-align:justify;">${parrafos[0] ||
-    ''}</p>
+    <p style="text-align:justify;">${parrafos[0] || ''}</p>
     <p align="center" style="text-align:center;"><strong>Tabla N° 1. Historias Clínicas auditadas por mes — Hospital Santa Rosa</strong></p>
     ${t1}
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-    ${imgMes ?
-    `
+    ${imgMes ? `
     <p align="center" style="text-align:center;"><strong>Gráfico N° 1. Historias Clínicas auditadas por mes</strong></p>
     <p align="center" style="text-align:center;"><img src="${imgMes}" width="480"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-    <h4 style="color:#1e3a6e;">3.3.2.
-    Evaluación de la Calidad de Registro</h4>
-    <p style="text-align:justify;">${parrafos[1] ||
-    ''}</p>
+    <h4 style="color:#1e3a6e;">3.3.2. Evaluación de la Calidad de Registro</h4>
+    <p style="text-align:justify;">${parrafos[1] || ''}</p>
     <p align="center" style="text-align:center;"><strong>Tabla N° 2. Calidad de registro de las HCs auditadas — Hospital Santa Rosa</strong></p>
     ${t2}
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>
-    ${imgPastel ?
-    `
+    ${imgPastel ? `
     <p align="center" style="text-align:center;"><strong>Gráfico N° 2. Calidad de registro en las Historias Clínicas auditadas</strong></p>
     <p align="center" style="text-align:center;"><img src="${imgPastel}" width="400"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-    ${tieneMultiArea ?
-    `
+    ${tieneMultiArea ? `
     <h4 style="color:#1e3a6e;">3.3.3. Evaluación de la Calidad de registro por Área de atención</h4>
     ${_parrafo3AHtml(parrafos[2] || '')}
     ${t3Html}` : `
     ${_parrafo3AHtml(parrafos[2] || '')}
     ${t3Html}`}
 
-    <h4 style="color:#1e3a6e;">${tieneMultiArea ?
-    '3.3.4' : '3.3.3'}. Distribución de Historias Clínicas auditadas por Departamento/Servicio</h4>
-    <p style="text-align:justify;">${parrafos[3] ||
-    ''}</p>
+    <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.4' : '3.3.3'}. Distribución de Historias Clínicas auditadas por Departamento/Servicio</h4>
+    <p style="text-align:justify;">${parrafos[3] || ''}</p>
     ${t4Html}
 
-    <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.5' : '3.3.4'}.
-    Evaluación de la Calidad de Registro por Departamento/Servicio</h4>
+    <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.5' : '3.3.4'}. Evaluación de la Calidad de Registro por Departamento/Servicio</h4>
     ${t5Html}
 
-    <h4 style="color:#1e3a6e;">${tieneMultiArea ?
-    '3.3.6' : '3.3.5'}. Promedio de Cumplimiento del correcto registro</h4>
-    <p style="text-align:justify;">${parrafos[4] ||
-    ''}</p>
+    <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.6' : '3.3.5'}. Promedio de Cumplimiento del correcto registro</h4>
+    <p style="text-align:justify;">${parrafos[4] || ''}</p>
     ${imgCumpl ? `
     <p align="center" style="text-align:center;"><strong>Gráfico N° 6. Promedio de Cumplimiento Global del correcto registro de las HCs auditadas</strong></p>
     <p align="center" style="text-align:center;"><img src="${imgCumpl}" width="400"/></p>
@@ -3318,17 +3260,13 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     ${t6aHtml}
 
-    <h4 style="color:#1e3a6e;">${tieneMultiArea ?
-    '3.3.7' : '3.3.6'}. No Conformidades</h4>
+    <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.7' : '3.3.6'}. No Conformidades</h4>
     ${tieneMultiArea ? `
-    <p style="text-align:justify;"><strong>a.
-    Consulta Externa</strong></p>
+    <p style="text-align:justify;"><strong>a. Consulta Externa</strong></p>
     <p style="color:#888;font-style:italic;">[Completar manualmente con las No Conformidades reportadas en Consulta Externa.]</p>
-    <p style="text-align:justify;"><strong>b.
-    Emergencia</strong></p>
+    <p style="text-align:justify;"><strong>b. Emergencia</strong></p>
     <p style="color:#888;font-style:italic;">[Completar manualmente con las No Conformidades reportadas en Emergencia.]</p>
-    <p style="text-align:justify;"><strong>c.
-    Hospitalización</strong></p>
+    <p style="text-align:justify;"><strong>c. Hospitalización</strong></p>
     <p style="color:#888;font-style:italic;">[Completar manualmente con las No Conformidades reportadas en Hospitalización.]</p>
     ` : `
     <p style="text-align:justify;color:#888;font-style:italic;">[Completar manualmente con las No Conformidades reportadas según área de atención.]</p>
@@ -3343,16 +3281,14 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     </h3>
     <table align="center" style="width:100%;border-collapse:collapse;margin:10px auto;font-size:9pt;">
       <thead>
- 
-       <tr>
+        <tr>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">N°</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">MES</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">N° HC</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">DEPARTAMENTO/SERVICIO AUDITADO</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">ÁREA</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">OPORTUNIDAD</th>
-          <th style="border:1px solid 
-          #000;background:#e2e8f0;padding:5px;text-align:center;">PUNTAJE</th>
+          <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">PUNTAJE</th>
           <th style="border:1px solid #000;background:#e2e8f0;padding:5px;text-align:center;">CALIFICACIÓN</th>
         </tr>
       </thead>
@@ -3363,7 +3299,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-
   a.download = `Informe_${tipoLabel}_${fechaHoy.replace(/\//g, '-')}.doc`;
   a.click();
 }
@@ -3373,26 +3308,21 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 // =====================================================================
 function _calcGlobal(data) {
   if (!data || !data.length) return { sat: 0, mej: 0, def: 0, total: 0, prom: 0 };
-
   let sat = 0, mej = 0, def = 0, sumPct = 0;
-
   data.forEach(r => {
     if (r.calificacion === 'SATISFACTORIO') sat++;
     else if (r.calificacion === 'POR MEJORAR') mej++;
     else def++;
     sumPct += (r.porcentaje || 0);
   });
-
   const total = data.length;
   const prom = total ? parseFloat((sumPct / total).toFixed(2)) : 0;
-
   return { sat, mej, def, total, prom };
 }
 
 function _calcPorMes(data) {
   if (!data) return {};
   const pm = {};
-
   data.forEach(r => {
     const m = r.num_auditoria || 'Sin Mes';
     if (!pm[m]) pm[m] = { sat: 0, mej: 0, def: 0, total: 0 };
@@ -3401,14 +3331,12 @@ function _calcPorMes(data) {
     else pm[m].def++;
     pm[m].total++;
   });
-
   return pm;
 }
 
 function _calcPorServicio(data) {
   if (!data) return {};
   const ps = {};
-
   data.forEach(r => {
     const s = r.servicio || '—';
     if (!ps[s]) ps[s] = { sat: 0, mej: 0, def: 0, total: 0 };
@@ -3417,14 +3345,12 @@ function _calcPorServicio(data) {
     else ps[s].def++;
     ps[s].total++;
   });
-
   return ps;
 }
 
 function _calcPorArea(data) {
   if (!data) return {};
   const pa = {};
-
   data.forEach(r => {
     const a = r.area || 'SIN ÁREA';
     if (!pa[a]) pa[a] = { sat: 0, mej: 0, def: 0, total: 0, sumaPct: 0 };
@@ -3434,7 +3360,6 @@ function _calcPorArea(data) {
     pa[a].total++;
     pa[a].sumaPct += (r.porcentaje || 0);
   });
-
   const result = {};
   Object.keys(pa).forEach(a => {
     const d = pa[a];
@@ -3446,52 +3371,42 @@ function _calcPorArea(data) {
       prom: d.total ? parseFloat((d.sumaPct / d.total).toFixed(2)) : 0
     };
   });
-
   return result;
 }
 
 function _getMesesSelExp() {
   return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
     .map(cb => cb.value);
-
 }
 
 function _getServsSelExp() {
   if (_serviciosSelExp.size === 0) return [];
   return [..._serviciosSelExp];
-
 }
 
 function _pct(n, total) {
   if (!total) return 0;
   return parseFloat((n / total * 100).toFixed(1));
-
 }
 
 function _mesCorto(mes) {
   return String(mes).includes(' - ') ? String(mes).split(' - ')[1] : mes;
-
 }
 
 function _canvasToImg(id) {
   const c = document.getElementById(id);
   return c ? c.toDataURL('image/png', 1.0) : '';
-
 }
 
 function _limpiarPreview() {
   ['expTabla2', 'expTabla3', 'expTabla5'].forEach(id => {
     const el = document.getElementById(id); if (el) el.innerHTML = '';
   });
-
   ['expResumenRapido', 'expNarrativo'].forEach(id => {
     const el = document.getElementById(id); if (el) el.innerHTML = '';
   });
-
   if (_ch2) { _ch2.destroy(); _ch2 = null; }
-  if (_ch3) { _ch3.destroy(); _ch3 = null;
-
-  }
+  if (_ch3) { _ch3.destroy(); _ch3 = null; }
   if (_ch5) { _ch5.destroy(); _ch5 = null; }
 }
 
@@ -3506,6 +3421,36 @@ document.addEventListener('click', e => {
     document.getElementById('menuMesExp')?.classList.remove('show');
 });
 
+
 </script>
+<!-- SELECTOR TIPO DE INFORME -->
+<div style="margin-bottom:12px;">
+  <label style="font-weight:700;color:var(--navy);display:block;margin-bottom:6px;">
+    📋 Tipo de Informe
+  </label>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border:2px solid var(--border);border-radius:8px;background:var(--cream2);font-weight:600;color:var(--navy);">
+      <input type="radio" name="tipoInformeRad" id="radTrimestral" value="trimestral"
+             onchange="document.getElementById('expTipoInforme').value='trimestral';_actualizarUITipoInforme();actualizarPreviewExport();"
+             checked>
+      🗓️ Trimestral
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border:2px solid var(--border);border-radius:8px;background:var(--cream2);font-weight:600;color:var(--navy);">
+      <input type="radio" name="tipoInformeRad" id="radAnual" value="anual"
+             onchange="document.getElementById('expTipoInforme').value='anual';_actualizarUITipoInforme();actualizarPreviewExport();">
+      📅 Anual
+    </label>
+  </div>
+  <!-- Campo hidden que guarda el valor actual -->
+  <select id="expTipoInforme" style="display:none;" onchange="_actualizarUITipoInforme();actualizarPreviewExport();">
+    <option value="trimestral">Trimestral</option>
+    <option value="anual">Anual</option>
+  </select>
+  <!-- Info dinámica de fecha de corte -->
+  <div id="expInfoFechaCorte"
+       style="margin-top:8px;padding:8px 12px;background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;font-size:12px;font-weight:600;">
+    Selecciona meses para ver la fecha de corte trimestral.
+  </div>
+</div>
 </body>
 </html>
