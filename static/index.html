@@ -655,22 +655,42 @@ table.main-tbl tr:hover td{background:#fdf8f0}
           </select>
         </div>
 
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+          <span style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;">
+            TIPO DE INFORME
+          </span>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:6px 12px;border-radius:20px;border:2px solid var(--border);background:var(--cream);font-weight:600;font-size:12px;transition:all .2s;" id="lblModoMensual">
+            <input type="radio" name="expModo" value="mensual" onchange="cambioModo()" checked
+                   style="accent-color:var(--navy);"> 📆 Mensual
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:6px 12px;border-radius:20px;border:2px solid var(--border);background:var(--cream);font-weight:600;font-size:12px;transition:all .2s;" id="lblModoTrimes">
+            <input type="radio" name="expModo" value="trimestral" onchange="cambioModo()"
+                   style="accent-color:var(--navy);"> 📋 Trimestral
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:6px 12px;border-radius:20px;border:2px solid var(--border);background:var(--cream);font-weight:600;font-size:12px;transition:all .2s;" id="lblModoAnual">
+            <input type="radio" name="expModo" value="anual" onchange="cambioModo()"
+                   style="accent-color:var(--navy);"> 📅 Anual
+          </label>
+        </div>
+
+        <div id="expInfoBanner" style="padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:12px;display:none;"></div>
+        
         <div class="fg">
           <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">AÑO</label>
           <select id="expAnio" onchange="actualizarFiltrosCascada()"></select>
         </div>
 
-        <div class="fg">
+        <!-- <div class="fg">
           <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">OPORTUNIDAD</label>
           <select id="expOportunidad" onchange="actualizarFiltrosCascada()">
             <option value="">Todos</option>
             <option value="A TIEMPO">A Tiempo</option>
             <option value="FUERA DE FECHA">Fuera de Fecha</option>
           </select>
-        </div>
+        </div> -->
 
         <div class="custom-ms" id="wrapMesExp" style="flex:1.2">
-          <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">MESES</label>
+          <label id="labelMesExp" style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.06em;display:block;margin-bottom:5px;">MESES</label>
           <div class="ms-btn" onclick="toggleMesExp()">
             <span id="textMesExp">Todos los meses</span> <span>▼</span>
           </div>
@@ -1928,8 +1948,9 @@ function hideLoading(){document.getElementById('loadingOverlay').classList.remov
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(type||'');setTimeout(()=>t.className='toast',3500);}
 
 // =====================================================================
-// MINI SISTEMA DE GENERACIÓN DE INFORMES OFICIALES v3.0
+// MINI SISTEMA DE GENERACIÓN DE INFORMES OFICIALES v4.0
 // MULTI-ÁREA: CONSULTA EXTERNA / HOSPITALIZACIÓN / EMERGENCIA
+// MODOS: MENSUAL | TRIMESTRAL | ANUAL
 // =====================================================================
 let _ch2 = null, _ch3 = null, _ch5 = null;
 let _expDataRaw = [];
@@ -1937,6 +1958,99 @@ let _expData = [];
 let _serviciosSelExp = new Set();
 let _isFirstLoadExp = true;
 
+// ─────────────────────────────────────────────────────────────────────
+// MAPA DE MESES: nombre corto → número de mes (1-12)
+// El campo num_auditoria tiene formato "01 - ENERO", "02 - FEBRERO", etc.
+// ─────────────────────────────────────────────────────────────────────
+const MESES_NUM = {
+  'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
+  'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
+  'SEPTIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12
+};
+
+/** Extrae el número de mes (1-12) desde el campo num_auditoria tipo "01 - ENERO" */
+function _numMes(numAuditoria) {
+  if (!numAuditoria) return null;
+  const str = String(numAuditoria).toUpperCase().trim();
+  // Formato "01 - ENERO" → tomar la parte numérica
+  const match = str.match(/^(\d{1,2})/);
+  if (match) return parseInt(match[1], 10);
+  // Fallback: buscar nombre de mes
+  for (const [nombre, num] of Object.entries(MESES_NUM)) {
+    if (str.includes(nombre)) return num;
+  }
+  return null;
+}
+
+/**
+ * Dado el año seleccionado y los meses seleccionados (array de num_auditoria strings),
+ * calcula la fecha de corte para modo TRIMESTRAL.
+ * Regla: fecha de corte = día 15 del mes SIGUIENTE al último mes seleccionado.
+ * Retorna { fechaCorte: Date, textoCorte: string }
+ */
+function _calcFechaCorteTrimes(anioSel, mesesSel) {
+  if (!mesesSel || mesesSel.length === 0) return null;
+  const nums = mesesSel.map(_numMes).filter(n => n !== null);
+  if (!nums.length) return null;
+  const ultimoMes = Math.max(...nums); // ej: 3 para marzo
+  const mesSiguiente = ultimoMes === 12 ? 1 : ultimoMes + 1;
+  const anioCorte = ultimoMes === 12 ? parseInt(anioSel) + 1 : parseInt(anioSel);
+  const fechaCorte = new Date(anioCorte, mesSiguiente - 1, 15, 23, 59, 59); // 15 del mes siguiente
+  const nombresMes = Object.keys(MESES_NUM);
+  const nombreMesSig = nombresMes[mesSiguiente - 1]; // índice base 0
+  return {
+    fechaCorte,
+    textoCorte: `15 de ${nombreMesSig.charAt(0) + nombreMesSig.slice(1).toLowerCase()} de ${anioCorte}`
+  };
+}
+
+/**
+ * Filtra un registro según el modo de informe.
+ * - MENSUAL/TRIMESTRAL: verifica que el año del registro sea el seleccionado
+ *   y que la marca temporal (si existe) sea <= fecha de corte.
+ * - ANUAL: solo verifica que el año sea el seleccionado.
+ */
+function _registroDentroFecha(r, anioSel, mesesSel, modo) {
+  // Verificar año
+  if (anioSel && r.anio !== anioSel) return false;
+
+  if (modo === 'anual') return true; // anual: todo el año
+
+  // Modo mensual o trimestral: verificar que el mes del registro esté en la selección
+  if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
+
+  if (modo === 'mensual') return true;
+
+  // Modo trimestral: además verificar con marca temporal si está disponible
+  if (modo === 'trimestral') {
+    const info = _calcFechaCorteTrimes(anioSel, mesesSel);
+    if (!info) return true;
+    // Si el registro tiene marca temporal, validar que no supere la fecha de corte
+    if (r.marcaTemporal) {
+      const ft = _parseFechaTemporal(r.marcaTemporal);
+      if (ft && ft > info.fechaCorte) return false;
+    }
+    return true;
+  }
+
+  return true;
+}
+
+/** Intenta parsear una marca temporal en varios formatos comunes */
+function _parseFechaTemporal(str) {
+  if (!str) return null;
+  // Intentar Date nativo
+  const d = new Date(str);
+  if (!isNaN(d)) return d;
+  // Formato DD/MM/YYYY o DD/MM/YYYY HH:MM:SS
+  const m = String(str).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// CARGA Y APERTURA DEL MODAL
+// ─────────────────────────────────────────────────────────────────────
 async function cargarDatosExportacion() {
   const a = document.getElementById('expArea').value;
   if (a === 'actual') {
@@ -1981,6 +2095,9 @@ function abrirModalExportacion() {
   document.getElementById('modalExportOverlay').classList.add('open');
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// INICIALIZAR FILTROS DEL MODAL
+// ─────────────────────────────────────────────────────────────────────
 function _initExportFilters() {
   _isFirstLoadExp = true;
   _serviciosSelExp.clear();
@@ -1989,13 +2106,56 @@ function _initExportFilters() {
   document.getElementById('expAnio').innerHTML = '<option value="">Todos los años</option>' +
     anios.map(a => `<option value="${a}">${a}</option>`).join('');
 
+  // Poblar todos los meses disponibles en el raw
   const meses = [...new Set(_expDataRaw.map(r => r.num_auditoria).filter(a => a && a != 'Sin Fecha'))].sort();
-  document.getElementById('menuMesExp').innerHTML = meses.map(m => `
-    <label class="ms-item">
-      <input type="checkbox" value="${m}" onchange="cambioFiltroPrincipal()"> ${m}
-    </label>
-  `).join('');
+  _poblarMenuMeses(meses);
 
+  // Aplicar modo actual para configurar la UI
+  _aplicarModoUI();
+  cambioFiltroPrincipal();
+}
+
+/** Puebla el menú de meses con los valores dados */
+function _poblarMenuMeses(meses) {
+  const modo = _getModo();
+  if (modo === 'trimestral') {
+    // En trimestral: checkboxes pero con máximo 3 seleccionables
+    document.getElementById('menuMesExp').innerHTML = meses.map(m => `
+      <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
+        <input type="checkbox" value="${m}" onchange="_onMesTrimes(this)">
+        <span style="margin-left:8px;font-size:12px">${m}</span>
+      </label>
+    `).join('');
+  } else if (modo === 'mensual') {
+    // En mensual: radio buttons (solo 1 mes)
+    document.getElementById('menuMesExp').innerHTML = `
+      <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;background:#f0f9ff;">
+        <input type="radio" name="mesExpRadio" value="" onchange="cambioFiltroPrincipal()" checked>
+        <span style="margin-left:8px;font-size:12px;font-style:italic;">Todos los meses</span>
+      </label>` +
+      meses.map(m => `
+        <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
+          <input type="radio" name="mesExpRadio" value="${m}" onchange="cambioFiltroPrincipal()">
+          <span style="margin-left:8px;font-size:12px">${m}</span>
+        </label>
+      `).join('');
+  } else {
+    // Anual: sin filtro de mes (se ignora)
+    document.getElementById('menuMesExp').innerHTML = `
+      <div style="padding:12px;color:#888;font-style:italic;font-size:12px;">
+        En modo Anual se incluyen todos los meses del año seleccionado.
+      </div>`;
+  }
+}
+
+/** Handler para checkboxes en modo trimestral: máximo 3 */
+function _onMesTrimes(cb) {
+  const checked = document.querySelectorAll('#menuMesExp input[type=checkbox]:checked');
+  if (checked.length > 3) {
+    cb.checked = false;
+    showToast('Solo puedes seleccionar hasta 3 meses para el informe trimestral', 'err');
+    return;
+  }
   cambioFiltroPrincipal();
 }
 
@@ -2003,18 +2163,150 @@ function cerrarModalExport() {
   document.getElementById('modalExportOverlay').classList.remove('open');
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// GETTERS DEL MODO Y MESES SELECCIONADOS
+// ─────────────────────────────────────────────────────────────────────
+function _getModo() {
+  const el = document.querySelector('input[name="expModo"]:checked');
+  return el ? el.value : 'mensual';
+}
+
+function _getMesesSelExp() {
+  const modo = _getModo();
+  if (modo === 'anual') return []; // anual no filtra por mes
+  if (modo === 'mensual') {
+    const radio = document.querySelector('input[name="mesExpRadio"]:checked');
+    if (!radio || radio.value === '') return [];
+    return [radio.value];
+  }
+  // trimestral: checkboxes
+  return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
+    .map(cb => cb.value);
+}
+
+function _getServsSelExp() {
+  if (_serviciosSelExp.size === 0) return [];
+  return [..._serviciosSelExp];
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// APLICAR CAMBIO DE MODO EN LA UI
+// ─────────────────────────────────────────────────────────────────────
+function _aplicarModoUI() {
+  const modo = _getModo();
+  const wrapMes = document.getElementById('wrapMesExp');
+  const labelMes = document.getElementById('labelMesExp');
+  const infoBanner = document.getElementById('expInfoBanner');
+
+  if (modo === 'anual') {
+    if (wrapMes) wrapMes.style.display = 'none';
+    if (labelMes) labelMes.style.display = 'none';
+  } else {
+    if (wrapMes) wrapMes.style.display = '';
+    if (labelMes) labelMes.style.display = '';
+    // Actualizar label según modo
+    if (labelMes) {
+      labelMes.textContent = modo === 'trimestral' ? 'MESES (Máx. 3)' : 'MES';
+    }
+  }
+
+  // Actualizar banner informativo
+  _actualizarBannerInfo();
+
+  // Re-poblar menú de meses según modo
+  const anioSel = document.getElementById('expAnio')?.value || '';
+  let meses;
+  if (anioSel) {
+    meses = [...new Set(_expDataRaw.filter(r => r.anio === anioSel).map(r => r.num_auditoria).filter(a => a && a != 'Sin Fecha'))].sort();
+  } else {
+    meses = [...new Set(_expDataRaw.map(r => r.num_auditoria).filter(a => a && a != 'Sin Fecha'))].sort();
+  }
+  _poblarMenuMeses(meses);
+}
+
+function _actualizarBannerInfo() {
+  const modo = _getModo();
+  const banner = document.getElementById('expInfoBanner');
+  if (!banner) return;
+  const anioSel = document.getElementById('expAnio')?.value || '';
+  const mesesSel = _getMesesSelExp();
+
+  if (modo === 'anual') {
+    banner.style.display = '';
+    banner.style.background = '#e0f2fe';
+    banner.style.borderLeft = '4px solid #0284c7';
+    banner.innerHTML = `<strong>📅 Informe Anual ${anioSel || '(Todos los años)'}</strong><br>
+      <small>Se incluyen todos los registros del año seleccionado (enero a diciembre).</small>`;
+  } else if (modo === 'trimestral') {
+    if (mesesSel.length === 0) {
+      banner.style.display = '';
+      banner.style.background = '#fef9c3';
+      banner.style.borderLeft = '4px solid #eab308';
+      banner.innerHTML = `<strong>📋 Informe Trimestral</strong><br>
+        <small>Selecciona <strong>hasta 3 meses</strong> para definir el período trimestral.</small>`;
+    } else {
+      const info = _calcFechaCorteTrimes(anioSel, mesesSel);
+      banner.style.display = '';
+      banner.style.background = '#f0fdf4';
+      banner.style.borderLeft = '4px solid #16a34a';
+      const mesesTexto = mesesSel.map(m => _mesCorto(m)).join(', ');
+      banner.innerHTML = `<strong>📋 Informe Trimestral: ${mesesTexto}</strong><br>
+        <small>✅ Fecha de corte: <strong>${info ? info.textoCorte : '—'}</strong> · 
+        Solo se incluyen registros del año <strong>${anioSel || 'seleccionado'}</strong> dentro de este período.</small>`;
+    }
+  } else {
+    // mensual
+    const mesSel = mesesSel.length > 0 ? mesesSel[0] : null;
+    banner.style.display = '';
+    banner.style.background = '#f5f3ff';
+    banner.style.borderLeft = '4px solid #7c3aed';
+    banner.innerHTML = `<strong>📆 Informe Mensual${mesSel ? ': ' + _mesCorto(mesSel) : ' (Todos los meses)'}</strong><br>
+      <small>Se incluyen registros del mes seleccionado en el año ${anioSel || 'elegido'}.</small>`;
+  }
+}
+
+function cambioModo() {
+  _isFirstLoadExp = true;
+  _serviciosSelExp.clear();
+  _aplicarModoUI();
+  cambioFiltroPrincipal();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// FILTRO PRINCIPAL EN CASCADA
+// ─────────────────────────────────────────────────────────────────────
 function cambioFiltroPrincipal() {
   const anioSel = document.getElementById('expAnio').value;
   const mesesSel = _getMesesSelExp();
-  const oportSel = document.getElementById('expOportunidad').value;
+  const modo = _getModo();
 
+  // Actualizar banner
+  _actualizarBannerInfo();
+
+  // Recalcular meses disponibles si cambia el año
+  const mesesDisponibles = [...new Set(
+    _expDataRaw
+      .filter(r => !anioSel || r.anio === anioSel)
+      .map(r => r.num_auditoria)
+      .filter(a => a && a !== 'Sin Fecha')
+  )].sort();
+
+  // Solo re-poblar si no hay meses ya seleccionados en trimestral
+  if (modo !== 'trimestral' || mesesSel.length === 0) {
+    _poblarMenuMeses(mesesDisponibles);
+    // Re-aplicar selección anterior si existe
+    if (modo === 'trimestral' && mesesSel.length > 0) {
+      mesesSel.forEach(m => {
+        const cb = document.querySelector(`#menuMesExp input[value="${CSS.escape(m)}"]`);
+        if (cb) cb.checked = true;
+      });
+    }
+  }
+
+  // Calcular servicios disponibles con el filtro actual
   const serviciosDisponibles = [...new Set(
-    _expDataRaw.filter(r => {
-      if (anioSel && r.anio !== anioSel) return false;
-      if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-      if (oportSel && r.oportunidad !== oportSel) return false;
-      return true;
-    }).map(r => r.servicio).filter(s => s && s !== '—')
+    _expDataRaw.filter(r => _registroDentroFecha(r, anioSel, mesesSel, modo))
+      .map(r => r.servicio).filter(s => s && s !== '—')
   )].sort();
 
   const newSet = new Set();
@@ -2081,25 +2373,34 @@ function toggleMesExp() { document.getElementById('menuMesExp').classList.toggle
 
 function actualizarFiltrosCascada() { cambioFiltroPrincipal(); }
 
+// ─────────────────────────────────────────────────────────────────────
+// ACTUALIZAR PREVIEW
+// ─────────────────────────────────────────────────────────────────────
 function actualizarPreviewExport() {
   const anioSel = document.getElementById('expAnio').value;
   const mesesSel = _getMesesSelExp();
   const servsSel = _getServsSelExp();
-  const oportSel = document.getElementById('expOportunidad').value;
+  const modo = _getModo();
 
+  // Actualizar texto del dropdown de mes
   const textMes = document.getElementById('textMesExp');
   if (textMes) {
-    if (mesesSel.length === 0) textMes.textContent = 'Todos los meses';
-    else if (mesesSel.length === 1) textMes.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
-    else textMes.textContent = `${mesesSel.length} seleccionados`;
+    if (modo === 'anual') {
+      textMes.textContent = 'Año completo';
+    } else if (mesesSel.length === 0) {
+      textMes.textContent = modo === 'mensual' ? 'Todos los meses' : 'Seleccionar meses…';
+    } else if (mesesSel.length === 1) {
+      textMes.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
+    } else {
+      textMes.textContent = `${mesesSel.length} meses`;
+    }
   }
 
   if (servsSel.length === 0) { _expData = []; _limpiarPreview(); return; }
 
+  // Filtrar datos con la lógica inteligente de fechas
   _expData = _expDataRaw.filter(r => {
-    if (anioSel && r.anio !== anioSel) return false;
-    if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
-    if (oportSel && r.oportunidad !== oportSel) return false;
+    if (!_registroDentroFecha(r, anioSel, mesesSel, modo)) return false;
     if (!servsSel.includes(r.servicio)) return false;
     return true;
   });
@@ -2313,6 +2614,19 @@ function _renderNarrativo() {
   const porMes = _calcPorMes(_expData);
   const meses = Object.keys(porMes).sort();
   const anio = document.getElementById('expAnio').value || 'el período seleccionado';
+  const modo = _getModo();
+  const mesesSel = _getMesesSelExp();
+
+  // Texto del período según modo
+  let periodoTexto = anio;
+  if (modo === 'trimestral' && mesesSel.length > 0) {
+    const info = _calcFechaCorteTrimes(anio, mesesSel);
+    periodoTexto = `${anio} — Trimestre: ${mesesSel.map(m => _mesCorto(m)).join(', ')} (corte: ${info ? info.textoCorte : ''})`;
+  } else if (modo === 'mensual' && mesesSel.length === 1) {
+    periodoTexto = `${anio} — ${_mesCorto(mesesSel[0])}`;
+  } else if (modo === 'anual') {
+    periodoTexto = `Año ${anio} (Anual)`;
+  }
 
   let mejorMes = '', mejorPct = -1, peorMes = '', peorPct = 101;
   meses.forEach(m => {
@@ -2338,7 +2652,7 @@ function _renderNarrativo() {
 
   // Párrafo 1
   if (meses.length > 0) {
-    texto += `En el período seleccionado (${anio}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
+    texto += `En el período seleccionado (${periodoTexto}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
     texto += `La distribución mensual fue la siguiente: ${textoMeses}; tal como se muestra en la Tabla N° 1 y en el Gráfico N° 1.\n\n`;
   }
 
@@ -2354,7 +2668,6 @@ function _renderNarrativo() {
       const pctSat = _pct(d.sat, d.total);
       const pctMej = _pct(d.mej, d.total);
       const pctDef = _pct(d.def, d.total);
-      // Cada área en línea separada con prefijo de viñeta para el preview
       texto += `• En ${_nombreAreaTexto(area)}, de ${d.total} Historias Clínicas auditadas, ${d.sat} (${pctSat}%) obtuvieron resultado "Satisfactorio", ${d.mej} (${pctMej}%) obtuvieron resultado "Por Mejorar" y ${d.def} (${pctDef}%) obtuvieron resultado "Deficiente".\n`;
     });
     texto += `Los resultados se presentan en la Tabla N° 3 y en el Gráfico N° 3.\n\n`;
@@ -2420,6 +2733,19 @@ function copiarNarrativo() {
 // =====================================================================
 function generarReporteFinal(formato) {
   if (!_expData || _expData.length === 0) { showToast('No hay datos para exportar.', 'err'); return; }
+
+  // Validación especial para trimestral
+  const modo = _getModo();
+  const mesesSel = _getMesesSelExp();
+  if (modo === 'trimestral' && mesesSel.length === 0) {
+    showToast('Por favor selecciona los meses para el informe trimestral.', 'err');
+    return;
+  }
+  if (modo === 'trimestral' && mesesSel.length > 3) {
+    showToast('El informe trimestral admite máximo 3 meses.', 'err');
+    return;
+  }
+
   showLoading(`Generando archivo ${formato.toUpperCase()}…`);
 
   const imgPastel = _canvasToImg('expChart2');
@@ -2435,14 +2761,27 @@ function generarReporteFinal(formato) {
   const anio = document.getElementById('expAnio').value || '';
   const narrativo = document.getElementById('expNarrativo').textContent;
 
+  // Calcular texto del período y fecha de corte para el encabezado del informe
+  let periodoInforme = anio;
+  let fechaCorteTexto = '';
+  if (modo === 'trimestral' && mesesSel.length > 0) {
+    const info = _calcFechaCorteTrimes(anio, mesesSel);
+    periodoInforme = `${anio} — Trimestre ${mesesSel.map(m => _mesCorto(m)).join('/')}`;
+    fechaCorteTexto = info ? info.textoCorte : '';
+  } else if (modo === 'mensual' && mesesSel.length === 1) {
+    periodoInforme = `${anio} — ${_mesCorto(mesesSel[0])}`;
+  } else if (modo === 'anual') {
+    periodoInforme = `Año ${anio} (Anual)`;
+  }
+
   _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, prom, sat, mej, def, (imgMes, imgServ4, imgCumpl, imgAreaBars, imgAreaPie) => {
     setTimeout(() => {
       try {
         if (formato === 'excel') {
-          _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ, porArea);
+          _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ, porArea, periodoInforme, fechaCorteTexto);
         } else {
           _generarWord(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ, porArea,
-            imgPastel, imgBarras, imgServ, narrativo, anio,
+            imgPastel, imgBarras, imgServ, narrativo, periodoInforme, fechaCorteTexto,
             imgMes, imgServ4, imgCumpl, imgAreaBars, imgAreaPie);
         }
       } catch (e) {
@@ -2594,7 +2933,7 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
 // =====================================================================
 // EXCEL
 // =====================================================================
-function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ, porArea) {
+function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ, porArea, periodoInforme, fechaCorteTexto) {
   const wb = XLSX.utils.book_new();
   const areasPresentes = Object.keys(porArea);
   const tieneMultiArea = areasPresentes.length > 1;
@@ -2602,6 +2941,10 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
   const resData = [
     ['INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO — HOSPITAL SANTA ROSA'],
     ['Fecha de emisión:', fechaHoy],
+    ['Período:', periodoInforme],
+  ];
+  if (fechaCorteTexto) resData.push(['Fecha de corte:', fechaCorteTexto]);
+  resData.push(
     [''],
     ['Tabla N° 1. Historias Clínicas auditadas por mes'],
     ['MES', 'N° HCs', '%'],
@@ -2617,7 +2960,7 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
     [''],
     ['Promedio de Cumplimiento Global:', prom + '%'],
     [''],
-  ];
+  );
 
   if (tieneMultiArea) {
     resData.push(['Tabla N° 3. Calidad de Registro por Área de atención']);
@@ -2695,7 +3038,7 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
 function _generarWord(fechaHoy, sat, mej, def, total, prom,
   porMes, meses, porServ, porArea,
   imgPastel, imgBarras, imgServ,
-  narrativo, anio,
+  narrativo, periodoInforme, fechaCorteTexto,
   imgMes, imgServ4, imgCumpl, imgAreaBars, imgAreaPie) {
 
   const noCumpl = parseFloat((100 - prom).toFixed(2));
@@ -2703,23 +3046,16 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
   const areasPresentes = Object.keys(porArea);
   const tieneMultiArea = areasPresentes.length > 1;
 
-  // Reconstruir párrafos desde el narrativo
-  // párrafo 0 = HCs por mes, párrafo 1 = global, párrafo 2 = por área/mes,
-  // párrafo 3 = por servicio, párrafo 4 = cumplimiento
   const parrafos = narrativo.split('\n\n');
 
-  // ── Párrafo 3 (por área) convertido a lista HTML para el Word ──
-  // El narrativo guarda cada área con prefijo "• "; lo convertimos a <ul><li>
   function _parrafo3AHtml(texto) {
     if (!tieneMultiArea) return `<p style="text-align:justify;">${texto}</p>`;
-    // Separar la intro, las viñetas y el cierre
     const lineas = texto.split('\n').filter(l => l.trim());
     const intro   = lineas.find(l => !l.startsWith('•') && !l.startsWith('Los resultados')) || '';
     const viñetas = lineas.filter(l => l.startsWith('•'));
     const cierre  = lineas.find(l => l.startsWith('Los resultados')) || '';
     const items   = viñetas.map(v => {
       const contenido = v.replace(/^•\s*/, '');
-      // Detectar el nombre del área para negrita
       const match = contenido.match(/^(En [^,]+),(.+)$/);
       if (match) {
         return `<li style="margin-bottom:6px;text-align:justify;"><strong>${match[1]}</strong>,${match[2]}</li>`;
@@ -2962,7 +3298,12 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     </tr>`;
   }).join('');
 
-  // ── HTML final del Word (SIN div.aviso) ──
+  // Línea extra de fecha de corte en el encabezado del Word si es trimestral
+  const lineaFechaCorte = fechaCorteTexto
+    ? `<strong>Fecha de corte:</strong> ${fechaCorteTexto}`
+    : '';
+
+  // ── HTML final del Word ──
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
     xmlns:w='urn:schemas-microsoft-com:office:word'
     xmlns='http://www.w3.org/TR/REC-html40'>
@@ -2980,7 +3321,8 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p align="center" style="text-align:center;">
       <strong>Fecha de Emisión:</strong> ${fechaHoy}
       &nbsp;&nbsp;&nbsp;&nbsp;
-      <strong>Período:</strong> ${anio}
+      <strong>Período:</strong> ${periodoInforme}
+      ${lineaFechaCorte ? `&nbsp;&nbsp;&nbsp;&nbsp;${lineaFechaCorte}` : ''}
       &nbsp;&nbsp;&nbsp;&nbsp;
       <strong>Total de HCs evaluadas:</strong> ${total}
     </p>
@@ -3142,16 +3484,6 @@ function _calcPorArea(data) {
     };
   });
   return result;
-}
-
-function _getMesesSelExp() {
-  return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
-    .map(cb => cb.value);
-}
-
-function _getServsSelExp() {
-  if (_serviciosSelExp.size === 0) return [];
-  return [..._serviciosSelExp];
 }
 
 function _pct(n, total) {
