@@ -1163,8 +1163,16 @@ async function actualizarDatos(forzarActualizacion = false) {
 }
 
 async function calcularEstadisticas(data) {
-  if (!data || !data.length) {
+  if (!data) {
     stats = null;
+    return;
+  }
+  // Si el filtro no encuentra nada (ej. no hay "Fuera de fecha"), ponemos todo en CERO
+  if (data.length === 0) {
+    stats = {
+      total: 0, satisfactorio: 0, por_mejorar: 0, deficiente: 0,
+      promedio_pct: 0, por_servicio: {}, secciones: {}
+    };
     return;
   }
   
@@ -1324,17 +1332,48 @@ function aplicarFiltros() {
 
   clearTimeout(timerFiltrosDash);
 
-  timerFiltrosDash = setTimeout(() => {
+ timerFiltrosDash = setTimeout(() => {
     const anioSel = document.getElementById('filtAnio').value;
     const oportSel = document.getElementById('filtOportDash').value;
     const checks = document.querySelectorAll('#menuMesDash input[type="checkbox"]:checked');
     const mesesSel = Array.from(checks).map(cb => cb.value);
-    const textBtn = document.getElementById('textMesDash');
-    if (textBtn) {
-      if (mesesSel.length === 0) textBtn.textContent = 'Todos los meses';
-      else if (mesesSel.length === 1) textBtn.textContent = mesesSel[0].split(' - ')[1] || mesesSel[0];
-      else textBtn.textContent = `${mesesSel.length} seleccionados`;
+
+    // --- INICIO: OCULTAR Y DESMARCAR MESES SIN DATOS ---
+    const mesesDisponibles = [...new Set(allData.filter(r => {
+      if (anioSel && r.anio !== anioSel) return false;
+      if (oportSel && r.oportunidad !== oportSel) return false;
+      return true;
+    }).map(r => r.num_auditoria))];
+
+    const menuDash = document.getElementById('menuMesDash');
+    if (menuDash) {
+      const labelsMes = menuDash.querySelectorAll('.ms-item');
+      labelsMes.forEach(label => {
+        const checkbox = label.querySelector('input');
+        if (mesesDisponibles.includes(checkbox.value)) {
+          label.style.display = 'flex'; // Mostrar si tiene datos
+        } else {
+          label.style.display = 'none'; // Ocultar si no tiene datos
+          checkbox.checked = false; // Desmarca si se oculta para evitar lag
+        }
+      });
+
+      // Actualizar qué meses quedaron marcados realmente
+      const checksActualizados = Array.from(menuDash.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      
+      // Actualizar el texto del botón
+      const textBtn = document.getElementById('textMesDash');
+      if (textBtn) {
+        if (checksActualizados.length === 0) textBtn.textContent = 'Todos los meses';
+        else if (checksActualizados.length === 1) textBtn.textContent = checksActualizados[0].split(' - ')[1] || checksActualizados[0];
+        else textBtn.textContent = `${checksActualizados.length} seleccionados`;
+      }
+      
+      // Actualizar la variable para que el filtro funcione con los meses correctos
+      mesesSel.length = 0;
+      mesesSel.push(...checksActualizados);
     }
+    // --- FIN ---
 
     const selectorServicio = document.getElementById('filtServDash');
     const servSel = selectorServicio.value;
@@ -1351,26 +1390,6 @@ function aplicarFiltros() {
 
     if (serviciosDisponibles.includes(servSel)) {
       selectorServicio.value = servSel;
-    }
-
-    // --- NUEVO: OCULTAR MESES QUE NO TIENEN DATOS ---
-    const mesesDisponibles = [...new Set(allData.filter(r => {
-      if (anioSel && r.anio !== anioSel) return false;
-      if (oportSel && r.oportunidad !== oportSel) return false;
-      return true;
-    }).map(r => r.num_auditoria))];
-
-    const menuDash = document.getElementById('menuMesDash');
-    if (menuDash) {
-      const labelsMes = menuDash.querySelectorAll('.ms-item');
-      labelsMes.forEach(label => {
-        const val = label.querySelector('input').value;
-        if (mesesDisponibles.includes(val)) {
-          label.style.display = 'flex'; // Mostrar si tiene datos
-        } else {
-          label.style.display = 'none'; // Ocultar si no tiene datos para ese filtro
-        }
-      });
     }
     // -------------------------------------------------
 
@@ -1468,10 +1487,9 @@ function renderDashboard() {
 function destroyChart(id) { if(charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
 function renderChartCalif() {
-  destroyChart('calif');
-  if (!stats || !stats.total) return;
-  const ctx = document.getElementById('chartCalif');
-  if (!ctx) return;
+  destroyChart('calif'); 
+  if (!stats) return; // Le quitamos el "!stats.total" para que sí dibuje aunque haya 0
+  const ctx = document.getElementById('chartCalif'); if (!ctx) return;
   charts['calif'] = new Chart(ctx.getContext('2d'), {
     type:'doughnut',
     data:{
