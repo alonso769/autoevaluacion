@@ -1966,7 +1966,7 @@ async function cargarDatosExportacion() {
       }
       if (!error || combined.length > 0) {
         _expDataRaw = combined;
-        aplicarLogicaFechas(_expDataRaw);
+        if(typeof aplicarLogicaFechas === 'function') aplicarLogicaFechas(_expDataRaw);
         _initExportFilters();
       }
     } catch (e) { showToast('Error cargando datos', 'err'); }
@@ -1984,6 +1984,20 @@ function abrirModalExportacion() {
 function _initExportFilters() {
   _isFirstLoadExp = true;
   _serviciosSelExp.clear();
+
+  // INYECCIÓN DINÁMICA: Selector de Tipo de Reporte (Trimestral/Anual) si no existe
+  if (!document.getElementById('expTipoReporte')) {
+    const expAnioElement = document.getElementById('expAnio');
+    if (expAnioElement) {
+      const selectHtml = `
+        <select id="expTipoReporte" onchange="cambioFiltroPrincipal()" style="margin-left: 10px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border, #ccc); font-size: 13px; font-weight: bold; color: var(--navy, #1e3a6e); cursor: pointer;">
+          <option value="trimestral">Informe Trimestral</option>
+          <option value="anual">Informe Anual</option>
+        </select>
+      `;
+      expAnioElement.insertAdjacentHTML('afterend', selectHtml);
+    }
+  }
 
   const anios = [...new Set(_expDataRaw.map(r => r.anio).filter(a => a && a != 'Sin Año'))].sort();
   document.getElementById('expAnio').innerHTML = '<option value="">Todos los años</option>' +
@@ -2003,16 +2017,60 @@ function cerrarModalExport() {
   document.getElementById('modalExportOverlay').classList.remove('open');
 }
 
+// =====================================================================
+// LÓGICA DE CORTE DE FECHAS (TRIMESTRAL / ANUAL)
+// =====================================================================
+function esRegistroValidoPorFecha(r, anioSel, mesesSel, tipoReporte) {
+  if (!anioSel) return true;
+  
+  // Intenta utilizar la propiedad que contiene la fecha real de creación o registro
+  const fechaRegistroStr = r.fecha_registro || r.fecha || r.fecha_auditoria || r.createdAt;
+  if (!fechaRegistroStr) return true; // Si el registro no tiene fecha, lo pasamos por defecto
+
+  const fechaReg = new Date(fechaRegistroStr);
+  if (isNaN(fechaReg.getTime())) return true; // Evitar bloqueos por fechas mal formadas
+
+  const fechaInicioAnio = new Date(parseInt(anioSel), 0, 1, 0, 0, 0); // 1 de Enero del año seleccionado
+  const fechaFinAnio = new Date(parseInt(anioSel), 11, 31, 23, 59, 59); // 31 de Dic del año seleccionado
+
+  // REGLA UNIVERSAL: No incluir datos de años anteriores (ej. si eliges Abr 2026, no jalamos Dic 2025)
+  if (fechaReg < fechaInicioAnio) return false;
+
+  if (tipoReporte === 'trimestral' && mesesSel.length > 0) {
+    let maxMes = 0;
+    mesesSel.forEach(m => {
+      // Extrae el número del mes de textos como "01 - Enero", "02-Febrero", etc.
+      const num = parseInt(String(m).split('-')[0].trim());
+      if (!isNaN(num) && num > maxMes) maxMes = num;
+    });
+
+    if (maxMes > 0) {
+      // Magia de Date en JS: el índice de meses va de 0 a 11. 
+      // Por tanto, si maxMes es 3 (Marzo), al pasarle '3' creará Abril. 
+      // Así automáticamente tenemos "hasta el 15 del mes siguiente".
+      const fechaCorteTrimestral = new Date(parseInt(anioSel), maxMes, 15, 23, 59, 59);
+      if (fechaReg > fechaCorteTrimestral) return false;
+    }
+  } else if (tipoReporte === 'anual') {
+    // Corte estricto para todo lo que esté dentro de ese año exacto
+    if (fechaReg > fechaFinAnio) return false;
+  }
+
+  return true;
+}
+
 function cambioFiltroPrincipal() {
   const anioSel = document.getElementById('expAnio').value;
   const mesesSel = _getMesesSelExp();
-  const oportSel = document.getElementById('expOportunidad').value;
+  const oportSel = document.getElementById('expOportunidad')?.value;
+  const tipoReporte = document.getElementById('expTipoReporte')?.value || 'trimestral';
 
   const serviciosDisponibles = [...new Set(
     _expDataRaw.filter(r => {
       if (anioSel && r.anio !== anioSel) return false;
       if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
       if (oportSel && r.oportunidad !== oportSel) return false;
+      if (!esRegistroValidoPorFecha(r, anioSel, mesesSel, tipoReporte)) return false;
       return true;
     }).map(r => r.servicio).filter(s => s && s !== '—')
   )].sort();
@@ -2027,19 +2085,21 @@ function cambioFiltroPrincipal() {
   _serviciosSelExp = newSet;
 
   const menu = document.getElementById('menuServExp');
-  menu.innerHTML = `
-    <div class="ms-actions" style="position:sticky;top:0;background:#fff;z-index:10;padding:10px;border-bottom:1px solid #ccc;display:flex;gap:10px;">
-      <button onclick="seleccionarTodosServ(true)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:var(--navy);">✅ Todos</button>
-      <button onclick="seleccionarTodosServ(false)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:#dc2626;">❌ Ninguno</button>
-    </div>
-  ` + serviciosDisponibles.map(s => `
-    <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
-      <input type="checkbox" value="${_esc(s)}"
-             ${_serviciosSelExp.has(s) ? 'checked' : ''}
-             onchange="_onServExpChange(this)">
-      <span style="margin-left:8px;font-size:12px">${s}</span>
-    </label>
-  `).join('');
+  if(menu) {
+    menu.innerHTML = `
+      <div class="ms-actions" style="position:sticky;top:0;background:#fff;z-index:10;padding:10px;border-bottom:1px solid #ccc;display:flex;gap:10px;">
+        <button onclick="seleccionarTodosServ(true)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:var(--navy);">✅ Todos</button>
+        <button onclick="seleccionarTodosServ(false)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:#dc2626;">❌ Ninguno</button>
+      </div>
+    ` + serviciosDisponibles.map(s => `
+      <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
+        <input type="checkbox" value="${_esc(s)}"
+               ${_serviciosSelExp.has(s) ? 'checked' : ''}
+               onchange="_onServExpChange(this)">
+        <span style="margin-left:8px;font-size:12px">${s}</span>
+      </label>
+    `).join('');
+  }
 
   _actualizarTextoServExp();
   actualizarPreviewExport();
@@ -2064,7 +2124,9 @@ function seleccionarTodosServ(sel) {
 }
 
 function _actualizarTextoServExp() {
-  const total = document.querySelectorAll('#menuServExp input[type=checkbox]').length;
+  const cbs = document.querySelectorAll('#menuServExp input[type=checkbox]');
+  if(!cbs.length) return;
+  const total = cbs.length;
   const checked = document.querySelectorAll('#menuServExp input[type=checkbox]:checked').length;
   const txt = document.getElementById('textServExp');
   if (!txt) return;
@@ -2076,8 +2138,8 @@ function _actualizarTextoServExp() {
   } else txt.textContent = `${checked} servicios`;
 }
 
-function toggleServExp() { document.getElementById('menuServExp').classList.toggle('show'); }
-function toggleMesExp() { document.getElementById('menuMesExp').classList.toggle('show'); }
+function toggleServExp() { document.getElementById('menuServExp')?.classList.toggle('show'); }
+function toggleMesExp() { document.getElementById('menuMesExp')?.classList.toggle('show'); }
 
 function actualizarFiltrosCascada() { cambioFiltroPrincipal(); }
 
@@ -2085,7 +2147,8 @@ function actualizarPreviewExport() {
   const anioSel = document.getElementById('expAnio').value;
   const mesesSel = _getMesesSelExp();
   const servsSel = _getServsSelExp();
-  const oportSel = document.getElementById('expOportunidad').value;
+  const oportSel = document.getElementById('expOportunidad')?.value;
+  const tipoReporte = document.getElementById('expTipoReporte')?.value || 'trimestral';
 
   const textMes = document.getElementById('textMesExp');
   if (textMes) {
@@ -2101,6 +2164,7 @@ function actualizarPreviewExport() {
     if (mesesSel.length > 0 && !mesesSel.includes(r.num_auditoria)) return false;
     if (oportSel && r.oportunidad !== oportSel) return false;
     if (!servsSel.includes(r.servicio)) return false;
+    if (!esRegistroValidoPorFecha(r, anioSel, mesesSel, tipoReporte)) return false;
     return true;
   });
 
@@ -2118,7 +2182,9 @@ function actualizarPreviewExport() {
 
 function _renderResumen() {
   const { sat, mej, def, total, prom } = _calcGlobal(_expData);
-  document.getElementById('expResumenRapido').innerHTML = `
+  const el = document.getElementById('expResumenRapido');
+  if(!el) return;
+  el.innerHTML = `
     <div class="exp-badge tot"><div><div class="badge-num">${total}</div><div>Total HCs</div></div></div>
     <div class="exp-badge sat"><div><div class="badge-num">${sat}</div><div>Satisfactorio (${_pct(sat,total)}%)</div></div></div>
     <div class="exp-badge mej"><div><div class="badge-num">${mej}</div><div>Por Mejorar (${_pct(mej,total)}%)</div></div></div>
@@ -2129,7 +2195,9 @@ function _renderResumen() {
 
 function _renderTabla2() {
   const { sat, mej, def, total } = _calcGlobal(_expData);
-  document.getElementById('expTabla2').innerHTML = `
+  const el = document.getElementById('expTabla2');
+  if(!el) return;
+  el.innerHTML = `
     <thead><tr><th style="text-align:left">CALIFICACIÓN</th><th>N°</th><th>%</th></tr></thead>
     <tbody>
       <tr><td style="text-align:left">Satisfactorio</td><td>${sat}</td><td>${_pct(sat,total)}%</td></tr>
@@ -2157,7 +2225,9 @@ function _renderTabla3() {
     return `<td style="color:${p>=90?'#166534':p>=75?'#d97706':'#dc2626'};font-weight:700">${p}%</td>`;
   }).join('') + `<td colspan="2"></td>`;
 
-  document.getElementById('expTabla3').innerHTML = `
+  const el = document.getElementById('expTabla3');
+  if(!el) return;
+  el.innerHTML = `
     <thead><tr><th style="text-align:left">CALIFICACIÓN</th>${ths}</tr></thead>
     <tbody>
       <tr><td style="text-align:left">Satisfactorio</td>${fSat}</tr>
@@ -2174,8 +2244,10 @@ function _renderTabla5() {
     (_pct(porServ[b].sat, porServ[b].total)) - (_pct(porServ[a].sat, porServ[a].total))
   );
   const mostrar = servicios.length > 1;
-  document.getElementById('wrapTabla5').style.display = mostrar ? '' : 'none';
-  document.getElementById('wrapGraf5').style.display = mostrar ? '' : 'none';
+  const wrapT5 = document.getElementById('wrapTabla5');
+  const wrapG5 = document.getElementById('wrapGraf5');
+  if (wrapT5) wrapT5.style.display = mostrar ? '' : 'none';
+  if (wrapG5) wrapG5.style.display = mostrar ? '' : 'none';
   if (!mostrar) return;
 
   const filas = servicios.map(s => {
@@ -2195,7 +2267,9 @@ function _renderTabla5() {
   }).join('');
 
   const { sat: tS, mej: tM, def: tD, total: tT } = _calcGlobal(_expData);
-  document.getElementById('expTabla5').innerHTML = `
+  const el = document.getElementById('expTabla5');
+  if(!el) return;
+  el.innerHTML = `
     <thead>
       <tr>
         <th style="text-align:left">SERVICIO</th>
@@ -2313,6 +2387,7 @@ function _renderNarrativo() {
   const porMes = _calcPorMes(_expData);
   const meses = Object.keys(porMes).sort();
   const anio = document.getElementById('expAnio').value || 'el período seleccionado';
+  const tipoReporte = document.getElementById('expTipoReporte')?.value || 'trimestral';
 
   let mejorMes = '', mejorPct = -1, peorMes = '', peorPct = 101;
   meses.forEach(m => {
@@ -2338,7 +2413,8 @@ function _renderNarrativo() {
 
   // Párrafo 1
   if (meses.length > 0) {
-    texto += `En el período seleccionado (${anio}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
+    const txtReporte = tipoReporte === 'anual' ? 'informe anual' : 'período seleccionado';
+    texto += `En el ${txtReporte} (${anio}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
     texto += `La distribución mensual fue la siguiente: ${textoMeses}; tal como se muestra en la Tabla N° 1 y en el Gráfico N° 1.\n\n`;
   }
 
@@ -2354,7 +2430,6 @@ function _renderNarrativo() {
       const pctSat = _pct(d.sat, d.total);
       const pctMej = _pct(d.mej, d.total);
       const pctDef = _pct(d.def, d.total);
-      // Cada área en línea separada con prefijo de viñeta para el preview
       texto += `• En ${_nombreAreaTexto(area)}, de ${d.total} Historias Clínicas auditadas, ${d.sat} (${pctSat}%) obtuvieron resultado "Satisfactorio", ${d.mej} (${pctMej}%) obtuvieron resultado "Por Mejorar" y ${d.def} (${pctDef}%) obtuvieron resultado "Deficiente".\n`;
     });
     texto += `Los resultados se presentan en la Tabla N° 3 y en el Gráfico N° 3.\n\n`;
@@ -2396,7 +2471,8 @@ function _renderNarrativo() {
     texto += '\n\nEn la Tabla N° 6a se presenta el Promedio de Cumplimiento del correcto registro según Área de atención.';
   }
 
-  document.getElementById('expNarrativo').textContent = texto;
+  const elNarrativo = document.getElementById('expNarrativo');
+  if(elNarrativo) elNarrativo.textContent = texto;
 }
 
 function _nombreAreaTexto(area) {
@@ -2410,7 +2486,9 @@ function _nombreAreaTexto(area) {
 }
 
 function copiarNarrativo() {
-  const t = document.getElementById('expNarrativo').textContent;
+  const el = document.getElementById('expNarrativo');
+  if(!el) return;
+  const t = el.textContent;
   if (!t) { showToast('No hay texto para copiar', 'err'); return; }
   navigator.clipboard.writeText(t).then(() => showToast('Texto copiado al portapapeles ✓', 'ok'));
 }
@@ -2433,7 +2511,7 @@ function generarReporteFinal(formato) {
   const porArea = _calcPorArea(_expData);
   const meses = Object.keys(porMes).sort();
   const anio = document.getElementById('expAnio').value || '';
-  const narrativo = document.getElementById('expNarrativo').textContent;
+  const narrativo = document.getElementById('expNarrativo') ? document.getElementById('expNarrativo').textContent : '';
 
   _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, prom, sat, mej, def, (imgMes, imgServ4, imgCumpl, imgAreaBars, imgAreaPie) => {
     setTimeout(() => {
@@ -2704,22 +2782,16 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
   const tieneMultiArea = areasPresentes.length > 1;
 
   // Reconstruir párrafos desde el narrativo
-  // párrafo 0 = HCs por mes, párrafo 1 = global, párrafo 2 = por área/mes,
-  // párrafo 3 = por servicio, párrafo 4 = cumplimiento
   const parrafos = narrativo.split('\n\n');
 
-  // ── Párrafo 3 (por área) convertido a lista HTML para el Word ──
-  // El narrativo guarda cada área con prefijo "• "; lo convertimos a <ul><li>
   function _parrafo3AHtml(texto) {
     if (!tieneMultiArea) return `<p style="text-align:justify;">${texto}</p>`;
-    // Separar la intro, las viñetas y el cierre
     const lineas = texto.split('\n').filter(l => l.trim());
-    const intro   = lineas.find(l => !l.startsWith('•') && !l.startsWith('Los resultados')) || '';
+    const intro  = lineas.find(l => !l.startsWith('•') && !l.startsWith('Los resultados')) || '';
     const viñetas = lineas.filter(l => l.startsWith('•'));
     const cierre  = lineas.find(l => l.startsWith('Los resultados')) || '';
     const items   = viñetas.map(v => {
       const contenido = v.replace(/^•\s*/, '');
-      // Detectar el nombre del área para negrita
       const match = contenido.match(/^(En [^,]+),(.+)$/);
       if (match) {
         return `<li style="margin-bottom:6px;text-align:justify;"><strong>${match[1]}</strong>,${match[2]}</li>`;
@@ -3190,7 +3262,6 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#wrapMesExp'))
     document.getElementById('menuMesExp')?.classList.remove('show');
 });
-
 
 </script>
 </body>
