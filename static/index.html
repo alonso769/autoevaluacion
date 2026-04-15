@@ -2276,7 +2276,6 @@ function _renderNarrativo() {
   const porServ = _calcPorServicio(_expData);
   const servs = Object.keys(porServ);
 
-  // Calcular áreas presentes
   const porArea = _calcPorArea(_expData);
   const areasPresentes = Object.keys(porArea);
   const tieneMultiArea = areasPresentes.length > 1;
@@ -2288,16 +2287,13 @@ function _renderNarrativo() {
 
   let texto = '';
 
-  // Párrafo 1 - Número de HCs por mes
   if (meses.length > 0) {
     texto += `En el período seleccionado (${anio}), se realizó la Auditoría de la Calidad de registro en ${total} Historias Clínicas (HCs) del Hospital Santa Rosa. `;
     texto += `La distribución mensual fue la siguiente: ${textoMeses}; tal como se muestra en la Tabla N° 1 y en el Gráfico N° 1.\n\n`;
   }
 
-  // Párrafo 2 - Resultados globales (Tabla N°2)
   texto += `De las ${total} Historias Clínicas auditadas, ${sat} HCs (${_pct(sat,total)}%) obtuvieron resultado "Satisfactorio", ${mej} HCs (${_pct(mej,total)}%) resultado "Por Mejorar" y ${def} HCs (${_pct(def,total)}%) obtuvieron resultado "Deficiente", tal como se presenta en la Tabla N° 2 y el Gráfico N° 2.\n\n`;
 
-  // Párrafo 3 - Resultados por área de atención (NUEVO - Tabla N°3)
   if (tieneMultiArea) {
     texto += `A continuación, se presentan los resultados de la Evaluación de la Calidad de registro, según Área auditada:\n`;
     areasPresentes.forEach(area => {
@@ -2310,7 +2306,6 @@ function _renderNarrativo() {
     });
     texto += `Los resultados se presentan en la Tabla N° 3 y en el Gráfico N° 3.\n\n`;
   } else {
-    // Una sola área: tabla por mes
     if (meses.length > 0) {
       texto += `En la Tabla N° 3 y en el Gráfico N° 3 se presentan los resultados obtenidos por mes.`;
       if (mejorMes) texto += ` Los mejores resultados se reportaron en ${mejorMes} con ${mejorPct}% de calificación "Satisfactorio"`;
@@ -2319,7 +2314,6 @@ function _renderNarrativo() {
     }
   }
 
-  // Párrafo 4 - Distribución y calidad por departamento/servicio
   if (servs.length > 1) {
     const top = [...servs].sort((a, b) => _pct(porServ[b].sat, porServ[b].total) - _pct(porServ[a].sat, porServ[a].total));
     const topNombre = top[0].replace('SERV. DE ', 'Servicio de ').replace('DPTO. DE ', 'Departamento de ');
@@ -2333,10 +2327,8 @@ function _renderNarrativo() {
     else texto += '\n\n';
   }
 
-  // Párrafo 5 - Promedio de cumplimiento global
   texto += `El Promedio de Cumplimiento del correcto registro en las HCs auditadas fue de ${prom}%, correspondiendo a la calificación "${clasif}" según los criterios de la NTS N° 029-MINSA/DIGEPRES-V.02, tal como se presenta en el Gráfico N° 6.`;
 
-  // Agregar promedio por área si hay múltiples áreas
   if (tieneMultiArea) {
     let mejorArea = '', mejorPromArea = -1;
     areasPresentes.forEach(area => {
@@ -2346,7 +2338,6 @@ function _renderNarrativo() {
     if (mejorArea) {
       texto += ` El mayor Promedio de Cumplimiento fue reportado por el Área de ${_nombreAreaTexto(mejorArea)} con ${mejorPromArea}%.`;
     }
-
     texto += '\n\nEn la Tabla N° 6a se presenta el Promedio de Cumplimiento del correcto registro según Área de atención.';
   }
 
@@ -2420,7 +2411,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
   const areasPresentes = Object.keys(porArea);
   const tieneMultiArea = areasPresentes.length > 1;
 
-  // Necesitamos 5 gráficos: Gráfico1(mes), Gráfico4(serv dist), Gráfico6(cumpl), Gráfico3area(barras área), Gráfico3pie(pastel area)
   let pendientes = 5;
   let imgMes = '', imgServ4 = '', imgCumpl = '', imgAreaBars = '', imgAreaPie = '';
 
@@ -2432,7 +2422,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
     }
   }
 
-  // Gráfico 1 – HCs auditadas por mes (barras azules)
   const c1 = document.createElement('canvas'); c1.width = 700; c1.height = 340; wrap.appendChild(c1);
   const ch1 = new Chart(c1.getContext('2d'), {
     type: 'bar',
@@ -2453,7 +2442,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
   });
   setTimeout(() => { imgMes = c1.toDataURL('image/png', 1.0); ch1.destroy(); check(); }, 300);
 
-  // Gráfico 4 – Distribución HCs por Departamento/Servicio (barras azules)
   const c4 = document.createElement('canvas'); c4.width = 700; c4.height = 340; wrap.appendChild(c4);
   const servList4 = Object.keys(porServ).sort((a, b) => porServ[b].total - porServ[a].total);
   const ch4 = new Chart(c4.getContext('2d'), {
@@ -2478,7 +2466,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
   });
   setTimeout(() => { imgServ4 = c4.toDataURL('image/png', 1.0); ch4.destroy(); check(); }, 350);
 
-  // Gráfico 6 – Doughnut de cumplimiento global
   const c6 = document.createElement('canvas'); c6.width = 500; c6.height = 340; wrap.appendChild(c6);
   const noCumpl = parseFloat((100 - prom).toFixed(2));
   const ch6 = new Chart(c6.getContext('2d'), {
@@ -2498,7 +2485,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
   });
   setTimeout(() => { imgCumpl = c6.toDataURL('image/png', 1.0); ch6.destroy(); check(); }, 400);
 
-  // Gráfico 3 – Barras agrupadas por Área de atención (Calificación x Área)
   if (tieneMultiArea) {
     const c3a = document.createElement('canvas'); c3a.width = 700; c3a.height = 340; wrap.appendChild(c3a);
     const areaLabels = areasPresentes;
@@ -2507,21 +2493,9 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
       data: {
         labels: areaLabels.map(_nombreAreaTexto),
         datasets: [
-          {
-            label: 'Satisfactorio',
-            data: areaLabels.map(a => porArea[a]?.sat || 0),
-            backgroundColor: COLORS.sat
-          },
-          {
-            label: 'Por Mejorar',
-            data: areaLabels.map(a => porArea[a]?.mej || 0),
-            backgroundColor: COLORS.mej
-          },
-          {
-            label: 'Deficiente',
-            data: areaLabels.map(a => porArea[a]?.def || 0),
-            backgroundColor: COLORS.def
-          }
+          { label: 'Satisfactorio', data: areaLabels.map(a => porArea[a]?.sat || 0), backgroundColor: COLORS.sat },
+          { label: 'Por Mejorar', data: areaLabels.map(a => porArea[a]?.mej || 0), backgroundColor: COLORS.mej },
+          { label: 'Deficiente', data: areaLabels.map(a => porArea[a]?.def || 0), backgroundColor: COLORS.def }
         ]
       },
       options: {
@@ -2532,7 +2506,6 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
     });
     setTimeout(() => { imgAreaBars = c3a.toDataURL('image/png', 1.0); ch3a.destroy(); check(); }, 450);
 
-    // Gráfico 6a – Barras de % cumplimiento por área
     const c6a = document.createElement('canvas'); c6a.width = 500; c6a.height = 300; wrap.appendChild(c6a);
     const promAreas = areasPresentes.map(a => porArea[a]?.prom || 0);
     const minProm = Math.max(0, Math.min(...promAreas) - 5);
@@ -2549,40 +2522,30 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
       },
       options: {
         animation: { duration: 0 }, responsive: false,
-        plugins: {
-          legend: { display: false },
-          datalabels: { display: false }
-        },
+        plugins: { legend: { display: false }, datalabels: { display: false } },
         scales: {
           x: { grid: { display: false } },
-          y: {
-            beginAtZero: false,
-            min: minProm,
-            max: 100,
-            ticks: { callback: v => v + '%' }
-          }
+          y: { beginAtZero: false, min: minProm, max: 100, ticks: { callback: v => v + '%' } }
         }
       }
     });
     setTimeout(() => { imgAreaPie = c6a.toDataURL('image/png', 1.0); ch6a.destroy(); check(); }, 500);
   } else {
-    // No hay multi-área, completar los pendientes vacíos
     imgAreaBars = '';
-    check(); // para c3a
+    check();
     imgAreaPie = '';
-    check(); // para c6a
+    check();
   }
 }
 
 // =====================================================================
-// EXCEL – Incluye hoja por área si hay múltiples áreas
+// EXCEL
 // =====================================================================
 function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porServ, porArea) {
   const wb = XLSX.utils.book_new();
   const areasPresentes = Object.keys(porArea);
   const tieneMultiArea = areasPresentes.length > 1;
 
-  // --- Hoja Resumen ---
   const resData = [
     ['INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO — HOSPITAL SANTA ROSA'],
     ['Fecha de emisión:', fechaHoy],
@@ -2605,7 +2568,6 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
     [''],
   ];
 
-  // Tabla 3: por área (si multi-área) o por mes (si una sola área)
   if (tieneMultiArea) {
     resData.push(['Tabla N° 3. Calidad de Registro por Área de atención']);
     resData.push(['ÁREA', 'SATISFACTORIO', '%SAT', 'POR MEJORAR', '%MEJ', 'DEFICIENTE', '%DEF', 'TOTAL']);
@@ -2643,7 +2605,6 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resData), 'Resumen');
 
-  // --- Hoja Por Servicio ---
   if (Object.keys(porServ).length > 1) {
     const servData = [
       ['Tabla N° 4. Distribución de HCs por Departamento/Servicio'],
@@ -2662,7 +2623,6 @@ function _generarExcel(fechaHoy, sat, mej, def, total, prom, porMes, meses, porS
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(servData), 'Por Servicio');
   }
 
-  // --- Hoja Detalle ---
   const anexoData = _expData.map((r, i) => ({
     'N°': i + 1,
     'MES': r.num_auditoria,
@@ -2715,7 +2675,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     </tr>
   </table>`;
 
-  // ── Tabla 2: Calidad global ──
+  // ── Tabla 2 ──
   const t2 = `<table align="center" style="width:70%;border-collapse:collapse;margin:10px auto 20px auto;font-size:10pt;">
     <tr><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">CALIFICACIÓN</th><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">N°</th><th style="border:1px solid #000;background:#e2e8f0;padding:6px;">%</th></tr>
     <tr><td style="border:1px solid #000;padding:6px;">Satisfactorio</td><td style="border:1px solid #000;padding:6px;">${sat}</td><td style="border:1px solid #000;padding:6px;">${_pct(sat,total)}%</td></tr>
@@ -2724,10 +2684,9 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <tr><td style="border:1px solid #000;padding:6px;"><strong>TOTAL</strong></td><td style="border:1px solid #000;padding:6px;"><strong>${total}</strong></td><td style="border:1px solid #000;padding:6px;"><strong>100%</strong></td></tr>
   </table>`;
 
-  // ── Tabla 3: Según áreas (si multi-área) o por mes ──
+  // ── Tabla 3 ──
   let t3Html = '';
   if (tieneMultiArea) {
-    // Tabla 3 por ÁREA (como en el informe oficial Q4-2025)
     const filasArea = areasPresentes.map(a => {
       const d = porArea[a];
       return `<tr>
@@ -2772,9 +2731,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p align="center" style="text-align:center;"><strong>Gráfico N° 3. Calidad de registro por Área de atención</strong></p>
     <p align="center" style="text-align:center;"><img src="${imgAreaBars}" width="520"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}`;
-
   } else {
-    // Tabla 3 por MES (modo servicio único)
     const hMeses = meses.map(m => `<th style="border:1px solid #000;background:#e2e8f0;padding:6px;">${_mesCorto(m)}</th>`).join('');
     const fSat3 = meses.map(m => `<td style="border:1px solid #000;padding:6px;">${porMes[m].sat}</td>`).join('');
     const fMej3 = meses.map(m => `<td style="border:1px solid #000;padding:6px;">${porMes[m].mej}</td>`).join('');
@@ -2799,7 +2756,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}`;
   }
 
-  // ── Tabla 4: Distribución por Departamento/Servicio ──
+  // ── Tabla 4 ──
   const servList4 = Object.keys(porServ).sort((a, b) => porServ[b].total - porServ[a].total);
   const filas4 = servList4.map(s => `
     <tr>
@@ -2829,7 +2786,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p>` : ''}
     <br>` : '';
 
-  // ── Tabla 5: Calidad por Departamento/Servicio ──
+  // ── Tabla 5 ──
   let t5Html = '';
   const servsList5 = Object.keys(porServ);
   if (servsList5.length > 1) {
@@ -2877,7 +2834,7 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       <br>`;
   }
 
-  // ── Tabla 6a: Promedio por área (solo si multi-área) ──
+  // ── Tabla 6a ──
   let t6aHtml = '';
   if (tieneMultiArea) {
     const filas6a = areasPresentes.map(a => {
@@ -2923,44 +2880,96 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     </tr>`;
   }).join('');
 
-  // ── HTML final del Word ──
+  // ══════════════════════════════════════════════════════════════════
+  // ── HTML FINAL DEL WORD  ← ÚNICO BLOQUE MODIFICADO ──
+  // ══════════════════════════════════════════════════════════════════
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
     xmlns:w='urn:schemas-microsoft-com:office:word'
     xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset='utf-8'><title>Informe Auditoría</title>
   <style>
-    body { font-family:Arial,sans-serif; font-size:11pt; }
+    body { font-family:Arial,sans-serif; font-size:11pt; margin:2cm; }
     .page-break { page-break-before:always; }
     .fuente { font-size:9pt; color:#555; margin-top:4px; text-align:center; }
-    .aviso { background:#fff3cd; border:2px solid #ffc107; border-radius:6px; padding:14px 18px; margin-bottom:24px; font-size:10pt; }
-    .aviso strong { color:#856404; }
+    .aviso {
+      background:#fff8e1;
+      border-left:5px solid #f59e0b;
+      border-top:1px solid #fbbf24;
+      border-right:1px solid #fbbf24;
+      border-bottom:1px solid #fbbf24;
+      border-radius:4px;
+      padding:14px 18px;
+      margin-bottom:36px;
+      font-size:9.5pt;
+      color:#4b3a00;
+    }
+    .aviso .aviso-titulo {
+      font-weight:bold;
+      font-size:10pt;
+      color:#78350f;
+      display:block;
+      margin-bottom:8px;
+      letter-spacing:0.02em;
+    }
+    .aviso .aviso-cuerpo {
+      margin:0;
+      line-height:1.6;
+    }
+    .aviso .aviso-pie {
+      margin-top:10px;
+      font-style:italic;
+      color:#6b4c00;
+      line-height:1.5;
+    }
+    .titulo-informe {
+      margin-top:28px;
+      margin-bottom:6px;
+      color:#1e3a6e;
+      text-align:center;
+      font-size:16pt;
+      font-weight:bold;
+      letter-spacing:0.01em;
+    }
+    .subtitulo-informe {
+      text-align:center;
+      font-size:10pt;
+      margin-bottom:24px;
+      color:#333;
+    }
   </style>
   </head>
   <body>
+
+    <!-- ▸ NOTA SEPARADA DEL TÍTULO -->
     <div class="aviso">
-      <strong>⚠ NOTA IMPORTANTE PARA EL EDITOR DE ESTE INFORME:</strong><br>
-      Este archivo fue generado automáticamente en base a la <strong>data registrada en el archivo Excel del Drive</strong>
-      (Formularios Google — Oficina de Gestión de la Calidad). Los resultados estadísticos, tablas y gráficos
-      reflejan únicamente los datos ingresados hasta la fecha de generación (<strong>${fechaHoy}</strong>).<br>
-      <em>Para completar el Informe Oficial deberá adicionar manualmente: portada institucional, sección de
-      Antecedentes, Base Legal, sección de No Conformidades detallada, firma y sello del responsable, y
-      cualquier otra sección que corresponda según el trimestre auditado.</em>
+      <span class="aviso-titulo">⚠ NOTA IMPORTANTE PARA EL EDITOR DE ESTE INFORME</span>
+      <p class="aviso-cuerpo">
+        Este archivo fue generado automáticamente en base a la <strong>data registrada en el archivo Excel
+        del Drive</strong> (Formularios Google — Oficina de Gestión de la Calidad). Los resultados
+        estadísticos, tablas y gráficos reflejan únicamente los datos ingresados hasta la fecha de
+        generación: <strong>${fechaHoy}</strong>.
+      </p>
+      <p class="aviso-pie">
+        Para completar el Informe Oficial deberá adicionar manualmente: portada institucional, sección de
+        Antecedentes, Base Legal, sección de No Conformidades detallada, firma y sello del responsable, y
+        cualquier otra sección que corresponda según el trimestre auditado.
+      </p>
     </div>
 
-    <h2 align="center" style="color:#1e3a6e;text-align:center;">
+    <!-- ▸ TÍTULO DEL INFORME -->
+    <h2 class="titulo-informe">
       INFORME DE EVALUACIÓN DE LA CALIDAD DE REGISTRO<br>HOSPITAL SANTA ROSA
     </h2>
-    <p align="center" style="text-align:center;">
+    <p class="subtitulo-informe">
       <strong>Fecha de Emisión:</strong> ${fechaHoy}
-      &nbsp;&nbsp;&nbsp;&nbsp;
+      &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
       <strong>Período:</strong> ${anio}
-      &nbsp;&nbsp;&nbsp;&nbsp;
+      &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
       <strong>Total de HCs evaluadas:</strong> ${total}
     </p>
 
     <h3 style="color:#1e3a6e;">3.3. RESULTADOS</h3>
 
-    <!-- SECCIÓN 3.3.1: Número de HCs auditadas -->
     <h4 style="color:#1e3a6e;">3.3.1. Número de Historias Clínicas auditadas</h4>
     <p style="text-align:justify;">${parrafos[0] || ''}</p>
     <p align="center" style="text-align:center;"><strong>Tabla N° 1. Historias Clínicas auditadas por mes — Hospital Santa Rosa</strong></p>
@@ -2971,7 +2980,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p align="center" style="text-align:center;"><img src="${imgMes}" width="480"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-    <!-- SECCIÓN 3.3.2: Evaluación global de calidad -->
     <h4 style="color:#1e3a6e;">3.3.2. Evaluación de la Calidad de Registro</h4>
     <p style="text-align:justify;">${parrafos[1] || ''}</p>
     <p align="center" style="text-align:center;"><strong>Tabla N° 2. Calidad de registro de las HCs auditadas — Hospital Santa Rosa</strong></p>
@@ -2982,7 +2990,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p align="center" style="text-align:center;"><img src="${imgPastel}" width="400"/></p>
     <p class="fuente">Fuente: Formularios Auditoría de registro — Oficina de Gestión de la Calidad</p><br>` : ''}
 
-    <!-- SECCIÓN 3.3.3: Por área de atención (multi-área) o por mes (una sola área) -->
     ${tieneMultiArea ? `
     <h4 style="color:#1e3a6e;">3.3.3. Evaluación de la Calidad de registro por Área de atención</h4>
     <p style="text-align:justify;">${parrafos[2] || ''}</p>
@@ -2990,16 +2997,13 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
     <p style="text-align:justify;">${parrafos[2] || ''}</p>
     ${t3Html}`}
 
-    <!-- SECCIÓN 3.3.4 (multi-área) / 3.3.3 (una área): Distribución por Departamento/Servicio -->
     <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.4' : '3.3.3'}. Distribución de Historias Clínicas auditadas por Departamento/Servicio</h4>
     <p style="text-align:justify;">${parrafos[3] || ''}</p>
     ${t4Html}
 
-    <!-- SECCIÓN 3.3.5 (multi-área) / 3.3.4 (una área): Calidad por Departamento/Servicio -->
     <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.5' : '3.3.4'}. Evaluación de la Calidad de Registro por Departamento/Servicio</h4>
     ${t5Html}
 
-    <!-- SECCIÓN PROMEDIO DE CUMPLIMIENTO -->
     <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.6' : '3.3.5'}. Promedio de Cumplimiento del correcto registro</h4>
     <p style="text-align:justify;">${parrafos[4] || ''}</p>
     ${imgCumpl ? `
@@ -3009,7 +3013,6 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
 
     ${t6aHtml}
 
-    <!-- SECCIÓN NO CONFORMIDADES -->
     <h4 style="color:#1e3a6e;">${tieneMultiArea ? '3.3.7' : '3.3.6'}. No Conformidades</h4>
     ${tieneMultiArea ? `
     <p style="color:#888;font-style:italic;text-align:justify;"><strong>a. Consulta Externa</strong></p>
@@ -3098,7 +3101,6 @@ function _calcPorServicio(data) {
   return ps;
 }
 
-// ── _calcPorArea MEJORADO: incluye sat, mej, def, total, prom ──
 function _calcPorArea(data) {
   if (!data) return {};
   const pa = {};
@@ -3165,7 +3167,6 @@ function _esc(s) {
   return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-// Cerrar dropdowns al hacer click fuera
 document.addEventListener('click', e => {
   if (!e.target.closest('#wrapServExp'))
     document.getElementById('menuServExp')?.classList.remove('show');
