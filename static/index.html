@@ -1003,7 +1003,10 @@ function aplicarLogicaFechas(dataArray) {
         } else {
           monthDiff = realDate.month - auditMonth;
         }
-        r.oportunidad = (monthDiff > 1) ? 'FUERA DE FECHA' : 'A TIEMPO';
+        
+        // AQUÍ ESTÁ EL CAMBIO: > 0 en lugar de > 1
+        r.oportunidad = (monthDiff > 0) ? 'FUERA DE FECHA' : 'A TIEMPO';
+        
       } else {
         if (!r.oportunidad) r.oportunidad = 'A TIEMPO';
       }
