@@ -1162,11 +1162,81 @@ async function actualizarDatos(forzarActualizacion = false) {
   }
 }
 
+// CÁLCULO LOCAL PARA ELIMINAR EL LAG Y MOSTRAR 0 CUANDO NO HAY DATA
 async function calcularEstadisticas(data) {
-  if (!data || !data.length) {
-    stats = null;
+  if (!data) { stats = null; return; }
+
+  // Si no hay datos (ej. al filtrar "Fuera de fecha" y no hay resultados), inicializamos todo en 0
+  if (data.length === 0) {
+    stats = {
+      total: 0, satisfactorio: 0, por_mejorar: 0, deficiente: 0,
+      promedio_pct: 0, por_servicio: {}, secciones: {}
+    };
     return;
   }
+
+  try {
+    let sat = 0, mej = 0, def = 0, sumPct = 0;
+    let por_servicio = {};
+    let secciones = {};
+
+    data.forEach(r => {
+      // 1. Conteo de Calificaciones
+      if (r.calificacion === 'SATISFACTORIO') sat++;
+      else if (r.calificacion === 'POR MEJORAR') mej++;
+      else def++;
+      sumPct += (r.porcentaje || 0);
+
+      // 2. Agrupación por Servicio
+      const srv = r.servicio || '—';
+      if (!por_servicio[srv]) por_servicio[srv] = { sat: 0, mej: 0, def: 0, total: 0, sumProm: 0 };
+      if (r.calificacion === 'SATISFACTORIO') por_servicio[srv].sat++;
+      else if (r.calificacion === 'POR MEJORAR') por_servicio[srv].mej++;
+      else por_servicio[srv].def++;
+      por_servicio[srv].total++;
+      por_servicio[srv].sumProm += (r.porcentaje || 0);
+
+      // 3. Procesamiento de Secciones
+      if (r.secciones) {
+        for (let key in r.secciones) {
+          const sec = r.secciones[key];
+          if (!secciones[key]) {
+            secciones[key] = { label: sec.label, sumProm: 0, sumPct: 0, max: 0, count: 0, items: {} };
+          }
+          secciones[key].sumProm += (sec.subtotal || 0);
+          let secMax = sec.items ? sec.items.reduce((acc, it) => acc + (it.max || 0), 0) : 0;
+          if (secMax > secciones[key].max) secciones[key].max = secMax;
+          secciones[key].sumPct += (secMax > 0 ? (sec.subtotal / secMax) * 100 : 0);
+          secciones[key].count++;
+
+          if (sec.items) {
+            sec.items.forEach(item => {
+              const n = item.nombre;
+              if (!secciones[key].items[n]) secciones[key].items[n] = { completo: 0, incompleto: 0, no_existe: 0, en_exceso: 0, na: 0, sin_dato: 0 };
+              secciones[key].items[n][item.estado || 'sin_dato']++;
+            });
+          }
+        }
+      }
+    });
+
+    // Promedios finales
+    for (let s in por_servicio) por_servicio[s].promedio = parseFloat((por_servicio[s].sumProm / por_servicio[s].total).toFixed(2));
+    for (let k in secciones) {
+      secciones[k].promedio = parseFloat((secciones[k].sumProm / secciones[k].count).toFixed(2));
+      secciones[k].porcentaje = parseFloat((secciones[k].sumPct / secciones[k].count).toFixed(1));
+    }
+
+    stats = {
+      total: data.length, satisfactorio: sat, por_mejorar: mej, deficiente: def,
+      promedio_pct: parseFloat((sumPct / data.length).toFixed(2)),
+      por_servicio, secciones
+    };
+  } catch (e) {
+    console.error("Error en cálculo local:", e);
+    stats = null;
+  }
+}
   
   // === CÁLCULO LOCAL EN RAM (Elimina la necesidad de subir 25MB a Render y hace que el filtro sea a 0 lag) ===
   try {
@@ -1353,7 +1423,7 @@ function aplicarFiltros() {
       selectorServicio.value = servSel;
     }
 
-    // --- NUEVO: OCULTAR MESES QUE NO TIENEN DATOS ---
+    // --- NUEVO: OCULTAR MESES QUE NO TIENEN DATOS Y LIMPIAR SELECCIÓN ---
     const mesesDisponibles = [...new Set(allData.filter(r => {
       if (anioSel && r.anio !== anioSel) return false;
       if (oportSel && r.oportunidad !== oportSel) return false;
@@ -1364,14 +1434,29 @@ function aplicarFiltros() {
     if (menuDash) {
       const labelsMes = menuDash.querySelectorAll('.ms-item');
       labelsMes.forEach(label => {
-        const val = label.querySelector('input').value;
+        const checkbox = label.querySelector('input');
+        const val = checkbox.value;
+        
         if (mesesDisponibles.includes(val)) {
-          label.style.display = 'flex'; // Mostrar si tiene datos
+          label.style.display = 'flex'; // Mostrar si hay data
         } else {
-          label.style.display = 'none'; // Ocultar si no tiene datos para ese filtro
+          label.style.display = 'none'; // Ocultar si no hay data
+          // AGREGAR ESTO: Desmarca el mes si se oculta para que no ensucie el filtro
+          checkbox.checked = false; 
         }
       });
+
+      // RECALCULAR EL TEXTO DEL BOTÓN:
+      // Esto asegura que si se desmarcaron meses ocultos, el texto "X seleccionados" se actualice
+      const checksActualizados = Array.from(menuDash.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      const textBtn = document.getElementById('textMesDash');
+      if (textBtn) {
+        if (checksActualizados.length === 0) textBtn.textContent = 'Todos los meses';
+        else if (checksActualizados.length === 1) textBtn.textContent = checksActualizados[0].split(' - ')[1] || checksActualizados[0];
+        else textBtn.textContent = `${checksActualizados.length} seleccionados`;
+      }
     }
+    // ----------------------------------------------------------------------------
     // -------------------------------------------------
 
     filtData = allData.filter(r => {
@@ -1468,15 +1553,20 @@ function renderDashboard() {
 function destroyChart(id) { if(charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
 function renderChartCalif() {
-  destroyChart('calif');
-  if (!stats || !stats.total) return;
-  const ctx = document.getElementById('chartCalif');
-  if (!ctx) return;
+  destroyChart('calif'); 
+  if (!stats) return; // Permitimos que entre aunque total sea 0
+  const ctx = document.getElementById('chartCalif'); if (!ctx) return;
+  
+  // Si no hay datos, ChartJS mostrará un gráfico vacío, pero los KPIs (texto) dirán 0
   charts['calif'] = new Chart(ctx.getContext('2d'), {
     type:'doughnut',
-    data:{
-      labels:['Satisfactorio','Por mejorar','Deficiente'],
-      datasets:[{data:[stats.satisfactorio,stats.por_mejorar,stats.deficiente],backgroundColor:['#22c55e','#f59e0b','#ef4444'],borderWidth:0,hoverOffset:8}]
+    data:{ 
+      labels:['Satisfactorio','Por mejorar','Deficiente'], 
+      datasets:[{
+        data:[stats.satisfactorio, stats.por_mejorar, stats.deficiente],
+        backgroundColor:['#22c55e','#f59e0b','#ef4444'],
+        borderWidth:0
+      }] 
     },
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'Plus Jakarta Sans',size:12},padding:16,usePointStyle:true}},tooltip:{callbacks:{label:function(c){return ` ${c.label}: ${c.raw} (${((c.raw/stats.total)*100).toFixed(1)}%)`}}}}}
   });
