@@ -974,29 +974,30 @@ function cambiarArea() {
 
 // ===== PARSEO INTELIGENTE DE FECHA =====
 function parseRealDate(dateStr) {
-    if (!dateStr) return null;
-    const match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (match) { return { year: parseInt(match[3], 10), month: parseInt(match[2], 10) }; }
-    const d = new Date(dateStr);
-    if (!isNaN(d.getTime())) { return { year: d.getFullYear(), month: d.getMonth() + 1 }; }
-    return null;
+  if (!dateStr) return null;
+  const match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  // Agregamos la captura del "day" (día)
+  if (match) { return { year: parseInt(match[3], 10), month: parseInt(match[2], 10), day: parseInt(match[1], 10) }; }
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) { return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() }; }
+  return null;
 }
 
-// ===== APLICACIÓN DE LÓGICA DE FECHAS =====
+// ===== APLICACIÓN DE LÓGICA DE FECHAS (CON REGLA DE 15 DÍAS) =====
 function aplicarLogicaFechas(dataArray) {
   dataArray.forEach(r => {
     if (r.fecha_ingreso_real && r.num_auditoria) {
       const realDate = parseRealDate(r.fecha_ingreso_real);
-      const matchMonth = String(r.num_auditoria).match(/^(\d+)/); // Extrae número ej. "12" de "12 - Diciembre"
+      const matchMonth = String(r.num_auditoria).match(/^(\d+)/); 
       if (realDate && matchMonth) {
         const auditMonth = parseInt(matchMonth[1], 10);
-        // 1. Ajuste de año
+        
         if (auditMonth > realDate.month) {
           r.anio = (realDate.year - 1).toString();
         } else {
           r.anio = realDate.year.toString();
         }
-        // 2. Ajuste de oportunidad
+        
         let monthDiff;
         if (realDate.year > parseInt(r.anio, 10)) {
           monthDiff = (realDate.month + 12) - auditMonth;
@@ -1004,8 +1005,14 @@ function aplicarLogicaFechas(dataArray) {
           monthDiff = realDate.month - auditMonth;
         }
         
-        // AQUÍ ESTÁ EL CAMBIO: > 0 en lugar de > 1
-        r.oportunidad = (monthDiff > 0) ? 'FUERA DE FECHA' : 'A TIEMPO';
+        // --- LÓGICA EXACTA DE 15 DÍAS DE TOLERANCIA ---
+        if (monthDiff === 0) {
+          r.oportunidad = 'A TIEMPO'; // Entregado en su mismo mes
+        } else if (monthDiff === 1 && realDate.day <= 15) {
+          r.oportunidad = 'A TIEMPO'; // Entregado mes siguiente, hasta el día 15
+        } else {
+          r.oportunidad = 'FUERA DE FECHA'; // Mes siguiente día 16+, o 2+ meses después
+        }
         
       } else {
         if (!r.oportunidad) r.oportunidad = 'A TIEMPO';
@@ -1345,6 +1352,27 @@ function aplicarFiltros() {
     if (serviciosDisponibles.includes(servSel)) {
       selectorServicio.value = servSel;
     }
+
+    // --- NUEVO: OCULTAR MESES QUE NO TIENEN DATOS ---
+    const mesesDisponibles = [...new Set(allData.filter(r => {
+      if (anioSel && r.anio !== anioSel) return false;
+      if (oportSel && r.oportunidad !== oportSel) return false;
+      return true;
+    }).map(r => r.num_auditoria))];
+
+    const menuDash = document.getElementById('menuMesDash');
+    if (menuDash) {
+      const labelsMes = menuDash.querySelectorAll('.ms-item');
+      labelsMes.forEach(label => {
+        const val = label.querySelector('input').value;
+        if (mesesDisponibles.includes(val)) {
+          label.style.display = 'flex'; // Mostrar si tiene datos
+        } else {
+          label.style.display = 'none'; // Ocultar si no tiene datos para ese filtro
+        }
+      });
+    }
+    // -------------------------------------------------
 
     filtData = allData.filter(r => {
       if (anioSel && r.anio !== anioSel) return false;
