@@ -2127,13 +2127,18 @@ function _poblarMenuMeses(meses) {
       </label>
     `).join('');
   } else if (modo === 'mensual') {
-    // NUEVO: En mensual, checkboxes sin límite (antes eran radio buttons)
-    document.getElementById('menuMesExp').innerHTML = meses.map(m => `
-      <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
-        <input type="checkbox" value="${m}" onchange="cambioFiltroPrincipal()">
-        <span style="margin-left:8px;font-size:12px">${m}</span>
-      </label>
-    `).join('');
+    // En mensual: checkboxes (múltiples meses permitidos)
+    document.getElementById('menuMesExp').innerHTML = `
+      <div class="ms-actions" style="position:sticky;top:0;background:#fff;z-index:10;padding:10px;border-bottom:1px solid #ccc;display:flex;gap:10px;">
+        <button onclick="_seleccionarTodosMeses(true)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:var(--navy);">✅ Todos</button>
+        <button onclick="_seleccionarTodosMeses(false)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:#dc2626;">❌ Ninguno</button>
+      </div>` +
+      meses.map(m => `
+        <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
+          <input type="checkbox" name="mesExpCheck" value="${m}" onchange="cambioFiltroPrincipal()">
+          <span style="margin-left:8px;font-size:12px">${m}</span>
+        </label>
+      `).join('');
   } else {
     // Anual: sin filtro de mes (se ignora)
     document.getElementById('menuMesExp').innerHTML = `
@@ -2169,8 +2174,11 @@ function _getModo() {
 function _getMesesSelExp() {
   const modo = _getModo();
   if (modo === 'anual') return []; // anual no filtra por mes
-  
-  // Ahora tanto mensual como trimestral leen los checkboxes marcados
+  if (modo === 'mensual') {
+    const checks = Array.from(document.querySelectorAll('input[name="mesExpCheck"]:checked'));
+    return checks.map(cb => cb.value);
+  }
+  // trimestral: checkboxes
   return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
     .map(cb => cb.value);
 }
@@ -2197,7 +2205,7 @@ function _aplicarModoUI() {
     if (labelMes) labelMes.style.display = '';
     // Actualizar label según modo
     if (labelMes) {
-      labelMes.textContent = modo === 'trimestral' ? 'MESES (Máx. 3)' : 'MES';
+      labelMes.textContent = modo === 'trimestral' ? 'MESES (Máx. 3)' : 'MESES';
     }
   }
 
@@ -2247,12 +2255,12 @@ function _actualizarBannerInfo() {
     }
   } else {
     // mensual
-    const mesSel = mesesSel.length > 0 ? mesesSel[0] : null;
+    const mesesTextoM = mesesSel.length > 0 ? mesesSel.map(m => _mesCorto(m)).join(', ') : null;
     banner.style.display = '';
     banner.style.background = '#f5f3ff';
     banner.style.borderLeft = '4px solid #7c3aed';
-    banner.innerHTML = `<strong>📆 Informe Mensual${mesSel ? ': ' + _mesCorto(mesSel) : ' (Todos los meses)'}</strong><br>
-      <small>Se incluyen registros del mes seleccionado en el año ${anioSel || 'elegido'}.</small>`;
+    banner.innerHTML = `<strong>📆 Informe Mensual${mesesTextoM ? ': ' + mesesTextoM : ' (Todos los meses)'}</strong><br>
+      <small>Se incluyen registros de los meses seleccionados en el año ${anioSel || 'elegido'}.</small>`;
   }
 }
 
@@ -3476,7 +3484,12 @@ function _calcPorArea(data) {
   });
   return result;
 }
-
+/** Selecciona o deselecciona todos los checkboxes de mes en modo mensual */
+function _seleccionarTodosMeses(sel) {
+  document.querySelectorAll('input[name="mesExpCheck"]')
+    .forEach(cb => cb.checked = sel);
+  cambioFiltroPrincipal();
+}
 function _pct(n, total) {
   if (!total) return 0;
   return parseFloat((n / total * 100).toFixed(1));
