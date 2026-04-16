@@ -2127,18 +2127,13 @@ function _poblarMenuMeses(meses) {
       </label>
     `).join('');
   } else if (modo === 'mensual') {
-    // En mensual: radio buttons (solo 1 mes)
-    document.getElementById('menuMesExp').innerHTML = `
-      <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;background:#f0f9ff;">
-        <input type="radio" name="mesExpRadio" value="" onchange="cambioFiltroPrincipal()" checked>
-        <span style="margin-left:8px;font-size:12px;font-style:italic;">Todos los meses</span>
-      </label>` +
-      meses.map(m => `
-        <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
-          <input type="radio" name="mesExpRadio" value="${m}" onchange="cambioFiltroPrincipal()">
-          <span style="margin-left:8px;font-size:12px">${m}</span>
-        </label>
-      `).join('');
+    // NUEVO: En mensual, checkboxes sin límite (antes eran radio buttons)
+    document.getElementById('menuMesExp').innerHTML = meses.map(m => `
+      <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
+        <input type="checkbox" value="${m}" onchange="cambioFiltroPrincipal()">
+        <span style="margin-left:8px;font-size:12px">${m}</span>
+      </label>
+    `).join('');
   } else {
     // Anual: sin filtro de mes (se ignora)
     document.getElementById('menuMesExp').innerHTML = `
@@ -2174,12 +2169,8 @@ function _getModo() {
 function _getMesesSelExp() {
   const modo = _getModo();
   if (modo === 'anual') return []; // anual no filtra por mes
-  if (modo === 'mensual') {
-    const radio = document.querySelector('input[name="mesExpRadio"]:checked');
-    if (!radio || radio.value === '') return [];
-    return [radio.value];
-  }
-  // trimestral: checkboxes
+  
+  // Ahora tanto mensual como trimestral leen los checkboxes marcados
   return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
     .map(cb => cb.value);
 }
