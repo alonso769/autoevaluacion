@@ -2127,15 +2127,15 @@ function _poblarMenuMeses(meses) {
       </label>
     `).join('');
   } else if (modo === 'mensual') {
-    // En mensual: checkboxes (múltiples meses permitidos)
+    // En mensual: checkboxes (uno o más meses)
     document.getElementById('menuMesExp').innerHTML = `
       <div class="ms-actions" style="position:sticky;top:0;background:#fff;z-index:10;padding:10px;border-bottom:1px solid #ccc;display:flex;gap:10px;">
-        <button onclick="_seleccionarTodosMeses(true)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:var(--navy);">✅ Todos</button>
-        <button onclick="_seleccionarTodosMeses(false)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:#dc2626;">❌ Ninguno</button>
+        <button onclick="seleccionarTodosMensuales(true)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:var(--navy);">✅ Todos</button>
+        <button onclick="seleccionarTodosMensuales(false)" style="padding:4px 8px;cursor:pointer;background:var(--cream2);border:1px solid var(--border);border-radius:4px;font-weight:bold;color:#dc2626;">❌ Ninguno</button>
       </div>` +
       meses.map(m => `
         <label class="ms-item" style="display:flex;align-items:center;cursor:pointer;padding:8px 12px;border-bottom:1px solid #eee;margin:0;">
-          <input type="checkbox" name="mesExpCheck" value="${m}" onchange="cambioFiltroPrincipal()">
+          <input type="checkbox" value="${m}" onchange="cambioFiltroPrincipal()">
           <span style="margin-left:8px;font-size:12px">${m}</span>
         </label>
       `).join('');
@@ -2175,8 +2175,10 @@ function _getMesesSelExp() {
   const modo = _getModo();
   if (modo === 'anual') return []; // anual no filtra por mes
   if (modo === 'mensual') {
-    const checks = Array.from(document.querySelectorAll('input[name="mesExpCheck"]:checked'));
-    return checks.map(cb => cb.value);
+    // mensual: checkboxes (uno o más meses)
+    const checked = Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
+      .map(cb => cb.value);
+    return checked;
   }
   // trimestral: checkboxes
   return Array.from(document.querySelectorAll('#menuMesExp input[type=checkbox]:checked'))
@@ -2255,12 +2257,20 @@ function _actualizarBannerInfo() {
     }
   } else {
     // mensual
-    const mesesTextoM = mesesSel.length > 0 ? mesesSel.map(m => _mesCorto(m)).join(', ') : null;
     banner.style.display = '';
     banner.style.background = '#f5f3ff';
     banner.style.borderLeft = '4px solid #7c3aed';
-    banner.innerHTML = `<strong>📆 Informe Mensual${mesesTextoM ? ': ' + mesesTextoM : ' (Todos los meses)'}</strong><br>
-      <small>Se incluyen registros de los meses seleccionados en el año ${anioSel || 'elegido'}.</small>`;
+    if (mesesSel.length === 0) {
+      banner.innerHTML = `<strong>📆 Informe Mensual (Todos los meses)</strong><br>
+        <small>Se incluyen todos los registros del año ${anioSel || 'elegido'}.</small>`;
+    } else if (mesesSel.length === 1) {
+      banner.innerHTML = `<strong>📆 Informe Mensual: ${_mesCorto(mesesSel[0])}</strong><br>
+        <small>Se incluyen registros del mes seleccionado en el año ${anioSel || 'elegido'}.</small>`;
+    } else {
+      const mesesTexto = mesesSel.map(m => _mesCorto(m)).join(', ');
+      banner.innerHTML = `<strong>📆 Informe Mensual: ${mesesTexto}</strong><br>
+        <small>Se incluyen registros de los ${mesesSel.length} meses seleccionados en el año ${anioSel || 'elegido'}.</small>`;
+    }
   }
 }
 
@@ -2290,16 +2300,17 @@ function cambioFiltroPrincipal() {
       .filter(a => a && a !== 'Sin Fecha')
   )].sort();
 
-  // Solo re-poblar si no hay meses ya seleccionados en trimestral
-  if (modo !== 'trimestral' || mesesSel.length === 0) {
+  // Solo re-poblar si no hay meses ya seleccionados en trimestral/mensual
+  if (modo === 'trimestral' || modo === 'mensual') {
+    const prevSel = mesesSel; // guardar selección previa
     _poblarMenuMeses(mesesDisponibles);
-    // Re-aplicar selección anterior si existe
-    if (modo === 'trimestral' && mesesSel.length > 0) {
-      mesesSel.forEach(m => {
-        const cb = document.querySelector(`#menuMesExp input[value="${CSS.escape(m)}"]`);
-        if (cb) cb.checked = true;
-      });
-    }
+    // Re-aplicar selección anterior
+    prevSel.forEach(m => {
+      const cb = document.querySelector(`#menuMesExp input[type=checkbox][value="${CSS.escape(m)}"]`);
+      if (cb) cb.checked = true;
+    });
+  } else {
+    _poblarMenuMeses(mesesDisponibles);
   }
 
   // Calcular servicios disponibles con el filtro actual
@@ -2352,6 +2363,12 @@ function seleccionarTodosServ(sel) {
     });
   _actualizarTextoServExp();
   actualizarPreviewExport();
+}
+
+function seleccionarTodosMensuales(sel) {
+  document.querySelectorAll('#menuMesExp input[type=checkbox]')
+    .forEach(cb => { cb.checked = sel; });
+  cambioFiltroPrincipal();
 }
 
 function _actualizarTextoServExp() {
@@ -3484,12 +3501,7 @@ function _calcPorArea(data) {
   });
   return result;
 }
-/** Selecciona o deselecciona todos los checkboxes de mes en modo mensual */
-function _seleccionarTodosMeses(sel) {
-  document.querySelectorAll('input[name="mesExpCheck"]')
-    .forEach(cb => cb.checked = sel);
-  cambioFiltroPrincipal();
-}
+
 function _pct(n, total) {
   if (!total) return 0;
   return parseFloat((n / total * 100).toFixed(1));
