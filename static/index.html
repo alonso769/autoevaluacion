@@ -2620,11 +2620,12 @@ function _renderGraf5() {
   if (!ctx) return;
 
   // Ajustar altura del canvas dinamicamente segun numero de servicios
-  const alturaMinBarra = 38;
-  const alturaTotal = Math.max(300, servicios.length * alturaMinBarra + 60);
+  const alturaMinBarra = 46;
+  const alturaTotal = Math.max(350, servicios.length * alturaMinBarra + 80);
   ctx.style.height = alturaTotal + 'px';
+  ctx.style.width = '100%';
   const wrapGraf5El = document.getElementById('wrapGraf5');
-  if (wrapGraf5El) wrapGraf5El.style.height = (alturaTotal + 20) + 'px';
+  if (wrapGraf5El) wrapGraf5El.style.height = (alturaTotal + 30) + 'px';
 
   // Plugin inline para dibujar etiquetas de porcentaje en/junto a las barras
   const labelPlugin5 = {
@@ -2675,6 +2676,7 @@ function _renderGraf5() {
           }
         }
       },
+      layout: { padding: { right: 55 } },
       scales: {
         x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
         y: { ticks: { font: { size: 11 } } }
