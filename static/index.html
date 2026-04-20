@@ -2498,13 +2498,11 @@ function _renderTabla5() {
   const filas = servicios.map(s => {
     const d = porServ[s];
     const pct = _pct(d.sat, d.total);
-    const color = pct >= 90 ? '#dcfce7' : pct >= 75 ? '#fef3c7' : '#fee2e2';
-    const cTxt = pct >= 90 ? '#166534' : pct >= 75 ? '#d97706' : '#dc2626';
     const nombre = s.length > 40 ? s.substring(0, 40) + '…' : s;
     return `<tr>
       <td style="text-align:left;font-size:12px">${nombre}</td>
       <td>${d.sat}</td>
-      <td style="background:${color};color:${cTxt};font-weight:700">${pct}%</td>
+      <td style="font-weight:700">${pct}%</td>
       <td>${d.mej}</td>
       <td>${d.def}</td>
       <td style="font-weight:700">${d.total}</td>
@@ -2587,7 +2585,6 @@ function _renderGraf5() {
     (_pct(porServ[b].sat, porServ[b].total)) - (_pct(porServ[a].sat, porServ[a].total))
   );
   const pcts = servicios.map(s => _pct(porServ[s].sat, porServ[s].total));
-  const bgs = pcts.map(p => p >= 90 ? COLORS.sat : p >= 75 ? COLORS.mej : COLORS.def);
   const labels = servicios.map(s => s.replace('SERV. DE ', '').replace('DPTO. DE ', '').substring(0, 22));
 
   if (_ch5) _ch5.destroy();
@@ -2597,7 +2594,7 @@ function _renderGraf5() {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ label: '% Satisfactorio', data: pcts, backgroundColor: bgs, borderRadius: 4 }]
+      datasets: [{ label: '% Satisfactorio', data: pcts, backgroundColor: '#4472c4', borderRadius: 4 }]
     },
     options: {
       animation: false, responsive: true, maintainAspectRatio: false, indexAxis: 'y',
@@ -2611,6 +2608,13 @@ function _renderGraf5() {
               return ` ${ctx.parsed.x}%  (${d.sat}/${d.total} HCs)`;
             }
           }
+        },
+        datalabels: {
+          anchor: 'center',
+          align: 'center',
+          color: '#fff',
+          font: { size: 11, weight: 'bold' },
+          formatter: v => v + '%'
         }
       },
       scales: {
@@ -3229,12 +3233,10 @@ function _generarWord(fechaHoy, sat, mej, def, total, prom,
       .map(s => {
         const d = porServ[s];
         const p = _pct(d.sat, d.total);
-        const bg = p >= 90 ? '#dcfce7' : p >= 75 ? '#fef3c7' : '#fee2e2';
-        const co = p >= 90 ? '#166534' : p >= 75 ? '#d97706' : '#dc2626';
         return `<tr>
           <td style="border:1px solid #000;padding:6px;text-align:left;">${s}</td>
           <td style="border:1px solid #000;padding:6px;">${d.sat}</td>
-          <td style="border:1px solid #000;padding:6px;background:${bg};color:${co};font-weight:bold;">${p}%</td>
+          <td style="border:1px solid #000;padding:6px;font-weight:bold;">${p}%</td>
           <td style="border:1px solid #000;padding:6px;">${d.mej}</td>
           <td style="border:1px solid #000;padding:6px;">${d.def}</td>
           <td style="border:1px solid #000;padding:6px;"><strong>${d.total}</strong></td>
