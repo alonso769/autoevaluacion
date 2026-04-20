@@ -2585,13 +2585,50 @@ function _renderGraf5() {
     (_pct(porServ[b].sat, porServ[b].total)) - (_pct(porServ[a].sat, porServ[a].total))
   );
   const pcts = servicios.map(s => _pct(porServ[s].sat, porServ[s].total));
-  const labels = servicios.map(s => s.replace('SERV. DE ', '').replace('DPTO. DE ', '').substring(0, 22));
+  const labels = servicios.map(s => s.replace('SERV. DE ', '').replace('DPTO. DE ', '').substring(0, 30));
 
   if (_ch5) _ch5.destroy();
   const ctx = document.getElementById('expChart5');
   if (!ctx) return;
+
+  // Ajustar altura del canvas dinamicamente segun numero de servicios
+  const alturaMinBarra = 38;
+  const alturaTotal = Math.max(300, servicios.length * alturaMinBarra + 60);
+  ctx.style.height = alturaTotal + 'px';
+  const wrapGraf5El = document.getElementById('wrapGraf5');
+  if (wrapGraf5El) wrapGraf5El.style.height = (alturaTotal + 20) + 'px';
+
+  // Plugin inline para dibujar etiquetas de porcentaje dentro de las barras
+  const labelPlugin5 = {
+    id: 'barLabels5',
+    afterDatasetsDraw(chart) {
+      const { ctx: c, data } = chart;
+      chart.getDatasetMeta(0).data.forEach((bar, i) => {
+        const val = data.datasets[0].data[i];
+        const label = val + '%';
+        c.save();
+        c.font = 'bold 11px Arial';
+        c.textBaseline = 'middle';
+        const barWidth = bar.x - bar.base;
+        const x = bar.base + barWidth / 2;
+        const y = bar.y;
+        if (barWidth > 38) {
+          c.fillStyle = '#ffffff';
+          c.textAlign = 'center';
+          c.fillText(label, x, y);
+        } else {
+          c.fillStyle = '#333333';
+          c.textAlign = 'left';
+          c.fillText(label, bar.x + 4, y);
+        }
+        c.restore();
+      });
+    }
+  };
+
   _ch5 = new Chart(ctx.getContext('2d'), {
     type: 'bar',
+    plugins: [labelPlugin5],
     data: {
       labels,
       datasets: [{ label: '% Satisfactorio', data: pcts, backgroundColor: '#4472c4', borderRadius: 4 }]
@@ -2602,19 +2639,12 @@ function _renderGraf5() {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => {
-              const s = servicios[ctx.dataIndex];
+            label: function(context) {
+              const s = servicios[context.dataIndex];
               const d = porServ[s];
-              return ` ${ctx.parsed.x}%  (${d.sat}/${d.total} HCs)`;
+              return ' ' + context.parsed.x + '%  (' + d.sat + '/' + d.total + ' HCs)';
             }
           }
-        },
-        datalabels: {
-          anchor: 'center',
-          align: 'center',
-          color: '#fff',
-          font: { size: 11, weight: 'bold' },
-          formatter: v => v + '%'
         }
       },
       scales: {
