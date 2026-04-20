@@ -2559,8 +2559,32 @@ function _renderGraf3() {
   if (_ch3) _ch3.destroy();
   const ctx = document.getElementById('expChart3');
   if (!ctx) return;
+
+  // Plugin para mostrar etiquetas de valor encima de cada barra
+  const labelPlugin3 = {
+    id: 'barLabels3',
+    afterDatasetsDraw(chart) {
+      const { ctx: c } = chart;
+      chart.data.datasets.forEach((dataset, dsIdx) => {
+        const meta = chart.getDatasetMeta(dsIdx);
+        meta.data.forEach((bar, i) => {
+          const val = dataset.data[i];
+          if (val === 0) return;
+          c.save();
+          c.font = 'bold 10px Arial';
+          c.fillStyle = '#333333';
+          c.textAlign = 'center';
+          c.textBaseline = 'bottom';
+          c.fillText(val, bar.x, bar.y - 2);
+          c.restore();
+        });
+      });
+    }
+  };
+
   _ch3 = new Chart(ctx.getContext('2d'), {
     type: 'bar',
+    plugins: [labelPlugin3],
     data: {
       labels: meses.map(_mesCorto),
       datasets: [
@@ -2572,7 +2596,11 @@ function _renderGraf3() {
     options: {
       animation: false, responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } } },
-      scales: { x: { stacked: false }, y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+      scales: {
+        x: { stacked: false },
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      },
+      layout: { padding: { top: 18 } }
     }
   });
 }
@@ -2598,7 +2626,7 @@ function _renderGraf5() {
   const wrapGraf5El = document.getElementById('wrapGraf5');
   if (wrapGraf5El) wrapGraf5El.style.height = (alturaTotal + 20) + 'px';
 
-  // Plugin inline para dibujar etiquetas de porcentaje dentro de las barras
+  // Plugin inline para dibujar etiquetas de porcentaje en/junto a las barras
   const labelPlugin5 = {
     id: 'barLabels5',
     afterDatasetsDraw(chart) {
@@ -2610,16 +2638,16 @@ function _renderGraf5() {
         c.font = 'bold 11px Arial';
         c.textBaseline = 'middle';
         const barWidth = bar.x - bar.base;
-        const x = bar.base + barWidth / 2;
-        const y = bar.y;
-        if (barWidth > 38) {
+        if (barWidth > 40) {
+          // Etiqueta dentro de la barra (blanca)
           c.fillStyle = '#ffffff';
           c.textAlign = 'center';
-          c.fillText(label, x, y);
+          c.fillText(label, bar.base + barWidth / 2, bar.y);
         } else {
-          c.fillStyle = '#333333';
+          // Etiqueta fuera de la barra (oscura)
+          c.fillStyle = '#1e3a6e';
           c.textAlign = 'left';
-          c.fillText(label, bar.x + 4, y);
+          c.fillText(label, bar.x + 5, bar.y);
         }
         c.restore();
       });
@@ -2867,8 +2895,22 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
   }
 
   const c1 = document.createElement('canvas'); c1.width = 700; c1.height = 340; wrap.appendChild(c1);
+  const labelPluginC1 = {
+    id: 'lpc1',
+    afterDatasetsDraw(chart) {
+      const { ctx: c } = chart;
+      chart.getDatasetMeta(0).data.forEach((bar, i) => {
+        const val = chart.data.datasets[0].data[i];
+        if (!val) return;
+        c.save(); c.font = 'bold 11px Arial'; c.fillStyle = '#1e3a6e';
+        c.textAlign = 'center'; c.textBaseline = 'bottom';
+        c.fillText(val, bar.x, bar.y - 3); c.restore();
+      });
+    }
+  };
   const ch1 = new Chart(c1.getContext('2d'), {
     type: 'bar',
+    plugins: [labelPluginC1],
     data: {
       labels: meses.map(_mesCorto),
       datasets: [{
@@ -2881,15 +2923,30 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
     options: {
       animation: { duration: 0 }, responsive: false,
       plugins: { legend: { display: false } },
-      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 10 } } }
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 10 } } },
+      layout: { padding: { top: 20 } }
     }
   });
   setTimeout(() => { imgMes = c1.toDataURL('image/png', 1.0); ch1.destroy(); check(); }, 300);
 
   const c4 = document.createElement('canvas'); c4.width = 700; c4.height = 340; wrap.appendChild(c4);
   const servList4 = Object.keys(porServ).sort((a, b) => porServ[b].total - porServ[a].total);
+  const labelPluginC4 = {
+    id: 'lpc4',
+    afterDatasetsDraw(chart) {
+      const { ctx: c } = chart;
+      chart.getDatasetMeta(0).data.forEach((bar, i) => {
+        const val = chart.data.datasets[0].data[i];
+        if (!val) return;
+        c.save(); c.font = 'bold 10px Arial'; c.fillStyle = '#1e3a6e';
+        c.textAlign = 'center'; c.textBaseline = 'bottom';
+        c.fillText(val, bar.x, bar.y - 3); c.restore();
+      });
+    }
+  };
   const ch4 = new Chart(c4.getContext('2d'), {
     type: 'bar',
+    plugins: [labelPluginC4],
     data: {
       labels: servList4.map(s => s.replace('SERV. DE ', '').replace('DPTO. DE ', '').substring(0, 24)),
       datasets: [{
@@ -2905,7 +2962,8 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
       scales: {
         x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 30 } },
         y: { beginAtZero: true }
-      }
+      },
+      layout: { padding: { top: 20 } }
     }
   });
   setTimeout(() => { imgServ4 = c4.toDataURL('image/png', 1.0); ch4.destroy(); check(); }, 350);
@@ -2932,8 +2990,25 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
   if (tieneMultiArea) {
     const c3a = document.createElement('canvas'); c3a.width = 700; c3a.height = 340; wrap.appendChild(c3a);
     const areaLabels = areasPresentes;
+    const labelPluginC3a = {
+      id: 'lpc3a',
+      afterDatasetsDraw(chart) {
+        const { ctx: c } = chart;
+        chart.data.datasets.forEach((dataset, dsIdx) => {
+          const meta = chart.getDatasetMeta(dsIdx);
+          meta.data.forEach((bar, i) => {
+            const val = dataset.data[i];
+            if (!val) return;
+            c.save(); c.font = 'bold 10px Arial'; c.fillStyle = '#333333';
+            c.textAlign = 'center'; c.textBaseline = 'bottom';
+            c.fillText(val, bar.x, bar.y - 2); c.restore();
+          });
+        });
+      }
+    };
     const ch3a = new Chart(c3a.getContext('2d'), {
       type: 'bar',
+      plugins: [labelPluginC3a],
       data: {
         labels: areaLabels.map(_nombreAreaTexto),
         datasets: [
@@ -2945,7 +3020,8 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
       options: {
         animation: { duration: 0 }, responsive: false,
         plugins: { legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } } },
-        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+        layout: { padding: { top: 20 } }
       }
     });
     setTimeout(() => { imgAreaBars = c3a.toDataURL('image/png', 1.0); ch3a.destroy(); check(); }, 450);
@@ -2953,8 +3029,22 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
     const c6a = document.createElement('canvas'); c6a.width = 500; c6a.height = 300; wrap.appendChild(c6a);
     const promAreas = areasPresentes.map(a => porArea[a]?.prom || 0);
     const minProm = Math.max(0, Math.min(...promAreas) - 5);
+    const labelPluginC6a = {
+      id: 'lpc6a',
+      afterDatasetsDraw(chart) {
+        const { ctx: c } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+          const val = chart.data.datasets[0].data[i];
+          if (!val) return;
+          c.save(); c.font = 'bold 11px Arial'; c.fillStyle = '#1e3a6e';
+          c.textAlign = 'center'; c.textBaseline = 'bottom';
+          c.fillText(val + '%', bar.x, bar.y - 3); c.restore();
+        });
+      }
+    };
     const ch6a = new Chart(c6a.getContext('2d'), {
       type: 'bar',
+      plugins: [labelPluginC6a],
       data: {
         labels: [...areasPresentes.map(_nombreAreaTexto), 'PROMEDIO'],
         datasets: [{
@@ -2966,11 +3056,12 @@ function _generarGraficosAdicionales(porMes, meses, porServ, porArea, total, pro
       },
       options: {
         animation: { duration: 0 }, responsive: false,
-        plugins: { legend: { display: false }, datalabels: { display: false } },
+        plugins: { legend: { display: false } },
         scales: {
           x: { grid: { display: false } },
           y: { beginAtZero: false, min: minProm, max: 100, ticks: { callback: v => v + '%' } }
-        }
+        },
+        layout: { padding: { top: 20 } }
       }
     });
     setTimeout(() => { imgAreaPie = c6a.toDataURL('image/png', 1.0); ch6a.destroy(); check(); }, 500);
